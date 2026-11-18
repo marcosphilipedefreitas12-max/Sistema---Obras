@@ -10,6 +10,7 @@
 - Perfis (`Sistema.gs`): aba `Sistema Perfis` por obra; `sisPermitir_` confere no servidor em `sisChamar`; `sisPermissoes_` vai na carga (`PM` na tela). Botões de gravar têm a classe `so-grava` (somem no perfil Consulta). Valores em R$ só para `PM.custos`.
 - Tema: variáveis CSS em `:root` e `:root[data-tema="escuro"]`; não usar cor fixa no CSS, criar variável. Gráficos do Início em SVG próprio (`painel()`), cores `--s0..--s3` (validadas para daltonismo nos dois temas).
 - Implantação SEMPRE "Executar como: Usuário que acessa" (senão quem tem o link mexe em tudo com a conta do dono).
+- Fotos (`Modulos.gs`): módulo com `fotos: '<letra>'` ganha bloco de fotos no formulário; arquivos no Drive (`DriveApp`, pasta por obra em Script Property `SIS_FOTOS_<idPlanilha>`, subpasta por tela e por chave do registro). A foto é reduzida no navegador (1600 px, JPEG) e enviada uma a uma.
 - `google.script.run` não aceita `Date` no retorno: converter para texto `yyyy-MM-dd` (`sisIso_`).
 - Escapar todo texto vindo da planilha com `esc()` antes de pôr no HTML.
 - Cada tela da planilha é um item de `SIS_MODULOS` (`Modulos.gs`): aba, linha do cabeçalho (`hdr`, `hdr2` se o nome está mesclado na linha de cima), primeira/última linha de dados, coluna-chave, última coluna, colunas da lista (`mostrar`) e os textos `serve` / `quando` / `passos`. Ao mudar o layout de uma aba na planilha, atualizar aqui.

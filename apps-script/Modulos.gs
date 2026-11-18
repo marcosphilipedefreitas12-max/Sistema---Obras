@@ -21,12 +21,12 @@ var SIS_GRUPOS = [
 
 // tipo: 'tabela' (lista + formulário), 'consulta' (só abre na planilha), 'presenca', 'demandas', 'fornecedores'
 var SIS_MODULOS = [
-  { id: 'diario', grupo: 'dia', aba: 'Diário de Obra', tipo: 'tabela', hdr: 4, ini: 5, fim: 404, chave: 'A', ult: 'T',
+  { id: 'diario', grupo: 'dia', aba: 'Diário de Obra', tipo: 'tabela', hdr: 4, ini: 5, fim: 404, chave: 'A', ult: 'T', fotos: 'P',
     mostrar: ['A', 'B', 'C', 'K', 'M', 'N', 'O'], ordem: 'desc',
     serve: 'Registro do dia: clima, quantas pessoas de cada função, equipamentos, serviços executados e ocorrências.',
     quando: 'Todo dia, no fim do expediente. Um registro por dia.',
     passos: ['Clique em "Novo registro" e escolha a data.', 'Preencha o clima da manhã e da tarde.', 'Digite quantas pessoas de cada função trabalharam.',
-             'Descreva os serviços executados e qualquer ocorrência (visita, acidente, falta de material, chuva).', 'O total de efetivo e as colunas "pela folha" são automáticos.'] },
+             'Descreva os serviços executados e qualquer ocorrência (visita, acidente, falta de material, chuva).', 'O total de efetivo e as colunas "pela folha" são automáticos.', 'Fotos: no registro do dia, toque em "Adicionar fotos" (no celular abre a câmera). Elas vão para a pasta de fotos da obra no Google Drive, separadas por dia.'] },
   { id: 'presenca', grupo: 'dia', aba: 'Presença', tipo: 'presenca',
     serve: 'Presença de cada pessoa cadastrada, dia a dia. Alimenta o pagamento dos diaristas e o custo de mão de obra.',
     quando: 'Todo dia, de manhã, depois de conferir quem chegou.',
@@ -192,7 +192,7 @@ function sisConfig_() {
   ss.getSheets().forEach(function (s) { gid[s.getName()] = s.getSheetId(); });
   var mods = SIS_MODULOS.filter(function (m) { return !m.aba || gid[m.aba] !== undefined; }).map(function (m) {
     return { id: m.id, grupo: m.grupo, aba: m.aba || '', titulo: m.titulo || m.aba || (m.id === 'demandas' ? 'Demandas' : 'Fornecedores'),
-             tipo: m.tipo, serve: m.serve || '', quando: m.quando || '', passos: m.passos || [], novo: m.novo !== false,
+             tipo: m.tipo, fotos: m.fotos ? sisColNum_(m.fotos) - 1 : -1, serve: m.serve || '', quando: m.quando || '', passos: m.passos || [], novo: m.novo !== false,
              link: m.aba ? ss.getUrl() + '#gid=' + gid[m.aba] : '' };
   });
   return { grupos: SIS_GRUPOS, modulos: mods, url: ss.getUrl() };
@@ -403,4 +403,74 @@ function sisPainel_(ss, R, RD) {
     }
   }
   return p;
+}
+
+/* ---------------------------------------------------------------- fotos (Google Drive) */
+/*
+ * Cada obra tem uma pasta "Fotos — <obra>" no Drive (guardada nas propriedades do script) com uma
+ * subpasta por tela e por registro (ex.: Diário de Obra / 2026-11-18). O link da subpasta vai para a
+ * coluna de fotos da linha. A pasta é compartilhada com quem tem acesso à planilha.
+ */
+function sisPastaObra_(criar) {
+  var ss = sisSS_(), k = 'SIS_FOTOS_' + ss.getId(), props = PropertiesService.getScriptProperties(), id = props.getProperty(k);
+  if (id) { try { return DriveApp.getFolderById(id); } catch (e) { if (!criar) throw new Error('Você ainda não tem acesso à pasta de fotos desta obra. Peça ao administrador para abrir "Perfis de acesso" e salvar (isso libera a pasta para a equipe).'); } }
+  if (!criar) return null;
+  var pai = null; try { var it = DriveApp.getFileById(ss.getId()).getParents(); if (it.hasNext()) pai = it.next(); } catch (e) {}
+  var nome = 'Fotos — ' + (function () { try { return String(ss.getSheetByName('Resumo').getRange('B2').getDisplayValue() || ss.getName()); } catch (e) { return ss.getName(); } })();
+  var pasta; try { pasta = pai ? pai.createFolder(nome) : DriveApp.createFolder(nome); } catch (e) { pasta = DriveApp.createFolder(nome); }
+  props.setProperty(k, pasta.getId());
+  sisFotosCompartilhar_(pasta, ss);
+  return pasta;
+}
+function sisFotosCompartilhar_(pasta, ss) {
+  var ed = [], le = [];
+  try { ed = ss.getEditors().map(function (u) { return u.getEmail(); }); } catch (e) {}
+  try { le = ss.getViewers().map(function (u) { return u.getEmail(); }).filter(function (x) { return ed.indexOf(x) < 0; }); } catch (e) {}
+  ed.forEach(function (e) { try { pasta.addEditor(e); } catch (x) {} });
+  le.forEach(function (e) { try { pasta.addViewer(e); } catch (x) {} });
+}
+function sisSubpasta_(pai, nome) { var it = pai.getFoldersByName(nome); return it.hasNext() ? it.next() : pai.createFolder(nome); }
+function sisPastaRegistro_(id, chave, criar) {
+  var m = sisModulo_(id); if (!m.fotos) throw new Error('Esta tela não tem fotos.');
+  var raiz = sisPastaObra_(criar); if (!raiz) return null;
+  var tela = criar ? sisSubpasta_(raiz, m.titulo || m.aba) : (function () { var it = raiz.getFoldersByName(m.titulo || m.aba); return it.hasNext() ? it.next() : null; })();
+  if (!tela) return null;
+  var nome = String(chave || '').replace(/[\\/:*?"<>|]/g, '-').slice(0, 80) || 'sem-identificacao';
+  if (criar) return sisSubpasta_(tela, nome);
+  var it2 = tela.getFoldersByName(nome); return it2.hasNext() ? it2.next() : null;
+}
+function sisFotosLista_(pasta) {
+  var out = [], it = pasta.getFiles();
+  while (it.hasNext()) { var f = it.next(); if (!/^image\//.test(f.getMimeType())) continue;
+    out.push({ id: f.getId(), nome: f.getName(), url: 'https://drive.google.com/file/d/' + f.getId() + '/view', quando: sisIso_(f.getDateCreated()) }); }
+  out.sort(function (a, b) { return a.nome < b.nome ? -1 : 1; });
+  return out;
+}
+
+/** Fotos de um registro (chave = data do diário em yyyy-mm-dd). */
+function sisFotos(id, chave) {
+  var p = null; try { p = sisPastaRegistro_(id, chave, false); } catch (e) { return { fotos: [], pasta: '', erro: e.message }; }
+  return { fotos: p ? sisFotosLista_(p) : [], pasta: p ? p.getUrl() : '' };
+}
+
+/** Recebe UMA foto (já reduzida no celular/computador) e grava no Drive. linha > 0: grava o link da pasta na planilha. */
+function sisFotoEnviar(id, chave, linha, nome, base64) {
+  if (!chave) throw new Error('Preencha a data antes de adicionar fotos.');
+  var m = sisModulo_(id), pasta = sisPastaRegistro_(id, chave, true);
+  var dados = Utilities.base64Decode(String(base64).replace(/^data:[^,]+,/, ''));
+  if (dados.length > 8 * 1024 * 1024) throw new Error('Foto grande demais.');
+  var arq = pasta.createFile(Utilities.newBlob(dados, 'image/jpeg', String(nome || 'foto.jpg').replace(/[\\/]/g, '-')));
+  arq.setDescription('Enviada por ' + sisUsuario_() + ' pelo Sistema de Obras');
+  if (linha > 0) {
+    sisComTrava_(function () {
+      var sh = sisSS_().getSheetByName(m.aba), c = sisColNum_(m.fotos), cel = sh.getRange(linha, c);
+      if (!cel.getFormula() && String(cel.getValue()) !== pasta.getUrl()) cel.setValue(pasta.getUrl());
+    });
+  }
+  return { pasta: pasta.getUrl(), foto: { id: arq.getId(), nome: arq.getName(), url: 'https://drive.google.com/file/d/' + arq.getId() + '/view' } };
+}
+
+/** Administrador: libera a pasta de fotos para todos que têm acesso à planilha. */
+function sisFotosLiberar_() {
+  try { var p = sisPastaObra_(false); if (p) sisFotosCompartilhar_(p, sisSS_()); } catch (e) {}
 }

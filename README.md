@@ -48,6 +48,7 @@ O menu segue a rotina da obra: **Todo dia** (Diário, Presença, Produção, Lan
 
 - **Início** — gráficos (avanço físico previsto × real, orçamento × realizado com divisão por tipo, contas a pagar, efetivo diário, equipe por função, orçado × gasto por etapa), pendências da planilha (aba Menu) com atalho para a tela certa, números principais (Resumo), demandas e retornos do dia.
 - **Telas de lançamento** — lista com busca; "+ Novo registro" abre um formulário com a explicação de cada campo (tirada das notas do cabeçalho da planilha). Só grava nas colunas sem fórmula; o que a planilha calcula aparece no fim, só para consulta. Painel "Como lançar" com quando e como preencher.
+- **Fotos no Diário** — no registro do dia, "📷 Adicionar fotos" (no celular abre a câmera). A foto é reduzida no aparelho e vai para a pasta "Fotos — <obra>" no Google Drive (subpasta por dia); o link da pasta fica na coluna de fotos do Diário. A pasta é compartilhada com quem tem acesso à planilha (o Administrador reforça isso ao salvar os Perfis). Outras telas podem ganhar fotos com `fotos: '<coluna>'` em `SIS_MODULOS`.
 - **Presença** — P / F / ½ / A por pessoa, gravando na hora.
 - **Demandas** — quadro A fazer → Em andamento → Aguardando terceiros → Concluída, com responsável, prazo e histórico automático.
 - **Fornecedores** — cadastro, avaliação, contatos e próximos passos, e o histórico da obra (cotações, contratos, medições, lançamentos, compras) puxado pelo nome.
