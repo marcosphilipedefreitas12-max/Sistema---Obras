@@ -14,6 +14,11 @@
  * Assim cada pessoa entra com a própria conta e só vê os dados se tiver acesso à planilha.
  *
  * Os nomes das funções começam com "sis" para não colidir com o Script_Obra.gs.
+ *
+ * VÁRIAS OBRAS: o mesmo link serve para todas. Cada obra é uma planilha (cópia do
+ * Modelo); a lista fica nas propriedades do script. Como o app roda com a conta de
+ * quem acessa, cada pessoa só abre as obras cujas planilhas foram compartilhadas
+ * com ela (Compartilhar → Editor).
  */
 
 var SIS_ABAS = {
@@ -37,7 +42,6 @@ var SIS_STATUS = ['A fazer', 'Em andamento', 'Aguardando terceiros', 'Concluída
 /* ------------------------------------------------------------------ web app */
 
 function doGet() {
-  sisGarantirAbas_();
   return HtmlService.createHtmlOutputFromFile('Sistema')
     .setTitle('Sistema de Obras')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
@@ -47,7 +51,7 @@ function doGet() {
 /** Tudo o que a tela precisa, numa chamada só. */
 function sisCarregar() {
   sisGarantirAbas_();
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = sisSS_();
   var obra = '';
   try { obra = String(ss.getSheetByName('Resumo').getRange('B2').getDisplayValue() || ''); } catch (e) {}
   var fornecedores = sisLer_(SIS_ABAS.forn, SIS_COLS.forn);
@@ -160,7 +164,7 @@ function sisImportarFornecedores() {
 /* ------------------------------------------------------- histórico na planilha */
 
 function sisHistoricoFornecedores_() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = sisSS_();
   var H = {};
   function reg(nome) {
     var k = sisChave_(nome);
@@ -238,7 +242,7 @@ function sisHistoricoFornecedores_() {
 function sisPessoas_() {
   var nomes = {};
   sisLer_(SIS_ABAS.dem, SIS_COLS.dem).forEach(function (d) { if (d['Responsável']) nomes[d['Responsável']] = 1; });
-  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Pessoas');
+  var sh = sisSS_().getSheetByName('Pessoas');
   if (sh && sh.getLastRow() >= 6) {
     sh.getRange(6, 2, Math.min(120, sh.getLastRow() - 5), 1).getValues().forEach(function (r) { if (r[0]) nomes[String(r[0]).trim()] = 1; });
   }
@@ -254,7 +258,7 @@ function sisGarantirAbas_() {
 }
 
 function sisAba_(nome, cols) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = sisSS_();
   var sh = ss.getSheetByName(nome);
   if (!sh) {
     sh = ss.insertSheet(nome);
@@ -301,7 +305,7 @@ function sisGravar_(sh, linha, cols, obj) {
 }
 
 function sisComTrava_(fn) {
-  var lock = LockService.getDocumentLock();
+  var lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try { return fn(); } finally { lock.releaseLock(); }
 }
@@ -334,4 +338,112 @@ function sisData_(s) {
   if (s instanceof Date) return s;
   var m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);
   return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : '';
+}
+
+/* ======================================================== VÁRIAS OBRAS */
+
+var SIS_OBRA_ID = '', SIS_SS = null;
+
+/** Planilha da obra em uso nesta chamada (a escolhida na tela ou, se nenhuma, a planilha onde o script está). */
+function sisSS_() {
+  if (SIS_SS) return SIS_SS;
+  if (SIS_OBRA_ID) {
+    try { SIS_SS = SpreadsheetApp.openById(SIS_OBRA_ID); }
+    catch (e) { throw new Error('Você não tem acesso a esta obra. Peça ao responsável para compartilhar a planilha com você como Editor.'); }
+    return SIS_SS;
+  }
+  SIS_SS = SpreadsheetApp.getActiveSpreadsheet();
+  if (!SIS_SS) throw new Error('Escolha uma obra.');
+  return SIS_SS;
+}
+
+/** A tela chama tudo por aqui, dizendo de qual obra é a chamada. */
+function sisChamar(obraId, fn, args) {
+  var permitidas = { sisCarregar: sisCarregar, sisSalvarDemanda: sisSalvarDemanda, sisSalvarFornecedor: sisSalvarFornecedor,
+    sisSalvarInteracao: sisSalvarInteracao, sisImportarFornecedores: sisImportarFornecedores, sisAbaLer: sisAbaLer,
+    sisAbaSalvar: sisAbaSalvar, sisAbaLimpar: sisAbaLimpar, sisPresenca: sisPresenca, sisPresencaMarcar: sisPresencaMarcar,
+    sisObras: sisObras, sisObraCadastrar: sisObraCadastrar, sisObraNova: sisObraNova, sisObraRemover: sisObraRemover, sisModeloDefinir: sisModeloDefinir };
+  if (!permitidas[fn]) throw new Error('Função não permitida: ' + fn);
+  SIS_OBRA_ID = String(obraId || ''); SIS_SS = null;
+  return permitidas[fn].apply(null, args || []);
+}
+
+function sisRegistro_() {
+  try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('SIS_OBRAS') || '[]'); } catch (e) { return []; }
+}
+function sisRegistroGravar_(lista) { PropertiesService.getScriptProperties().setProperty('SIS_OBRAS', JSON.stringify(lista)); }
+function sisIdDoLink_(link) {
+  var m = String(link || '').match(/\/d\/([a-zA-Z0-9_-]{20,})/) || String(link || '').match(/^([a-zA-Z0-9_-]{20,})$/);
+  if (!m) throw new Error('Cole o link completo da planilha (o endereço que começa com https://docs.google.com/spreadsheets/d/...).');
+  return m[1];
+}
+function sisNomeObra_(ss) {
+  var n = ''; try { n = String(ss.getSheetByName('Resumo').getRange('B2').getDisplayValue() || ''); } catch (e) {}
+  return n || ss.getName();
+}
+
+/** Lista as obras que ESTA pessoa consegue abrir. */
+function sisObras() {
+  var reg = sisRegistro_(), mudou = false, ativa = null;
+  try { ativa = SpreadsheetApp.getActiveSpreadsheet(); } catch (e) {}
+  if (ativa && !reg.length) { // primeira vez: a planilha onde o script está entra na lista
+    try { reg.push({ id: ativa.getId(), nome: sisNomeObra_(ativa), resp: '', criada: sisIso_(new Date()) }); mudou = true; } catch (e) {}
+  }
+  var cache = CacheService.getUserCache(), lista = [];
+  reg.forEach(function (o) {
+    var ok = cache.get('ac_' + o.id);
+    if (ok === null) {
+      ok = '0';
+      try { var ss = SpreadsheetApp.openById(o.id); ok = '1'; var nome = sisNomeObra_(ss); if (nome && nome !== o.nome) { o.nome = nome; mudou = true; } } catch (e) {}
+      cache.put('ac_' + o.id, ok, 600);
+    }
+    if (ok === '1') lista.push({ id: o.id, nome: o.nome, resp: o.resp || '', url: 'https://docs.google.com/spreadsheets/d/' + o.id + '/edit' });
+  });
+  if (mudou) sisRegistroGravar_(reg);
+  return { obras: lista, total: reg.length, usuario: sisUsuario_(), temModelo: !!PropertiesService.getScriptProperties().getProperty('SIS_MODELO') };
+}
+
+/** Cadastra uma planilha de obra que já existe. */
+function sisObraCadastrar(link, resp) {
+  var id = sisIdDoLink_(link), ss;
+  try { ss = SpreadsheetApp.openById(id); } catch (e) { throw new Error('Não consegui abrir essa planilha. Confira o link e se ela está compartilhada com você.'); }
+  if (!ss.getSheetByName('Resumo') || !ss.getSheetByName('Diário de Obra')) throw new Error('Essa planilha não parece ser do modelo de gerenciamento de obra (faltam as abas Resumo / Diário de Obra).');
+  return sisComTrava_(function () {
+    var reg = sisRegistro_().filter(function (o) { return o.id !== id; });
+    reg.push({ id: id, nome: sisNomeObra_(ss), resp: String(resp || ''), criada: sisIso_(new Date()) });
+    sisRegistroGravar_(reg); CacheService.getUserCache().remove('ac_' + id);
+    return sisObras();
+  });
+}
+
+/** Guarda qual planilha é o Modelo em branco. */
+function sisModeloDefinir(link) {
+  var id = sisIdDoLink_(link);
+  try { SpreadsheetApp.openById(id); } catch (e) { throw new Error('Não consegui abrir o Modelo. Confira o link.'); }
+  PropertiesService.getScriptProperties().setProperty('SIS_MODELO', id);
+  return sisObras();
+}
+
+/** Cria uma obra nova: copia o Modelo para o Drive de quem clicou, dá o nome e compartilha com os responsáveis. */
+function sisObraNova(nome, emails) {
+  nome = String(nome || '').trim(); if (!nome) throw new Error('Escreva o nome da obra.');
+  var mid = PropertiesService.getScriptProperties().getProperty('SIS_MODELO');
+  if (!mid) throw new Error('Defina primeiro a planilha Modelo.');
+  var modelo; try { modelo = SpreadsheetApp.openById(mid); } catch (e) { throw new Error('Você não tem acesso à planilha Modelo. Peça para compartilharem com você.'); }
+  var nova = modelo.copy('Gerenciamento_Obra_' + nome.replace(/[^\wÀ-ú -]/g, '').replace(/\s+/g, '_'));
+  try { nova.getSheetByName('Resumo').getRange('B2').setValue(nome); } catch (e) {}
+  var lista = String(emails || '').split(/[\s,;]+/).filter(function (x) { return /@/.test(x); });
+  lista.forEach(function (em) { try { nova.addEditor(em); } catch (e) {} });
+  return sisComTrava_(function () {
+    var reg = sisRegistro_();
+    reg.push({ id: nova.getId(), nome: nome, resp: lista.join(', '), criada: sisIso_(new Date()) });
+    sisRegistroGravar_(reg);
+    var r = sisObras(); r.criada = { id: nova.getId(), url: nova.getUrl() }; return r;
+  });
+}
+
+/** Tira a obra da lista do sistema (a planilha NÃO é apagada). Só quem tem acesso à planilha pode tirar. */
+function sisObraRemover(id) {
+  try { SpreadsheetApp.openById(id); } catch (e) { throw new Error('Só quem tem acesso à planilha pode tirar a obra da lista.'); }
+  return sisComTrava_(function () { sisRegistroGravar_(sisRegistro_().filter(function (o) { return o.id !== id; })); return sisObras(); });
 }

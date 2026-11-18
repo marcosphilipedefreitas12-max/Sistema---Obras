@@ -41,6 +41,16 @@
   .lado .rodape a { padding: 0; border: 0; display: inline; color: #c9d0d5; text-decoration: underline; }
 
   .topo-mob { display: none; }
+  .app.sem-lado { grid-template-columns: 1fr; } .app.sem-lado .lado, .app.sem-lado .topo-mob button { display: none; }
+  .obras { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+  .obra { background: var(--papel); border: 1px solid var(--linha); border-top: 4px solid var(--azul); display: flex; flex-direction: column; }
+  .obra .abre { all: unset; cursor: pointer; padding: 16px 16px 12px; display: block; }
+  .obra .abre:focus-visible { outline: 3px solid var(--sinal); }
+  .obra .abre b { font-family: var(--titulo); font-size: 22px; font-weight: 600; display: block; color: var(--azul); }
+  .obra .abre span { font-size: 12.5px; color: var(--aco); }
+  .obra .abre:hover b { text-decoration: underline; }
+  .obra .acoes { border-top: 1px solid var(--linha2); padding: 8px 16px; display: flex; gap: 16px; font-size: 12.5px; }
+  .obra .acoes a { color: var(--aco); cursor: pointer; text-decoration: underline; }
   main { padding: 22px 28px 60px; min-width: 0; }
   .carimbo { display: grid; grid-template-columns: 1fr auto; border: 1.5px solid var(--tinta); background: var(--papel); margin-bottom: 20px; }
   .carimbo .tit { padding: 14px 18px; border-right: 1.5px solid var(--tinta); }
@@ -181,7 +191,7 @@
 <div class="carregando" id="carregando"></div>
 
 <script>
-var D = null, CFG = null, ATUAL = 'inicio', CACHE = {}, BUSCA = {}, LIMITE = {}, FILTRO = { resp: '', fTipo: '' }, ABA_F = 'dados', PRES = null;
+var OBRA = '', OBRAS = null, D = null, CFG = null, ATUAL = 'inicio', CACHE = {}, BUSCA = {}, LIMITE = {}, FILTRO = { resp: '', fTipo: '' }, ABA_F = 'dados', PRES = null;
 var ORIGENS = ['Chefe / diretoria', 'Projetista', 'Cliente', 'Vizinho', 'Fornecedor', 'Órgão público', 'Equipe da obra', 'Outro'];
 var TIPOS_FORN = ['Fornecedor', 'Empreiteiro / prestador', 'Projetista', 'Órgão / concessionária', 'Locadora'];
 var TIPOS_INT = ['Ligação', 'WhatsApp', 'E-mail', 'Visita', 'Reunião', 'Cotação', 'Cobrança', 'Outro'];
@@ -194,7 +204,7 @@ function api(fn) {
   var args = Array.prototype.slice.call(arguments, 1);
   return new Promise(function (ok, erro) {
     if (window.google && google.script && google.script.run) {
-      var r = google.script.run.withSuccessHandler(ok).withFailureHandler(erro); r[fn].apply(r, args);
+      google.script.run.withSuccessHandler(ok).withFailureHandler(erro).sisChamar(OBRA, fn, args);
     } else if (window.SIS_MOCK) setTimeout(function () { try { ok(window.SIS_MOCK(fn, args)); } catch (e) { erro(e); } }, 120);
     else erro(new Error('Abra o sistema pelo link do Google (Apps Script).'));
   });
@@ -250,7 +260,7 @@ function montarMenu() {
         (cont[m.id] ? '<span class="ct">' + cont[m.id] + '</span>' : '') + '</a>';
     }).join('') + '</div>';
   });
-  h += '<div class="rodape">Conectado como ' + esc(D.usuario) + '<br><a href="' + esc(CFG.url) + '" target="_blank">Abrir a planilha</a></div>';
+  h += '<div class="rodape">Conectado como ' + esc(D.usuario) + '<br><a href="' + esc(CFG.url) + '" target="_blank">Abrir a planilha</a> · <a onclick="vObras()" style="cursor:pointer">Trocar de obra</a></div>';
   el('lado').innerHTML = h;
 }
 function menuMob() { el('app').classList.toggle('menu-aberto'); }
@@ -552,10 +562,79 @@ function abrirGaveta(h) { el('gaveta').innerHTML = h; document.body.classList.ad
 function fecharGaveta() { document.body.classList.remove('aberta'); }
 document.addEventListener('keydown', function (e) { if (e.key === 'Escape') fecharGaveta(); });
 
+/* ---------------------------------------------------------------- obras */
+function urlObra(id) { if (window.google && google.script && google.script.history) google.script.history.replace(null, id ? { obra: id } : {}); }
+function abrirObra(id) {
+  OBRA = id; D = null; CFG = null; CACHE = {}; BUSCA = {}; LIMITE = {}; ATUAL = 'inicio'; urlObra(id);
+  el('app').classList.remove('sem-lado');
+  el('lado').innerHTML = ''; el('main').innerHTML = '<div class="vazio"><b>Abrindo a planilha da obra…</b>Isso leva alguns segundos.</div>';
+  chamar('sisCarregar').then(function (r) { D = r; CFG = r.config; montarMenu(); ir('inicio'); }, function (e) {
+    el('main').innerHTML = '<div class="vazio"><b>Não consegui abrir esta obra</b>' + esc(e && e.message ? e.message : e) + '<br><br><button class="btn" onclick="vObras()">Escolher outra obra</button></div>';
+  });
+}
+function vObras(forcar) {
+  fecharGaveta(); el('app').classList.add('sem-lado'); el('app').classList.remove('menu-aberto'); urlObra('');
+  var desenhar = function (r) {
+    OBRAS = r;
+    var h = '<section class="carimbo"><div class="tit"><h1>Suas obras</h1><p>Escolha a obra para abrir. Aparecem só as obras cujas planilhas foram compartilhadas com você.</p></div><div class="cel">' +
+      '<div><small>Usuário</small>' + esc(r.usuario) + '</div><div><small>Obras com acesso</small>' + r.obras.length + ' de ' + r.total + '</div></div></section>' +
+      '<div class="corpo"><div><div class="barra"><span class="esp"></span><button class="btn sec" onclick="formCadastrarObra()">Cadastrar obra existente</button>' +
+      '<button class="btn" onclick="formNovaObra()">+ Nova obra a partir do modelo</button></div>';
+    h += r.obras.length ? '<div class="obras">' + r.obras.map(function (o) {
+      return '<div class="obra"><button class="abre" onclick="abrirObra(\'' + esc(o.id) + '\')"><b>' + esc(o.nome) + '</b><span>' + (o.resp ? 'Responsáveis: ' + esc(o.resp) : 'Abrir o sistema desta obra') + '</span></button>' +
+        '<div class="acoes"><a href="' + esc(o.url) + '" target="_blank">Planilha</a><a onclick="tirarObra(\'' + esc(o.id) + '\',\'' + esc(o.nome).replace(/'/g, '') + '\')">Tirar da lista</a></div></div>';
+    }).join('') + '</div>' : '<div class="vazio"><b>Nenhuma obra liberada para você ainda</b>Peça ao responsável para compartilhar a planilha da obra com o seu e-mail (como Editor), ou cadastre uma obra.</div>';
+    h += '</div><details class="guia"' + (window.innerWidth > 820 ? ' open' : '') + '><summary><h2>Como funciona</h2></summary><ol>' +
+      '<li>Cada obra é uma planilha, copiada do Modelo.</li>' +
+      '<li>Quem vê cada obra é decidido no <b>Compartilhar</b> da planilha: dê acesso de <b>Editor</b> só ao engenheiro e à equipe daquela obra.</li>' +
+      '<li>A diretoria recebe acesso a todas e vê todas aqui.</li>' +
+      '<li>"Nova obra" copia o Modelo para o seu Drive, já com o nome, e compartilha com os e-mails que você informar.</li>' +
+      '<li>"Tirar da lista" não apaga a planilha.</li></ol>' +
+      (r.temModelo ? '' : '<div class="leg">Para criar obras novas, primeiro informe o link da planilha Modelo em "+ Nova obra".</div>') + '</details></div>';
+    el('main').innerHTML = h; window.scrollTo(0, 0);
+  };
+  el('main').innerHTML = '<div class="vazio"><b>Procurando suas obras…</b></div>'; el('lado').innerHTML = '';
+  OBRA = ''; chamar('sisObras').then(function (r) {
+    if (r.obras.length === 1 && !forcar && !OBRAS) { OBRAS = r; return abrirObra(r.obras[0].id); }
+    desenhar(r);
+  }, function (e) { el('main').innerHTML = '<div class="vazio"><b>Não consegui listar as obras</b>' + esc(e && e.message ? e.message : e) + '</div>'; });
+}
+function formCadastrarObra() {
+  abrirGaveta('<header><h2>Cadastrar obra existente</h2><div class="info">Para uma planilha de obra que já existe</div></header><div class="conteudo">' +
+    campo('Link da planilha da obra (obrigatório)', '<input id="oLink" placeholder="https://docs.google.com/spreadsheets/d/...">', 'Abra a planilha e copie o endereço lá em cima no navegador. Ela precisa estar no modelo de gerenciamento de obra.') +
+    campo('Responsáveis', '<input id="oResp" placeholder="Ex.: Eng. Ana">', 'Só para aparecer na lista. Quem acessa é definido no Compartilhar da planilha.') +
+    '</div><footer><span style="flex:1"></span><button class="btn sec" onclick="fecharGaveta()">Cancelar</button><button class="btn" onclick="cadastrarObra()">Cadastrar obra</button></footer>');
+}
+function cadastrarObra() {
+  var l = el('oLink').value.trim(); if (!l) return aviso('Cole o link da planilha.');
+  chamar('sisObraCadastrar', l, el('oResp').value.trim()).then(function () { fecharGaveta(); aviso('Obra cadastrada.'); vObras(true); }).catch(function () {});
+}
+function formNovaObra() {
+  var semModelo = OBRAS && !OBRAS.temModelo;
+  abrirGaveta('<header><h2>Nova obra</h2><div class="info">Copia a planilha Modelo e já deixa pronta para lançar</div></header><div class="conteudo">' +
+    (semModelo ? campo('Link da planilha Modelo (só na primeira vez)', '<input id="oMod" placeholder="https://docs.google.com/spreadsheets/d/...">', 'A planilha em branco (Modelo_Gerenciamento_Obra) convertida para Planilhas Google. Fica guardado para as próximas obras.') : '') +
+    campo('Nome da obra (obrigatório)', '<input id="oNome" placeholder="Ex.: Residencial Bela Vista">', 'Vai para o Resumo da planilha e para a lista de obras.') +
+    campo('E-mails do engenheiro e da equipe', '<textarea id="oMails" placeholder="engenheiro@empresa.com, mestre@empresa.com"></textarea>', 'Recebem acesso de Editor a esta obra (e um e-mail do Google avisando). Separe por vírgula. Você também pode compartilhar depois pela planilha.') +
+    '<p class="info">A planilha nova fica no seu Google Drive. Depois de criada, preencha a aba Resumo (datas, orçamento etc.).</p>' +
+    '</div><footer><span style="flex:1"></span><button class="btn sec" onclick="fecharGaveta()">Cancelar</button><button class="btn" onclick="novaObra()">Criar obra</button></footer>');
+}
+function novaObra() {
+  var nome = el('oNome').value.trim(); if (!nome) return aviso('Escreva o nome da obra.');
+  var passo = el('oMod') ? chamar('sisModeloDefinir', el('oMod').value.trim()) : Promise.resolve();
+  passo.then(function () { aviso('Criando a obra… pode levar até 1 minuto.', 60000); return chamar('sisObraNova', nome, el('oMails').value); })
+    .then(function () { fecharGaveta(); aviso('Obra "' + nome + '" criada.'); vObras(true); }).catch(function () {});
+}
+function tirarObra(id, nome) {
+  if (!confirm('Tirar "' + nome + '" da lista do sistema? A planilha NÃO é apagada e pode ser cadastrada de novo.')) return;
+  chamar('sisObraRemover', id).then(function () { aviso('Obra tirada da lista.'); vObras(true); }).catch(function () {});
+}
+
 /* ---------------------------------------------------------------- abrir */
-chamar('sisCarregar').then(function (r) { D = r; CFG = r.config; montarMenu(); ir('inicio'); }, function (e) {
-  el('main').innerHTML = '<div class="vazio"><b>Não consegui abrir a planilha da obra</b>' + esc(e && e.message ? e.message : e) + '<br><br>Confira se você tem acesso de edição à planilha.</div>';
-});
+(function () {
+  var ini = function (p) { if (p && p.obra) abrirObra(p.obra); else vObras(); };
+  if (window.google && google.script && google.script.url) google.script.url.getLocation(function (l) { ini(l.parameter); });
+  else ini(window.SIS_PARAM || {});
+})();
 </script>
 </body>
 </html>

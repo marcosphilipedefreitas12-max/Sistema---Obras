@@ -12,9 +12,15 @@ Sistema de gerenciamento das obras: todas as partes da planilha da obra (diário
 
 **Nenhum dado da obra fica neste repositório.** Quem não tem acesso à planilha não consegue ver nada no sistema.
 
-## Instalar numa obra (uma vez por planilha)
+## Várias obras
 
-1. Abra a planilha da obra no Google Planilhas → **Extensões → Apps Script**.
+Um único link serve para todas as obras. Cada obra é uma planilha (cópia do Modelo) e a lista de obras fica guardada no próprio script. Como o sistema roda com a conta de quem acessa, **cada pessoa só vê as obras cujas planilhas foram compartilhadas com ela** (Compartilhar → Editor). A diretoria, com acesso a todas, vê todas.
+
+Na tela **Suas obras**: "+ Nova obra a partir do modelo" copia o Modelo, coloca o nome e compartilha com os e-mails informados; "Cadastrar obra existente" inclui uma planilha que já existe; "Tirar da lista" não apaga a planilha. Dentro de uma obra, "Trocar de obra" fica no rodapé do menu.
+
+## Instalar (uma vez)
+
+1. Abra uma planilha de obra no Google Planilhas → **Extensões → Apps Script**.
 2. Ao lado do `Script_Obra.gs`, clique em **+ → Script**, nomeie `Sistema` e cole o conteúdo de `apps-script/Sistema.gs`.
 3. De novo **+ → Script**, nomeie `Modulos` e cole `apps-script/Modulos.gs`.
 4. Clique em **+ → HTML**, nomeie `Sistema` e cole o conteúdo de `apps-script/Sistema.html`.
