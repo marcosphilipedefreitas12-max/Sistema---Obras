@@ -46,12 +46,29 @@ O endereço fica `https://<usuário>.github.io/<repositório>/`.
 
 O menu segue a rotina da obra: **Todo dia** (Diário, Presença, Produção, Lançamentos), **Toda semana** (Planejamento, Cronograma, Estrutura, Diaristas, Monitoramento), **Execução**, **Qualidade e vistorias**, **Custos e compras**, **Contatos e demandas**, **Equipe** e **Cadastros**. A lista completa e os textos de ajuda estão em `SIS_MODULOS` (`Modulos.gs`).
 
-- **Início** — pendências da planilha (aba Menu) com atalho para a tela certa, números principais (Resumo), demandas e retornos do dia.
+- **Início** — gráficos (avanço físico previsto × real, orçamento × realizado com divisão por tipo, contas a pagar, efetivo diário, equipe por função, orçado × gasto por etapa), pendências da planilha (aba Menu) com atalho para a tela certa, números principais (Resumo), demandas e retornos do dia.
 - **Telas de lançamento** — lista com busca; "+ Novo registro" abre um formulário com a explicação de cada campo (tirada das notas do cabeçalho da planilha). Só grava nas colunas sem fórmula; o que a planilha calcula aparece no fim, só para consulta. Painel "Como lançar" com quando e como preencher.
 - **Presença** — P / F / ½ / A por pessoa, gravando na hora.
 - **Demandas** — quadro A fazer → Em andamento → Aguardando terceiros → Concluída, com responsável, prazo e histórico automático.
 - **Fornecedores** — cadastro, avaliação, contatos e próximos passos, e o histórico da obra (cotações, contratos, medições, lançamentos, compras) puxado pelo nome.
 - **Consultas** (Contas a Pagar, Gestão à Vista, Fluxo de Caixa…) — abrem direto na aba da planilha.
+
+## Perfis de acesso
+
+Em cada obra, o Administrador define em **Perfis de acesso** (menu → Administração) o perfil de cada e-mail; fica na aba `Sistema Perfis` da planilha.
+
+| Perfil | Pode |
+|---|---|
+| Administrador | Tudo e definir perfis (o dono da planilha é sempre Administrador) |
+| Engenheiro | Ver e lançar em todas as telas, inclusive custos |
+| Encarregado | Lançar o dia a dia; sem custos, pagamentos, fornecedores e dados das pessoas; não apaga |
+| Consulta | Só ver (sem custos); não grava |
+
+Lista vazia = todos como Engenheiro. Com alguém na lista, quem não está nela entra como Consulta. O servidor confere o perfil em cada chamada. A proteção de base continua sendo o compartilhamento da planilha — a implantação deve ser **"Executar como: Usuário que acessa o app da Web"**.
+
+## Tema claro e escuro
+
+Botão no rodapé do menu (no celular, "Tema" no topo). Começa pelo tema do aparelho e lembra a escolha.
 
 ## Testar sem o Google
 
