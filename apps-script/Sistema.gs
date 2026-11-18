@@ -370,7 +370,7 @@ function sisChamar(obraId, fn, args) {
   var permitidas = { sisCarregar: sisCarregar, sisSalvarDemanda: sisSalvarDemanda, sisSalvarFornecedor: sisSalvarFornecedor,
     sisSalvarInteracao: sisSalvarInteracao, sisImportarFornecedores: sisImportarFornecedores, sisAbaLer: sisAbaLer,
     sisAbaSalvar: sisAbaSalvar, sisAbaLimpar: sisAbaLimpar, sisPresenca: sisPresenca, sisPresencaMarcar: sisPresencaMarcar,
-    sisPerfis: sisPerfis, sisPerfisSalvar: sisPerfisSalvar,
+    sisPerfis: sisPerfis, sisPerfisSalvar: sisPerfisSalvar, sisFotos: sisFotos, sisFotoEnviar: sisFotoEnviar,
     sisObras: sisObras, sisObraCadastrar: sisObraCadastrar, sisObraNova: sisObraNova, sisObraRemover: sisObraRemover, sisModeloDefinir: sisModeloDefinir };
   if (!permitidas[fn]) throw new Error('Função não permitida: ' + fn);
   SIS_OBRA_ID = String(obraId || ''); SIS_SS = null; SIS_PERFIL = null;
@@ -512,10 +512,10 @@ function sisPermissoes_() {
 /** Confere no servidor (não só na tela) se o perfil pode chamar a função. */
 function sisPermitir_(fn, args) {
   var pm = sisPermissoes_(), nega = function () { throw new Error('Seu perfil (' + pm.perfil + ') não permite esta ação. Fale com o administrador da obra.'); };
-  var grava = ['sisAbaSalvar', 'sisAbaLimpar', 'sisPresencaMarcar', 'sisSalvarDemanda', 'sisSalvarFornecedor', 'sisSalvarInteracao', 'sisImportarFornecedores'];
+  var grava = ['sisFotoEnviar', 'sisAbaSalvar', 'sisAbaLimpar', 'sisPresencaMarcar', 'sisSalvarDemanda', 'sisSalvarFornecedor', 'sisSalvarInteracao', 'sisImportarFornecedores'];
   if (grava.indexOf(fn) >= 0 && !pm.grava) nega();
   if (fn === 'sisAbaLimpar' && !pm.apaga) nega();
-  if (/^sisAba/.test(fn) && pm.modulos.indexOf(args[0]) < 0) nega();
+  if ((/^sisAba/.test(fn) || /^sisFoto/.test(fn)) && pm.modulos.indexOf(args[0]) < 0) nega();
   if (/Fornecedor|Interacao/.test(fn) && pm.modulos.indexOf('fornecedores') < 0) nega();
   if (fn === 'sisSalvarDemanda' && pm.modulos.indexOf('demandas') < 0) nega();
   if ((fn === 'sisPresenca' || fn === 'sisPresencaMarcar') && pm.modulos.indexOf('presenca') < 0) nega();
@@ -543,6 +543,7 @@ function sisPerfisSalvar(lista) {
     if (sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, 3).clearContent();
     if (linhas.length) sh.getRange(2, 1, linhas.length, 3).setValues(linhas);
     SIS_PERFIL = null;
+    sisFotosLiberar_();
     return sisPerfis();
   });
 }

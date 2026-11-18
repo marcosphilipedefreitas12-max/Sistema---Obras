@@ -81,6 +81,11 @@
   .graf .vazio-g { color: var(--aco); font-size: 13px; padding: 26px 0; text-align: center; }
   .dica { position: fixed; pointer-events: none; background: var(--tinta); color: var(--fundo); font-size: 12px; padding: 6px 9px; border-radius: 4px; z-index: 70; display: none; white-space: nowrap; }
   .perfis td select { min-width: 150px; }
+  .fotos { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; }
+  .fotos .foto { display: block; aspect-ratio: 1; background: var(--cab); border: 1px solid var(--linha); overflow: hidden; }
+  .fotos .foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .fotos .foto span { display: block; padding: 6px; font-size: 11px; color: var(--aco); word-break: break-all; }
+  .fotos .info { grid-column: 1 / -1; }
   @media (max-width: 1100px) { .graficos { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   @media (max-width: 640px) { .graficos { grid-template-columns: 1fr; } .graf.largo { grid-column: auto; } }
   .app.sem-lado { grid-template-columns: 1fr; } .app.sem-lado .lado, .app.sem-lado .topo-mob button[onclick="menuMob()"] { display: none; }
@@ -532,6 +537,7 @@ function abrirLinha(id, linha) {
   if (!linha) h += '<p class="info" style="margin-top:0">Preencha o que tiver agora. O que ficar em branco pode ser completado depois.</p>';
   h += digit.map(function (c) {
     var v = valorCampo(c, l.v[c.i]), idc = 'c' + c.i, ctl, obrig = t.cols[t.chave] === c;
+    if (m.fotos === c.i) return '<input type="hidden" id="' + idc + '" value="' + esc(v) + '">' + blocoFotos(id, linha); // coluna de fotos vira o bloco de fotos
     if (c.tipo === 'data') ctl = '<input id="' + idc + '" type="date" value="' + esc(String(v).slice(0, 10)) + '">';
     else if (c.opcoes.length && c.opcoes.length <= 12) ctl = '<select id="' + idc + '">' + opts(v && c.opcoes.indexOf(v) < 0 ? [v].concat(c.opcoes) : c.opcoes, v, '') + '</select>';
     else if (c.opcoes.length) ctl = '<input id="' + idc + '" list="l' + c.i + '" value="' + esc(v) + '" placeholder="Escolha ou digite"><datalist id="l' + c.i + '">' + c.opcoes.map(function (o) { return '<option value="' + esc(o) + '">'; }).join('') + '</datalist>';
@@ -544,6 +550,67 @@ function abrirLinha(id, linha) {
   h += '</div><footer>' + (linha && t.novo && PM.apaga ? '<button class="btn perigo" onclick="limparLinha(\'' + id + '\',' + linha + ')">Apagar registro</button>' : '') +
     '<span style="flex:1"></span><button class="btn sec" onclick="fecharGaveta()">Cancelar</button><button class="btn so-grava" onclick="salvarLinha(\'' + id + '\',' + (linha || 0) + ')">Salvar na planilha</button></footer>';
   abrirGaveta(h);
+  if (m.fotos >= 0 && linha) carregarFotos(id, linha);
+}
+
+/* ---------------------------------------------------------------- fotos */
+function blocoFotos(id, linha) {
+  return '<div class="secao">Fotos do andamento<small>Vão para a pasta de fotos da obra no Google Drive, uma pasta por dia.</small></div>' +
+    '<div class="fotos" id="fotos"><span class="info" id="fotosInfo">' + (linha ? 'Carregando fotos…' : 'Escolha a data e adicione as fotos.') + '</span></div>' +
+    '<div class="barra so-grava" style="margin-top:8px"><label class="btn sec" for="fotoArq" tabindex="0" role="button" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();el(\'fotoArq\').click()}">📷 Adicionar fotos</label>' +
+    '<input id="fotoArq" type="file" accept="image/*" multiple style="display:none" onchange="enviarFotos(\'' + id + '\',' + (linha || 0) + ',this.files)">' +
+    '<a class="info" id="fotoPasta" target="_blank" style="display:none">Abrir a pasta no Drive</a></div>';
+}
+function chaveRegistro(id) { var t = CACHE[id], k = t.cols[t.chave], e = k && el('c' + k.i); return e ? String(e.value).trim() : ''; }
+function miniatura(f) {
+  var src = f.local || ('https://drive.google.com/thumbnail?id=' + encodeURIComponent(f.id) + '&sz=w320');
+  return '<a class="foto" href="' + esc(f.url) + '" target="_blank" title="' + esc(f.nome) + '"><img src="' + esc(src) + '" alt="' + esc(f.nome) + '" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement(\'span\'),{textContent:\'🖼 ' + esc(f.nome).replace(/'/g, '') + '\'}))"></a>';
+}
+function mostrarFotos(lista, pasta) {
+  var box = el('fotos'); if (!box) return;
+  box.innerHTML = lista.length ? lista.map(miniatura).join('') : '<span class="info">Nenhuma foto neste dia ainda.</span>';
+  if (pasta && el('fotoPasta')) { el('fotoPasta').href = pasta; el('fotoPasta').style.display = ''; }
+}
+var FOTOS = [];
+function carregarFotos(id, linha) {
+  var k = chaveRegistro(id); FOTOS = [];
+  api('sisFotos', id, k).then(function (r) { FOTOS = r.fotos; mostrarFotos(FOTOS, r.pasta); if (r.erro && el('fotosInfo')) el('fotosInfo').textContent = r.erro; })
+    .catch(function (e) { if (el('fotosInfo')) el('fotosInfo').textContent = 'Não consegui ler as fotos: ' + (e && e.message ? e.message : e); });
+}
+function reduzir(arq) { // diminui a foto no aparelho antes de enviar (máx. 1600 px, JPEG)
+  return new Promise(function (ok, erro) {
+    var fr = new FileReader();
+    fr.onload = function () {
+      var img = new Image();
+      img.onload = function () {
+        var r = Math.min(1, 1600 / Math.max(img.width, img.height)), c = document.createElement('canvas');
+        c.width = Math.round(img.width * r); c.height = Math.round(img.height * r);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); ok(c.toDataURL('image/jpeg', 0.82));
+      };
+      img.onerror = function () { erro(new Error('Arquivo não é uma imagem: ' + arq.name)); };
+      img.src = fr.result;
+    };
+    fr.onerror = erro; fr.readAsDataURL(arq);
+  });
+}
+function enviarFotos(id, linha, arquivos) {
+  var k = chaveRegistro(id), lista = Array.prototype.slice.call(arquivos || []);
+  if (!k) { aviso('Preencha a data antes de adicionar fotos.', 4000); return; }
+  if (!lista.length) return;
+  var i = 0, ok = 0;
+  var proxima = function () {
+    if (i >= lista.length) { ocupado(false); aviso(ok + ' foto(s) enviada(s).' + (linha ? '' : ' Clique em "Salvar na planilha" para gravar o dia.'), 4000); el('fotoArq').value = ''; return; }
+    var arq = lista[i++]; aviso('Enviando foto ' + i + ' de ' + lista.length + '…', 60000); ocupado(true);
+    reduzir(arq).then(function (dataUrl) {
+      var nome = k + '_' + new Date().toTimeString().slice(0, 8).replace(/:/g, '') + '_' + i + '.jpg';
+      return api('sisFotoEnviar', id, k, linha, nome, dataUrl).then(function (r) {
+        ok++; r.foto.local = dataUrl; FOTOS.push(r.foto); mostrarFotos(FOTOS, r.pasta);
+        var t = CACHE[id], cf = mod(id).fotos, inp = el('c' + cf); if (inp) inp.value = r.pasta;
+        if (linha) { var l = t.linhas.filter(function (x) { return x.linha === linha; })[0]; if (l) l.v[cf] = r.pasta; }
+      });
+    }).then(proxima, function (e) { ocupado(false); aviso('Não foi possível enviar: ' + (e && e.message ? e.message : e), 7000); });
+  };
+  proxima();
 }
 function salvarLinha(id, linha) {
   var t = CACHE[id], l = linha ? t.linhas.filter(function (x) { return x.linha === linha; })[0] : { v: {} }, mud = {}, n = 0;

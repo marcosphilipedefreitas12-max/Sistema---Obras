@@ -27,6 +27,8 @@ const fs = require('fs'), path = require('path');
   await p.evaluate(() => ir('diario')); await p.waitForTimeout(400);
   await p.click('text=+ Novo registro'); await p.fill('#gaveta input[type=date]', '2026-11-18'); await p.fill('#gaveta textarea, #gaveta input[id=c3]', 'Teste');
   await p.screenshot({ path: path.join(out, 'diario_novo.png') });
+  await p.setInputFiles('#fotoArq', { name: 'foto.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==', 'base64') });
+  await p.waitForTimeout(800); if (await p.locator('.fotos .foto').count() !== 1) erros.push('foto não apareceu');
   await p.click('#gaveta >> text=Salvar na planilha'); await p.waitForTimeout(500);
   await p.evaluate(() => ir('presenca')); await p.waitForTimeout(400); await p.click('.seg button.P >> nth=0'); await p.waitForTimeout(400);
   await p.screenshot({ path: path.join(out, 'presenca.png') });

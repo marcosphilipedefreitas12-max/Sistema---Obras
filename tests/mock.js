@@ -28,7 +28,7 @@ window.SIS_MOCK = (function () {
     var col = function (i, nome, tipo, extra) { var c = { i: i, letra: String.fromCharCode(65 + i), nome: nome, ajuda: '', auto: false, tipo: tipo || 'texto', opcoes: [] }; for (var k in extra || {}) c[k] = extra[k]; return c; };
     var t = id === 'diario' ? {
       cols: [col(0, 'Data', 'data', { ajuda: 'Data do dia.' }), col(1, 'Clima manhã', 'texto', { opcoes: ['Bom', 'Nublado', 'Chuva fraca', 'Chuva forte'] }), col(2, 'Pedreiros', 'numero', { ajuda: 'Quantas pessoas de cada função trabalharam.' }),
-             col(3, 'Serviços executados (onde e o quê)'), col(4, 'Total efetivo', 'numero', { auto: true })],
+             col(3, 'Serviços executados (onde e o quê)'), col(4, 'Total efetivo', 'numero', { auto: true }), col(15, 'Fotos (link da pasta / imagem)')],
       linhas: [{ linha: 6, d: ['17/11/26', 'Bom', '3', 'Demolição do muro de divisa', '3'], v: { 0: '2026-11-17', 1: 'Bom', 2: 3, 3: 'Demolição do muro de divisa' } },
                { linha: 5, d: ['16/11/26', 'Nublado', '2', 'Limpeza do terreno', '2'], v: { 0: '2026-11-16', 1: 'Nublado', 2: 2, 3: 'Limpeza do terreno' } }]
     } : {
@@ -68,6 +68,8 @@ window.SIS_MOCK = (function () {
     if (fn === 'sisSalvarInteracao') { if (!a.ID) { a.ID = 'I' + (n++); a.Autor = 'usuario'; st.interacoes.push(a); } else st.interacoes = st.interacoes.map(function (d) { return d.ID === a.ID ? a : d; }); }
     if (fn === 'sisImportarFornecedores') { Object.keys(st.historico).forEach(function (k) { if (!st.fornecedores.some(function (f) { return f.Nome.toLowerCase() === k; })) st.fornecedores.push({ ID: 'F' + (n++), Nome: st.historico[k].nome, Tipo: 'Fornecedor', 'Situação': 'Ativo' }); }); }
     var r = JSON.parse(JSON.stringify(st)); if (fn === 'sisImportarFornecedores') r.importados = 2;
+    if (fn === 'sisFotos') return { fotos: [], pasta: '' };
+    if (fn === 'sisFotoEnviar') return { pasta: 'https://drive.google.com/drive/folders/EXEMPLO', foto: { id: 'X' + (n++), nome: args[3], url: '#' } };
     if (fn === 'sisPerfis') return { lista: PERFIS, dono: 'usuario@exemplo.com', compartilhados: ['mestre@exemplo.com'], perfis: ['Administrador', 'Engenheiro', 'Encarregado', 'Consulta'], desc: { Administrador: 'Tudo.', Engenheiro: 'Tudo menos perfis.', Encarregado: 'Dia a dia, sem custos.', Consulta: 'Só vê.' } };
     if (fn === 'sisPerfisSalvar') { PERFIS = a; return SIS_MOCK('sisPerfis', []); }
     if (fn === 'sisCarregar') {
