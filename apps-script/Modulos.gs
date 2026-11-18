@@ -344,7 +344,7 @@ function sisPresencaMarcar(linha, col, valor) {
 /* ---------------------------------------------------------------- início */
 
 function sisInicio_() {
-  var ss = sisSS_(), out = { pend: [], numeros: [] };
+  var ss = sisSS_(), out = { pend: [], numeros: [], painel: null };
   var mn = ss.getSheetByName('Menu');
   if (mn) {
     var v = mn.getRange(6, 8, 22, 2).getDisplayValues();
@@ -353,12 +353,54 @@ function sisInicio_() {
       out.pend.push({ assunto: v[i][0], qtd: v[i][1] });
     }
   }
-  var rs = ss.getSheetByName('Resumo');
+  var rs = ss.getSheetByName('Resumo'), R = {}, RD = {};
   if (rs) {
-    var want = ['Avanço físico real', 'Avanço físico previsto', 'Orçamento (R$)', 'Realizado (R$)', 'Efetivo no último dia', 'Lajes concluídas',
-                'A vencer em 7 dias (R$)', 'Unidades liberadas para entrega'];
-    var d = rs.getRange(1, 1, rs.getLastRow(), 2).getDisplayValues();
-    want.forEach(function (w) { d.forEach(function (r) { if (r[0] === w) out.numeros.push({ campo: w, valor: r[1] }); }); });
+    var n = rs.getLastRow(), rg = rs.getRange(1, 1, n, 2), dv = rg.getDisplayValues(), vv = rg.getValues();
+    for (var k = 0; k < n; k++) { R[dv[k][0]] = vv[k][1]; RD[dv[k][0]] = dv[k][1]; }
+    ['Avanço físico real', 'Avanço físico previsto', 'Orçamento (R$)', 'Realizado (R$)', 'Efetivo no último dia', 'Lajes concluídas',
+     'A vencer em 7 dias (R$)', 'Unidades liberadas para entrega'].forEach(function (w) { if (w in RD) out.numeros.push({ campo: w, valor: RD[w] }); });
   }
+  try { out.painel = sisPainel_(ss, R, RD); } catch (e) { out.painel = null; }
   return out;
+}
+
+/** Dados dos gráficos do Início (lidos da planilha, sem alterar nada). */
+function sisPainel_(ss, R, RD) {
+  var num = function (x) { return typeof x === 'number' ? x : (Number(String(x || '').replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.')) || 0); };
+  var p = {
+    avanco: { real: num(R['Avanço físico real']), previsto: num(R['Avanço físico previsto']) },
+    termino: RD['Término previsto'] || '', inicio: RD['Início da obra'] || '', atrasadas: num(R['Atividades atrasadas']),
+    custo: { orcamento: num(R['Orçamento (R$)']), realizado: num(R['Realizado (R$)']),
+             partes: [['Mão de obra e serviços', num(R['Mão de obra e serviços (R$)'])], ['Material', num(R['Material (R$)'])], ['Equipamento', num(R['Equipamento (R$)'])]] },
+    pagar: [['Mês atual', num(R['A pagar — mês atual (R$)'])], ['Próximo mês', num(R['A pagar — próximo mês (R$)'])], ['Daqui a 2 meses', num(R['A pagar — daqui a 2 meses (R$)'])]],
+    vencidas: num(R['Contas vencidas (R$)']),
+    equipe: ['Pedreiros', 'Serventes', 'Carpinteiros', 'Armadores', 'Bombeiros (encanadores)', 'Eletricistas', 'Terceiros'].map(function (f) { return [f.replace(' (encanadores)', ''), num(R[f])]; }),
+    efetivo: [], etapas: []
+  };
+  // efetivo dos últimos 30 lançamentos do Diário
+  var di = ss.getSheetByName('Diário de Obra');
+  if (di) {
+    var cab = di.getRange(4, 1, 1, 25).getDisplayValues()[0], cT = cab.indexOf('Total efetivo');
+    if (cT >= 0) {
+      var vals = di.getRange(5, 1, 400, cT + 1).getValues(), lst = [];
+      vals.forEach(function (r) { if (r[0] instanceof Date) lst.push([sisIso_(r[0]), num(r[cT])]); });
+      lst.sort(function (a, b) { return a[0] < b[0] ? -1 : 1; });
+      p.efetivo = lst.slice(-30);
+    }
+  }
+  // orçado × gasto por etapa (Orçamento Analítico)
+  var oa = ss.getSheetByName('Orçamento Analítico');
+  if (oa) {
+    var c2 = oa.getRange(9, 1, 1, 20).getDisplayValues()[0], cE = c2.indexOf('Etapa'), cO = c2.indexOf('Custo direto (R$)'), cG = c2.indexOf('Gasto (R$)');
+    if (cE >= 0 && cO >= 0 && cG >= 0) {
+      var et = {}, ordem = [];
+      oa.getRange(10, 1, 500, 20).getValues().forEach(function (r) {
+        var e = String(r[cE] || '').trim(); if (!e) return;
+        if (!et[e]) { et[e] = [0, 0]; ordem.push(e); }
+        et[e][0] += num(r[cO]); et[e][1] += num(r[cG]);
+      });
+      p.etapas = ordem.map(function (e) { return [e, et[e][0], et[e][1]]; }).filter(function (x) { return x[1] || x[2]; });
+    }
+  }
+  return p;
 }

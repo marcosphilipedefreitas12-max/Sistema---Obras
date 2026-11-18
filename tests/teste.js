@@ -19,6 +19,9 @@ const fs = require('fs'), path = require('path');
   await p.click('text=+ Nova obra'); await p.fill('#oNome', 'Obra Nova Teste'); await p.click('#gaveta footer .btn:not(.sec)'); await p.waitForTimeout(500);
   await p.click('.obra .abre >> nth=0'); await p.waitForTimeout(600);
   await p.screenshot({ path: path.join(out, 'inicio.png'), fullPage: true });
+  await p.evaluate(() => trocarTema()); await p.waitForTimeout(200); await p.screenshot({ path: path.join(out, 'inicio_escuro.png'), fullPage: true }); await p.evaluate(() => trocarTema());
+  await p.evaluate(() => ir('perfis')); await p.waitForTimeout(400); await p.selectOption('#pp0', 'Encarregado'); await p.click('text=Salvar perfis'); await p.waitForTimeout(400);
+  await p.screenshot({ path: path.join(out, 'perfis.png') });
   // todas as telas do menu abrem sem erro
   for (const id of await p.evaluate(() => CFG.modulos.map(m => m.id))) { await p.evaluate(i => ir(i), id); await p.waitForTimeout(250); }
   await p.evaluate(() => ir('diario')); await p.waitForTimeout(400);

@@ -50,22 +50,30 @@ function doGet() {
 
 /** Tudo o que a tela precisa, numa chamada só. */
 function sisCarregar() {
-  sisGarantirAbas_();
   var ss = sisSS_();
+  var pm0 = sisPermissoes_();
+  if (pm0.grava) { try { sisGarantirAbas_(); } catch (e) {} }
   var obra = '';
   try { obra = String(ss.getSheetByName('Resumo').getRange('B2').getDisplayValue() || ''); } catch (e) {}
-  var fornecedores = sisLer_(SIS_ABAS.forn, SIS_COLS.forn);
+  var pm = sisPermissoes_(), veForn = pm.modulos.indexOf('fornecedores') >= 0;
+  var fornecedores = veForn ? sisLer_(SIS_ABAS.forn, SIS_COLS.forn) : [];
+  var inicio = sisInicio_();
+  if (!pm.custos) { // sem valores em R$ para quem não é engenheiro/administrador
+    inicio.numeros = inicio.numeros.filter(function (n) { return !/R\$/.test(n.campo); });
+    if (inicio.painel) { inicio.painel.custo = null; inicio.painel.pagar = null; inicio.painel.etapas = []; inicio.painel.vencidas = null; }
+  }
   return {
+    permissoes: pm,
     config: sisConfig_(),
-    inicio: sisInicio_(),
+    inicio: inicio,
     obra: obra || ss.getName(),
     usuario: sisUsuario_(),
     hoje: sisIso_(new Date()),
     status: SIS_STATUS,
     demandas: sisLer_(SIS_ABAS.dem, SIS_COLS.dem),
     fornecedores: fornecedores,
-    interacoes: sisLer_(SIS_ABAS.inter, SIS_COLS.inter),
-    historico: sisHistoricoFornecedores_(),
+    interacoes: veForn ? sisLer_(SIS_ABAS.inter, SIS_COLS.inter) : [],
+    historico: veForn ? sisHistoricoFornecedores_() : {},
     pessoas: sisPessoas_()
   };
 }
@@ -362,9 +370,11 @@ function sisChamar(obraId, fn, args) {
   var permitidas = { sisCarregar: sisCarregar, sisSalvarDemanda: sisSalvarDemanda, sisSalvarFornecedor: sisSalvarFornecedor,
     sisSalvarInteracao: sisSalvarInteracao, sisImportarFornecedores: sisImportarFornecedores, sisAbaLer: sisAbaLer,
     sisAbaSalvar: sisAbaSalvar, sisAbaLimpar: sisAbaLimpar, sisPresenca: sisPresenca, sisPresencaMarcar: sisPresencaMarcar,
+    sisPerfis: sisPerfis, sisPerfisSalvar: sisPerfisSalvar,
     sisObras: sisObras, sisObraCadastrar: sisObraCadastrar, sisObraNova: sisObraNova, sisObraRemover: sisObraRemover, sisModeloDefinir: sisModeloDefinir };
   if (!permitidas[fn]) throw new Error('Função não permitida: ' + fn);
-  SIS_OBRA_ID = String(obraId || ''); SIS_SS = null;
+  SIS_OBRA_ID = String(obraId || ''); SIS_SS = null; SIS_PERFIL = null;
+  if (!/^sisObra|^sisObras$|^sisModelo/.test(fn)) sisPermitir_(fn, args || []);
   return permitidas[fn].apply(null, args || []);
 }
 
@@ -446,4 +456,93 @@ function sisObraNova(nome, emails) {
 function sisObraRemover(id) {
   try { SpreadsheetApp.openById(id); } catch (e) { throw new Error('Só quem tem acesso à planilha pode tirar a obra da lista.'); }
   return sisComTrava_(function () { sisRegistroGravar_(sisRegistro_().filter(function (o) { return o.id !== id; })); return sisObras(); });
+}
+
+/* ======================================================== PERFIS DE ACESSO */
+/*
+ * Cada obra tem a aba "Sistema Perfis" (E-mail | Perfil | Nome). Enquanto ela estiver vazia,
+ * o dono da planilha é Administrador e os demais são Engenheiro (como antes). Depois que
+ * houver alguém cadastrado, quem não estiver na lista entra como Consulta.
+ * A proteção de verdade continua sendo o Compartilhar da planilha; os perfis decidem o que
+ * cada pessoa vê e pode lançar dentro do sistema.
+ */
+var SIS_PERFIS = ['Administrador', 'Engenheiro', 'Encarregado', 'Consulta'];
+var SIS_PERFIL_DESC = {
+  'Administrador': 'Tudo, inclusive definir os perfis da equipe.',
+  'Engenheiro': 'Vê e lança em todas as telas, inclusive custos e fornecedores.',
+  'Encarregado': 'Lança o dia a dia (diário, presença, produção, planejamento, qualidade, demandas). Não vê custos, pagamentos, fornecedores nem dados das pessoas; não apaga registros.',
+  'Consulta': 'Só vê as telas (sem custos detalhados). Não grava nada. Bom para diretoria e visitantes.'
+};
+var SIS_ABA_PERFIS = 'Sistema Perfis', SIS_PERFIL = null;
+var SIS_BLOQ_ENCARREGADO = ['lancamentos', 'contas', 'diaristas', 'fornecedores', 'pessoas'];
+
+function sisEmail_() { try { return String(Session.getActiveUser().getEmail() || '').toLowerCase(); } catch (e) { return ''; } }
+
+function sisPerfilAtual_() {
+  if (SIS_PERFIL) return SIS_PERFIL;
+  var ss = sisSS_(), eu = sisEmail_(), dono = '';
+  try { dono = String(ss.getOwner().getEmail() || '').toLowerCase(); } catch (e) {}
+  var lista = sisPerfisLer_(ss), achou = null;
+  lista.forEach(function (p) { if (p.email === eu) achou = p.perfil; });
+  SIS_PERFIL = (eu && eu === dono) ? 'Administrador' : achou || (lista.length ? 'Consulta' : 'Engenheiro');
+  if (SIS_PERFIS.indexOf(SIS_PERFIL) < 0) SIS_PERFIL = 'Consulta';
+  return SIS_PERFIL;
+}
+
+function sisPerfisLer_(ss) {
+  var sh = ss.getSheetByName(SIS_ABA_PERFIS); if (!sh || sh.getLastRow() < 2) return [];
+  return sh.getRange(2, 1, sh.getLastRow() - 1, 3).getValues()
+    .filter(function (r) { return String(r[0]).indexOf('@') > 0; })
+    .map(function (r) { return { email: String(r[0]).trim().toLowerCase(), perfil: String(r[1]).trim(), nome: String(r[2] || '').trim() }; });
+}
+
+/** O que o perfil pode fazer: vai para a tela junto com sisCarregar. */
+function sisPermissoes_() {
+  var p = sisPerfilAtual_();
+  var podeModulo = function (m) {
+    if (p === 'Administrador' || p === 'Engenheiro') return true;
+    if (m.grupo === 'custo' || SIS_BLOQ_ENCARREGADO.indexOf(m.id) >= 0) return false;
+    return true;
+  };
+  return { perfil: p, descricao: SIS_PERFIL_DESC[p], grava: p !== 'Consulta', apaga: p === 'Administrador' || p === 'Engenheiro',
+           custos: p === 'Administrador' || p === 'Engenheiro', admin: p === 'Administrador',
+           modulos: SIS_MODULOS.filter(podeModulo).map(function (m) { return m.id; }) };
+}
+
+/** Confere no servidor (não só na tela) se o perfil pode chamar a função. */
+function sisPermitir_(fn, args) {
+  var pm = sisPermissoes_(), nega = function () { throw new Error('Seu perfil (' + pm.perfil + ') não permite esta ação. Fale com o administrador da obra.'); };
+  var grava = ['sisAbaSalvar', 'sisAbaLimpar', 'sisPresencaMarcar', 'sisSalvarDemanda', 'sisSalvarFornecedor', 'sisSalvarInteracao', 'sisImportarFornecedores'];
+  if (grava.indexOf(fn) >= 0 && !pm.grava) nega();
+  if (fn === 'sisAbaLimpar' && !pm.apaga) nega();
+  if (/^sisAba/.test(fn) && pm.modulos.indexOf(args[0]) < 0) nega();
+  if (/Fornecedor|Interacao/.test(fn) && pm.modulos.indexOf('fornecedores') < 0) nega();
+  if (fn === 'sisSalvarDemanda' && pm.modulos.indexOf('demandas') < 0) nega();
+  if ((fn === 'sisPresenca' || fn === 'sisPresencaMarcar') && pm.modulos.indexOf('presenca') < 0) nega();
+  if (fn === 'sisPerfisSalvar' && !pm.admin) nega();
+}
+
+function sisPerfis() {
+  var ss = sisSS_(), dono = ''; try { dono = ss.getOwner().getEmail(); } catch (e) {}
+  var editores = []; try { editores = ss.getEditors().map(function (u) { return u.getEmail().toLowerCase(); }); } catch (e) {}
+  var leitores = []; try { leitores = ss.getViewers().map(function (u) { return u.getEmail().toLowerCase(); }); } catch (e) {}
+  return { lista: sisPerfisLer_(ss), dono: String(dono).toLowerCase(), compartilhados: editores.concat(leitores.filter(function (x) { return editores.indexOf(x) < 0; })),
+           perfis: SIS_PERFIS, desc: SIS_PERFIL_DESC };
+}
+
+function sisPerfisSalvar(lista) {
+  return sisComTrava_(function () {
+    var ss = sisSS_(), sh = ss.getSheetByName(SIS_ABA_PERFIS);
+    if (!sh) {
+      sh = ss.insertSheet(SIS_ABA_PERFIS);
+      sh.getRange(1, 1, 1, 3).setValues([['E-mail', 'Perfil', 'Nome']]).setFontWeight('bold').setFontColor('#ffffff').setBackground('#1F3864');
+      sh.setFrozenRows(1); sh.setTabColor('#AD1457');
+    }
+    var linhas = (lista || []).filter(function (p) { return String(p.email).indexOf('@') > 0 && SIS_PERFIS.indexOf(p.perfil) >= 0; })
+      .map(function (p) { return [String(p.email).trim().toLowerCase(), p.perfil, String(p.nome || '')]; });
+    if (sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, 3).clearContent();
+    if (linhas.length) sh.getRange(2, 1, linhas.length, 3).setValues(linhas);
+    SIS_PERFIL = null;
+    return sisPerfis();
+  });
 }
