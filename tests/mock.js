@@ -21,12 +21,51 @@ window.SIS_MOCK = (function () {
       'serviços épsilon': { nome: 'Serviços Épsilon', cotacoes: [{ n: 'COT-001', servico: 'Vistoria Cautelar', valor: 6520 }], contratos: [], medicoes: [], lancamentos: [], compras: [], servicos: [] } }
   };
   var n = 10;
-  return function (fn, a) {
-    a = a ? JSON.parse(JSON.stringify(a)) : a;
+  // Tabelas fictícias: cada aba devolve colunas genéricas; o Diário tem colunas próprias para testar o formulário.
+  var TAB = {}, PRES = { P: {} };
+  function tabela(id) {
+    if (TAB[id]) return TAB[id];
+    var col = function (i, nome, tipo, extra) { var c = { i: i, letra: String.fromCharCode(65 + i), nome: nome, ajuda: '', auto: false, tipo: tipo || 'texto', opcoes: [] }; for (var k in extra || {}) c[k] = extra[k]; return c; };
+    var t = id === 'diario' ? {
+      cols: [col(0, 'Data', 'data', { ajuda: 'Data do dia.' }), col(1, 'Clima manhã', 'texto', { opcoes: ['Bom', 'Nublado', 'Chuva fraca', 'Chuva forte'] }), col(2, 'Pedreiros', 'numero', { ajuda: 'Quantas pessoas de cada função trabalharam.' }),
+             col(3, 'Serviços executados (onde e o quê)'), col(4, 'Total efetivo', 'numero', { auto: true })],
+      linhas: [{ linha: 6, d: ['17/11/26', 'Bom', '3', 'Demolição do muro de divisa', '3'], v: { 0: '2026-11-17', 1: 'Bom', 2: 3, 3: 'Demolição do muro de divisa' } },
+               { linha: 5, d: ['16/11/26', 'Nublado', '2', 'Limpeza do terreno', '2'], v: { 0: '2026-11-16', 1: 'Nublado', 2: 2, 3: 'Limpeza do terreno' } }]
+    } : {
+      cols: [col(0, 'Item'), col(1, 'Descrição'), col(2, 'Valor', 'numero'), col(3, 'Status', 'texto', { opcoes: ['Aberto', 'Concluído'] })],
+      linhas: [{ linha: 5, d: ['1', 'Registro de exemplo', '10', 'Aberto'], v: { 0: '1', 1: 'Registro de exemplo', 2: 10, 3: 'Aberto' } }]
+    };
+    t.id = id; t.aba = id; t.chave = 0; t.mostrar = []; t.livres = 100; t.novo = true;
+    return (TAB[id] = t);
+  }
+  window.SpreadsheetApp = { getActiveSpreadsheet: function () { return {
+    getUrl: function () { return 'https://docs.google.com/spreadsheets/d/EXEMPLO/edit'; },
+    getSheets: function () { return SIS_MODULOS.filter(function (m) { return m.aba; }).map(function (m, i) { return { getName: function () { return m.aba; }, getSheetId: function () { return i + 1; } }; }); } }; } };
+  return function (fn, args) {
+    args = args ? JSON.parse(JSON.stringify(args)) : [];
+    var a = args[0];
+    if (fn === 'sisAbaLer') return JSON.parse(JSON.stringify(tabela(a)));
+    if (fn === 'sisAbaSalvar') {
+      var t = tabela(a), vals = args[2], l = args[1] || 100 + (n++), linha = t.linhas.filter(function (x) { return x.linha === l; })[0];
+      if (!linha) { linha = { linha: l, d: t.cols.map(function () { return ''; }), v: {} }; t.linhas.unshift(linha); }
+      Object.keys(vals).forEach(function (k) { linha.v[k] = vals[k]; linha.d[t.cols.map(function (c) { return c.i; }).indexOf(Number(k))] = vals[k]; });
+      var r = JSON.parse(JSON.stringify(t)); r.salva = l; return r;
+    }
+    if (fn === 'sisAbaLimpar') { var t2 = tabela(a); t2.linhas = t2.linhas.filter(function (x) { return x.linha !== args[1]; }); return JSON.parse(JSON.stringify(t2)); }
+    if (fn === 'sisPresenca') return { data: a || st.hoje, col: 8, primeira: '2026-09-01', pessoas: [
+      { linha: 6, nome: 'Ajudante Teste', funcao: 'Servente', vinculo: 'Diarista', situacao: 'Ativo', valor: PRES.P[6] || '' },
+      { linha: 7, nome: 'Pedreiro Teste', funcao: 'Pedreiro', vinculo: 'Empreiteiro', situacao: 'Ativo', valor: PRES.P[7] || '' }] };
+    if (fn === 'sisPresencaMarcar') { PRES.P[args[0]] = args[2]; return true; }
     if (fn === 'sisSalvarDemanda') { if (!a.ID) { a.ID = 'D' + (n++); st.demandas.push(a); } else st.demandas = st.demandas.map(function (d) { return d.ID === a.ID ? a : d; }); }
     if (fn === 'sisSalvarFornecedor') { if (!a.ID) { a.ID = 'F' + (n++); st.fornecedores.push(a); } else st.fornecedores = st.fornecedores.map(function (d) { return d.ID === a.ID ? a : d; }); }
     if (fn === 'sisSalvarInteracao') { if (!a.ID) { a.ID = 'I' + (n++); a.Autor = 'usuario'; st.interacoes.push(a); } else st.interacoes = st.interacoes.map(function (d) { return d.ID === a.ID ? a : d; }); }
     if (fn === 'sisImportarFornecedores') { Object.keys(st.historico).forEach(function (k) { if (!st.fornecedores.some(function (f) { return f.Nome.toLowerCase() === k; })) st.fornecedores.push({ ID: 'F' + (n++), Nome: st.historico[k].nome, Tipo: 'Fornecedor', 'Situação': 'Ativo' }); }); }
-    var r = JSON.parse(JSON.stringify(st)); if (fn === 'sisImportarFornecedores') r.importados = 2; return r;
+    var r = JSON.parse(JSON.stringify(st)); if (fn === 'sisImportarFornecedores') r.importados = 2;
+    if (fn === 'sisCarregar') {
+      r.config = sisConfig_();
+      r.inicio = { pend: [{ assunto: 'Boletos vencidos', qtd: 0 }, { assunto: 'Dias sem registro no Diário', qtd: 2 }, { assunto: 'Compras atrasadas', qtd: 1 }],
+        numeros: [{ campo: 'Avanço físico real', valor: '4,2%' }, { campo: 'Avanço físico previsto', valor: '5,0%' }, { campo: 'Orçamento (R$)', valor: 'R$ 1.000.000,00' }, { campo: 'Realizado (R$)', valor: 'R$ 42.000,00' }] };
+    }
+    return r;
   };
 })();

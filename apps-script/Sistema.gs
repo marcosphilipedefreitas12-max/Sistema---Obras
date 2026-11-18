@@ -2,7 +2,7 @@
  * SISTEMA DE OBRAS — CRM (Demandas, Fornecedores e Interações)
  *
  * Fica no MESMO projeto Apps Script da planilha da obra (Extensões → Apps Script),
- * como um arquivo a mais (Sistema.gs) ao lado do Script_Obra.gs, junto com Sistema.html.
+ * como arquivos a mais (Sistema.gs, Modulos.gs e Sistema.html) ao lado do Script_Obra.gs.
  *
  * A planilha é o banco de dados: o sistema cria e usa as abas
  *   "CRM Demandas", "CRM Fornecedores" e "CRM Interações"
@@ -52,6 +52,8 @@ function sisCarregar() {
   try { obra = String(ss.getSheetByName('Resumo').getRange('B2').getDisplayValue() || ''); } catch (e) {}
   var fornecedores = sisLer_(SIS_ABAS.forn, SIS_COLS.forn);
   return {
+    config: sisConfig_(),
+    inicio: sisInicio_(),
     obra: obra || ss.getName(),
     usuario: sisUsuario_(),
     hoje: sisIso_(new Date()),

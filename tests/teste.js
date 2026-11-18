@@ -1,25 +1,37 @@
 // Teste das telas fora do Google: node tests/teste.js (precisa do pacote playwright)
-// Gera tests/saida/*.png com dados fictícios de tests/mock.js
+// Usa dados fictícios de tests/mock.js e o menu real de apps-script/Modulos.gs. Gera tests/saida/*.png
 const { chromium } = require('playwright');
 const fs = require('fs'), path = require('path');
 (async () => {
-  const dir = __dirname, out = path.join(dir, 'saida');
+  const dir = __dirname, out = path.join(dir, 'saida'), as = path.join(dir, '..', 'apps-script');
   fs.mkdirSync(out, { recursive: true });
-  const html = fs.readFileSync(path.join(dir, '..', 'apps-script', 'Sistema.html'), 'utf8').replace('<script>', '<script src="mock.js"></script><script>');
+  const inj = '<script>' + fs.readFileSync(path.join(as, 'Modulos.gs'), 'utf8') + '</script><script src="mock.js"></script><script>';
+  const html = fs.readFileSync(path.join(as, 'Sistema.html'), 'utf8').replace('<script>', inj);
   fs.writeFileSync(path.join(dir, '_pagina.html'), html);
   const b = await chromium.launch(); const erros = [];
-  const p = await b.newPage({ viewport: { width: 1280, height: 860 } });
-  p.on('pageerror', e => erros.push(e.message));
-  await p.goto('file://' + path.join(dir, '_pagina.html')); await p.waitForTimeout(500);
+  const abrir = async (w, h) => {
+    const p = await b.newPage({ viewport: { width: w, height: h } });
+    p.on('pageerror', e => erros.push(e.message)); p.on('console', m => { if (m.type() === 'error' && !/fonts\.g/.test(m.text())) erros.push(m.text()); });
+    await p.goto('file://' + path.join(dir, '_pagina.html')); await p.waitForTimeout(600); return p;
+  };
+  const p = await abrir(1366, 860);
   await p.screenshot({ path: path.join(out, 'inicio.png'), fullPage: true });
-  await p.click('nav button[data-v=demandas]'); await p.click('text=+ Nova demanda');
-  await p.fill('#fTit', 'Demanda de teste'); await p.click('.modal >> text=Salvar'); await p.waitForTimeout(400);
+  // todas as telas do menu abrem sem erro
+  for (const id of await p.evaluate(() => CFG.modulos.map(m => m.id))) { await p.evaluate(i => ir(i), id); await p.waitForTimeout(250); }
+  await p.evaluate(() => ir('diario')); await p.waitForTimeout(400);
+  await p.click('text=+ Novo registro'); await p.fill('#gaveta input[type=date]', '2026-11-18'); await p.fill('#gaveta textarea, #gaveta input[id=c3]', 'Teste');
+  await p.screenshot({ path: path.join(out, 'diario_novo.png') });
+  await p.click('#gaveta >> text=Salvar na planilha'); await p.waitForTimeout(500);
+  await p.evaluate(() => ir('presenca')); await p.waitForTimeout(400); await p.click('.seg button.P >> nth=0'); await p.waitForTimeout(400);
+  await p.screenshot({ path: path.join(out, 'presenca.png') });
+  await p.evaluate(() => ir('demandas')); await p.click('text=+ Nova demanda');
+  await p.fill('#fTit', 'Demanda de teste'); await p.click('#gaveta >> text=Salvar'); await p.waitForTimeout(500);
   await p.screenshot({ path: path.join(out, 'demandas.png'), fullPage: true });
-  await p.click('nav button[data-v=fornecedores]'); await p.click('text=Importar todos'); await p.waitForTimeout(400);
+  await p.evaluate(() => ir('fornecedores')); await p.click('text=Importar todos'); await p.waitForTimeout(500);
   await p.screenshot({ path: path.join(out, 'fornecedores.png'), fullPage: true });
-  const m = await b.newPage({ viewport: { width: 390, height: 844 } });
-  await m.goto('file://' + path.join(dir, '_pagina.html')); await m.waitForTimeout(500);
+  const m = await abrir(390, 844);
   await m.screenshot({ path: path.join(out, 'celular.png'), fullPage: true });
+  await m.evaluate(() => menuMob()); await m.waitForTimeout(300); await m.screenshot({ path: path.join(out, 'celular_menu.png') });
   await b.close(); fs.unlinkSync(path.join(dir, '_pagina.html'));
   if (erros.length) { console.error('ERROS:', erros); process.exit(1); }
   console.log('OK — telas em', out);
