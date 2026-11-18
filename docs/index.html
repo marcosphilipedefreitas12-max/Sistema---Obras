@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sistema de Obras</title>
+<style>
+  :root { --navy: #1F3864; --bg: #f3f4f6; --mut: #667085; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", Roboto, Arial, sans-serif; background: var(--bg); color: #1d2433; min-height: 100vh; display: flex; flex-direction: column; }
+  header { background: var(--navy); color: #fff; padding: 40px 20px 34px; text-align: center; }
+  header h1 { margin: 0 0 6px; font-size: 26px; }
+  header p { margin: 0; opacity: .8; }
+  main { max-width: 760px; width: 100%; margin: -22px auto 40px; padding: 0 16px; flex: 1; }
+  .box { background: #fff; border-radius: 14px; padding: 22px; box-shadow: 0 2px 6px rgba(16,24,40,.08); }
+  .obra { display: flex; align-items: center; gap: 14px; padding: 14px 0; border-bottom: 1px solid #e2e5ea; }
+  .obra:last-child { border-bottom: 0; }
+  .obra b { display: block; font-size: 16px; }
+  .obra span { color: var(--mut); font-size: 13px; }
+  .grow { flex: 1; }
+  a.btn { background: var(--navy); color: #fff; text-decoration: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; white-space: nowrap; }
+  a.btn.off { background: #c7ccd6; pointer-events: none; }
+  .mods { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 18px; }
+  .mod { background: #fff; border-radius: 12px; padding: 16px; font-size: 13px; color: var(--mut); }
+  .mod b { display: block; color: var(--navy); font-size: 15px; margin-bottom: 4px; }
+  footer { text-align: center; color: var(--mut); font-size: 12px; padding: 16px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Sistema de Obras</h1>
+  <p>Demandas, fornecedores e acompanhamento das obras</p>
+</header>
+<main>
+  <div class="box" id="obras"></div>
+  <div class="mods">
+    <div class="mod"><b>Demandas</b>Pedidos da diretoria, projetistas, clientes e vizinhos, com responsável, prazo e histórico.</div>
+    <div class="mod"><b>Fornecedores</b>Cadastro, avaliação, contatos e tudo que já foi cotado, contratado, medido e pago na obra.</div>
+    <div class="mod"><b>Em breve</b>Projetistas e órgãos, serviços da obra (cronograma, produção, vistorias).</div>
+  </div>
+</main>
+<footer>Entre com a sua conta Google da empresa. Os dados ficam na planilha de cada obra — esta página não guarda nenhum dado.</footer>
+<script>
+  /* Endereço do App da Web de cada obra (Apps Script → Implantar → App da Web → URL). */
+  var OBRAS = [
+    { nome: 'City Design', descricao: 'Obra em andamento', url: '' }
+  ];
+  document.getElementById('obras').innerHTML = OBRAS.map(function (o) {
+    return '<div class="obra"><div class="grow"><b>' + o.nome + '</b><span>' + o.descricao + '</span></div>' +
+      (o.url ? '<a class="btn" href="' + o.url + '">Entrar</a>' : '<a class="btn off">Em instalação</a>') + '</div>';
+  }).join('');
+</script>
+</body>
+</html>

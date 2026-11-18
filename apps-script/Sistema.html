@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sistema de Obras</title>
+<style>
+  :root {
+    --navy: #1F3864; --navy-2: #2c4a7c; --bg: #f3f4f6; --card: #ffffff; --line: #e2e5ea; --txt: #1d2433; --mut: #667085;
+    --red: #c62828; --red-bg: #fde8e8; --amb: #b45309; --amb-bg: #fff4dc; --grn: #2e7d32; --grn-bg: #e6f4ea; --blu-bg: #e8eefb;
+    --rad: 10px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", Roboto, Arial, sans-serif; background: var(--bg); color: var(--txt); font-size: 14px; }
+  header { background: var(--navy); color: #fff; padding: 12px 20px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; position: sticky; top: 0; z-index: 5; }
+  header h1 { font-size: 17px; margin: 0; font-weight: 600; letter-spacing: .2px; }
+  header .obra { font-size: 12px; opacity: .8; }
+  nav { display: flex; gap: 4px; margin-left: auto; }
+  nav button { background: transparent; border: 0; color: #cfd8ea; padding: 8px 14px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+  nav button.on { background: #fff; color: var(--navy); font-weight: 600; }
+  main { padding: 18px 20px 60px; max-width: 1280px; margin: 0 auto; }
+  h2 { font-size: 18px; margin: 4px 0 14px; }
+  h3 { font-size: 14px; margin: 18px 0 8px; color: var(--navy); text-transform: uppercase; letter-spacing: .4px; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .grow { flex: 1; }
+  .btn { background: var(--navy); color: #fff; border: 0; border-radius: 8px; padding: 9px 14px; font-size: 14px; cursor: pointer; }
+  .btn.sec { background: #fff; color: var(--navy); border: 1px solid var(--line); }
+  .btn.min { padding: 4px 9px; font-size: 12px; }
+  .btn:disabled { opacity: .5; cursor: default; }
+  input, select, textarea { font: inherit; border: 1px solid #cfd4dc; border-radius: 8px; padding: 8px 10px; background: #fff; width: 100%; }
+  textarea { min-height: 70px; resize: vertical; }
+  label { font-size: 12px; color: var(--mut); display: block; margin-bottom: 4px; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+  .kpi { background: var(--card); border-radius: var(--rad); padding: 14px 16px; border-left: 5px solid var(--line); cursor: pointer; }
+  .kpi b { display: block; font-size: 28px; line-height: 1.1; }
+  .kpi span { font-size: 12px; color: var(--mut); }
+  .kpi.red { border-color: var(--red); } .kpi.red b { color: var(--red); }
+  .kpi.amb { border-color: #f59e0b; } .kpi.amb b { color: var(--amb); }
+  .kpi.grn { border-color: var(--grn); } .kpi.grn b { color: var(--grn); }
+  .kpi.blu { border-color: var(--navy-2); } .kpi.blu b { color: var(--navy); }
+  .list { background: var(--card); border-radius: var(--rad); overflow: hidden; }
+  .item { padding: 11px 14px; border-bottom: 1px solid var(--line); display: flex; gap: 10px; align-items: center; cursor: pointer; }
+  .item:last-child { border-bottom: 0; }
+  .item:hover { background: #fafbfc; }
+  .item .t { font-weight: 600; }
+  .item .s { font-size: 12px; color: var(--mut); }
+  .tag { font-size: 11px; padding: 2px 8px; border-radius: 99px; background: #eef0f4; color: #475467; white-space: nowrap; }
+  .tag.red { background: var(--red-bg); color: var(--red); } .tag.amb { background: var(--amb-bg); color: var(--amb); }
+  .tag.grn { background: var(--grn-bg); color: var(--grn); } .tag.blu { background: var(--blu-bg); color: var(--navy); }
+  .board { display: grid; grid-template-columns: repeat(4, minmax(230px, 1fr)); gap: 12px; overflow-x: auto; }
+  .col { background: #e9ecf1; border-radius: var(--rad); padding: 10px; min-height: 200px; }
+  .col h4 { margin: 2px 4px 10px; font-size: 13px; display: flex; justify-content: space-between; }
+  .card { background: var(--card); border-radius: 8px; padding: 10px 11px; margin-bottom: 8px; box-shadow: 0 1px 2px rgba(16,24,40,.08); cursor: pointer; border-left: 4px solid transparent; }
+  .card.p-Alta { border-left-color: var(--red); } .card.p-Média { border-left-color: #f59e0b; } .card.p-Baixa { border-left-color: #98a2b3; }
+  .card .t { font-weight: 600; margin-bottom: 5px; }
+  .card .m { display: flex; gap: 6px; flex-wrap: wrap; font-size: 12px; color: var(--mut); align-items: center; }
+  .card .mv { margin-top: 8px; display: flex; gap: 6px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .full { grid-column: 1 / -1; }
+  .stars { color: #f59e0b; letter-spacing: 1px; }
+  .forn { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+  .fcard { background: var(--card); border-radius: var(--rad); padding: 14px; cursor: pointer; }
+  .fcard .t { font-weight: 600; font-size: 15px; }
+  .fcard .nums { display: flex; gap: 14px; margin-top: 10px; font-size: 12px; color: var(--mut); }
+  .fcard .nums b { display: block; color: var(--txt); font-size: 14px; }
+  table { width: 100%; border-collapse: collapse; background: #fff; font-size: 13px; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); }
+  th { font-size: 11px; text-transform: uppercase; color: var(--mut); letter-spacing: .3px; background: #f8f9fb; }
+  td.n { text-align: right; white-space: nowrap; }
+  .empty { padding: 26px; text-align: center; color: var(--mut); background: var(--card); border-radius: var(--rad); }
+  .overlay { position: fixed; inset: 0; background: rgba(15,23,42,.45); display: none; align-items: flex-start; justify-content: center; padding: 30px 12px; overflow-y: auto; z-index: 20; }
+  .overlay.on { display: flex; }
+  .modal { background: #fff; border-radius: 12px; width: 100%; max-width: 760px; padding: 20px 22px; }
+  .modal h2 { margin-top: 0; }
+  .hist { white-space: pre-line; font-size: 12px; color: var(--mut); background: #f8f9fb; border-radius: 8px; padding: 10px; max-height: 140px; overflow: auto; }
+  .tabs2 { display: flex; gap: 6px; margin: 6px 0 10px; flex-wrap: wrap; }
+  .tabs2 button { border: 1px solid var(--line); background: #fff; border-radius: 99px; padding: 5px 12px; cursor: pointer; font-size: 12px; }
+  .tabs2 button.on { background: var(--navy); color: #fff; border-color: var(--navy); }
+  .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: #111827; color: #fff; padding: 10px 16px; border-radius: 8px; display: none; z-index: 30; }
+  .loading { position: fixed; inset: 0; background: rgba(255,255,255,.6); display: none; align-items: center; justify-content: center; z-index: 25; font-weight: 600; color: var(--navy); }
+  @media (max-width: 760px) {
+    header { padding: 10px 12px; } nav { margin-left: 0; width: 100%; } nav button { flex: 1; padding: 8px 4px; }
+    main { padding: 12px 10px 60px; }
+    .board { grid-template-columns: repeat(4, 82vw); scroll-snap-type: x mandatory; } .col { scroll-snap-align: start; }
+    .grid2, .grid3 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div><h1>Sistema de Obras</h1><div class="obra" id="obra">carregando…</div></div>
+  <nav>
+    <button data-v="inicio" class="on">Início</button>
+    <button data-v="demandas">Demandas</button>
+    <button data-v="fornecedores">Fornecedores</button>
+  </nav>
+</header>
+<main id="main"></main>
+
+<div class="overlay" id="ov"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast"></div>
+<div class="loading" id="loading">Salvando…</div>
+
+<script>
+/* ======================= dados e chamadas ao servidor ======================= */
+var D = null, VIEW = 'inicio', FILTRO = { dem: '', resp: '', forn: '', fTipo: '' };
+var ORIGENS = ['Chefe / diretoria', 'Projetista', 'Cliente', 'Vizinho', 'Fornecedor', 'Órgão público', 'Equipe da obra', 'Outro'];
+var TIPOS_FORN = ['Fornecedor', 'Empreiteiro / prestador', 'Projetista', 'Órgão / concessionária', 'Locadora'];
+var TIPOS_INT = ['Ligação', 'WhatsApp', 'E-mail', 'Visita', 'Reunião', 'Cotação', 'Cobrança', 'Outro'];
+
+function api(fn, arg) {
+  return new Promise(function (ok, erro) {
+    if (window.google && google.script && google.script.run) {
+      google.script.run.withSuccessHandler(ok).withFailureHandler(erro)[fn](arg);
+    } else if (window.SIS_MOCK) { setTimeout(function () { ok(window.SIS_MOCK(fn, arg)); }, 150); }
+    else erro(new Error('Abra o sistema pelo link do Google (Apps Script).'));
+  });
+}
+function salvar(fn, arg, msg) {
+  el('loading').style.display = 'flex';
+  return api(fn, arg).then(function (r) { D = r; el('loading').style.display = 'none'; fechar(); render(); toast(msg || 'Salvo'); return r; })
+    .catch(function (e) { el('loading').style.display = 'none'; alerta(e); });
+}
+function alerta(e) { toast('Erro: ' + (e && e.message ? e.message : e), 6000); }
+
+/* ======================= utilidades ======================= */
+function el(id) { return document.getElementById(id); }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function toast(t, ms) { var x = el('toast'); x.textContent = t; x.style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(function () { x.style.display = 'none'; }, ms || 2200); }
+function hoje() { return D ? D.hoje : new Date().toISOString().slice(0, 10); }
+function dias(iso) { if (!iso) return null; var a = new Date(iso + 'T12:00:00'), b = new Date(hoje() + 'T12:00:00'); return Math.round((a - b) / 864e5); }
+function br(iso) { if (!iso) return ''; var p = String(iso).slice(0, 10).split('-'); return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0].slice(2) : iso; }
+function rs(v) { return v == null || v === '' ? '—' : 'R$ ' + Number(v).toLocaleString('pt-BR', { maximumFractionDigits: 0 }); }
+function chave(s) { return String(s || '').trim().toLowerCase().replace(/\s+/g, ' '); }
+function opts(lista, sel, vazio) { return (vazio != null ? '<option value="">' + esc(vazio) + '</option>' : '') + lista.map(function (o) { return '<option' + (o === sel ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join(''); }
+function prazoTag(iso, feito) {
+  if (!iso) return '';
+  var d = dias(iso);
+  if (feito) return '<span class="tag">' + br(iso) + '</span>';
+  if (d < 0) return '<span class="tag red">atrasada ' + (-d) + 'd</span>';
+  if (d === 0) return '<span class="tag amb">hoje</span>';
+  if (d <= 3) return '<span class="tag amb">' + br(iso) + '</span>';
+  return '<span class="tag">' + br(iso) + '</span>';
+}
+function estrelas(n) { n = Math.round(Number(n) || 0); return n ? '<span class="stars">' + '★'.repeat(n) + '☆'.repeat(5 - n) + '</span>' : '<span class="s">sem nota</span>'; }
+function notaMedia(f) { var v = ['Nota prazo', 'Nota qualidade', 'Nota preço'].map(function (k) { return Number(f[k]) || 0; }).filter(Boolean); return v.length ? v.reduce(function (a, b) { return a + b; }, 0) / v.length : 0; }
+function hist(f) { return (D.historico && D.historico[chave(f.Nome)]) || { cotacoes: [], contratos: [], medicoes: [], lancamentos: [], compras: [], servicos: [] }; }
+function soma(lista, k) { return lista.reduce(function (a, x) { return a + (Number(x[k]) || 0); }, 0); }
+
+/* ======================= navegação ======================= */
+document.querySelectorAll('nav button').forEach(function (b) { b.onclick = function () { ir(b.dataset.v); }; });
+function ir(v) { VIEW = v; document.querySelectorAll('nav button').forEach(function (b) { b.classList.toggle('on', b.dataset.v === v); }); render(); window.scrollTo(0, 0); }
+function render() {
+  if (!D) return;
+  el('obra').textContent = D.obra + '  ·  ' + D.usuario;
+  ({ inicio: vInicio, demandas: vDemandas, fornecedores: vFornecedores })[VIEW]();
+}
+
+/* ======================= INÍCIO ======================= */
+function pendencias() {
+  var abertas = D.demandas.filter(function (d) { return d.Status !== 'Concluída'; });
+  var atras = abertas.filter(function (d) { return d.Prazo && dias(d.Prazo) < 0; });
+  var prox = abertas.filter(function (d) { return d.Prazo && dias(d.Prazo) >= 0 && dias(d.Prazo) <= 3; });
+  var aguard = abertas.filter(function (d) { return d.Status === 'Aguardando terceiros'; });
+  var seg = D.interacoes.filter(function (i) { return i['Data do próximo passo'] && String(i['Feito?']).toUpperCase() !== 'SIM' && dias(i['Data do próximo passo']) <= 0; });
+  return { abertas: abertas, atras: atras, prox: prox, aguard: aguard, seg: seg };
+}
+function vInicio() {
+  var p = pendencias();
+  var minhas = p.abertas.filter(function (d) { return chave(d['Responsável']) && chave(d['Responsável']) === chave(D.usuario); });
+  var hr = new Date().getHours(), oi = hr < 12 ? 'Bom dia' : hr < 18 ? 'Boa tarde' : 'Boa noite';
+  var h = '<h2>' + oi + '! Isto é o que precisa de atenção</h2><div class="kpis">' +
+    kpi('red', p.atras.length, 'demandas atrasadas', "ir('demandas')") +
+    kpi('amb', p.prox.length, 'vencem em até 3 dias', "ir('demandas')") +
+    kpi('blu', p.aguard.length, 'aguardando terceiros', "ir('demandas')") +
+    kpi(p.seg.length ? 'red' : 'grn', p.seg.length, 'retornos a fornecedores para hoje', "ir('fornecedores')") +
+    kpi('grn', D.fornecedores.length, 'fornecedores cadastrados', "ir('fornecedores')") + '</div>';
+  var lista = p.atras.concat(p.prox).sort(function (a, b) { return String(a.Prazo).localeCompare(String(b.Prazo)); });
+  h += '<h3>Demandas para resolver agora</h3>' + (lista.length ? '<div class="list">' + lista.map(itemDem).join('') + '</div>' : '<div class="empty">Nenhuma demanda atrasada ou vencendo. 👍</div>');
+  h += '<h3>Retornos combinados com fornecedores</h3>' + (p.seg.length ? '<div class="list">' + p.seg.map(function (i) {
+    return '<div class="item" onclick="abrirForn(\'' + esc(i['Fornecedor ID']) + '\')"><div class="grow"><div class="t">' + esc(i.Fornecedor) + '</div><div class="s">' + esc(i['Próximo passo'] || i.Resumo) + '</div></div>' + prazoTag(i['Data do próximo passo']) + '</div>';
+  }).join('') + '</div>' : '<div class="empty">Nenhum retorno pendente para hoje.</div>');
+  if (minhas.length) h += '<h3>Comigo (' + esc(D.usuario) + ')</h3><div class="list">' + minhas.map(itemDem).join('') + '</div>';
+  el('main').innerHTML = h;
+}
+function kpi(cor, n, t, onc) { return '<div class="kpi ' + cor + '" onclick="' + onc + '"><b>' + n + '</b><span>' + esc(t) + '</span></div>'; }
+function itemDem(d) {
+  return '<div class="item" onclick="abrirDem(\'' + esc(d.ID) + '\')"><div class="grow"><div class="t">' + esc(d['Título']) + '</div><div class="s">' +
+    esc([d['Responsável'], d.Origem, d.Status].filter(Boolean).join(' · ')) + '</div></div>' + prazoTag(d.Prazo) + '</div>';
+}
+
+/* ======================= DEMANDAS ======================= */
+function vDemandas() {
+  var q = chave(FILTRO.dem), r = FILTRO.resp;
+  var ds = D.demandas.filter(function (d) {
+    return (!q || chave(d['Título'] + ' ' + d['Descrição'] + ' ' + d.Solicitante).indexOf(q) >= 0) && (!r || d['Responsável'] === r);
+  });
+  var resps = D.pessoas.slice();
+  D.demandas.forEach(function (d) { if (d['Responsável'] && resps.indexOf(d['Responsável']) < 0) resps.push(d['Responsável']); });
+  var h = '<div class="row" style="margin-bottom:14px"><h2 class="grow" style="margin:0">Demandas</h2>' +
+    '<input style="max-width:230px" placeholder="Buscar…" value="' + esc(FILTRO.dem) + '" oninput="FILTRO.dem=this.value;vDemandas();this.focus();this.setSelectionRange(this.value.length,this.value.length)">' +
+    '<select style="max-width:190px" onchange="FILTRO.resp=this.value;vDemandas()">' + opts(resps.sort(), FILTRO.resp, 'Todos os responsáveis') + '</select>' +
+    '<button class="btn" onclick="abrirDem()">+ Nova demanda</button></div><div class="board">';
+  D.status.forEach(function (st, i) {
+    var cs = ds.filter(function (d) { return (d.Status || 'A fazer') === st; })
+      .sort(function (a, b) { return (a.Prazo || '9999').localeCompare(b.Prazo || '9999'); });
+    if (st === 'Concluída') cs = cs.slice(-15).reverse();
+    h += '<div class="col"><h4>' + esc(st) + '<span class="tag">' + cs.length + '</span></h4>' + cs.map(function (d) {
+      return '<div class="card p-' + esc(d.Prioridade || 'Média') + '" onclick="abrirDem(\'' + esc(d.ID) + '\')"><div class="t">' + esc(d['Título']) + '</div><div class="m">' +
+        (d['Responsável'] ? '<span>👤 ' + esc(d['Responsável']) + '</span>' : '') + (d.Origem ? '<span class="tag">' + esc(d.Origem) + '</span>' : '') + prazoTag(d.Prazo, st === 'Concluída') + '</div>' +
+        '<div class="mv">' + (i > 0 ? '<button class="btn sec min" onclick="event.stopPropagation();mover(\'' + esc(d.ID) + '\',-1)">◀</button>' : '') +
+        (i < 3 ? '<button class="btn sec min" onclick="event.stopPropagation();mover(\'' + esc(d.ID) + '\',1)">' + esc(D.status[i + 1]) + ' ▶</button>' : '') + '</div></div>';
+    }).join('') + (cs.length ? '' : '<div class="s" style="padding:6px;color:#98a2b3">vazio</div>') + '</div>';
+  });
+  el('main').innerHTML = h + '</div>';
+}
+function acharDem(id) { return D.demandas.filter(function (d) { return d.ID === id; })[0]; }
+function mover(id, passo) {
+  var d = Object.assign({}, acharDem(id)); var i = D.status.indexOf(d.Status || 'A fazer');
+  d.Status = D.status[Math.max(0, Math.min(3, i + passo))];
+  salvar('sisSalvarDemanda', d, 'Movida para "' + d.Status + '"');
+}
+function abrirDem(id) {
+  var d = id ? acharDem(id) : { Status: 'A fazer', Prioridade: 'Média', Obra: D.obra, Solicitante: '', 'Responsável': D.usuario };
+  var nomes = D.pessoas.slice(); if (d['Responsável'] && nomes.indexOf(d['Responsável']) < 0) nomes.unshift(d['Responsável']);
+  el('modal').innerHTML = '<h2>' + (id ? 'Demanda' : 'Nova demanda') + '</h2><div class="grid2">' +
+    '<div class="full"><label>O que precisa ser feito *</label><input id="fTit" value="' + esc(d['Título']) + '"></div>' +
+    '<div class="full"><label>Detalhes</label><textarea id="fDesc">' + esc(d['Descrição']) + '</textarea></div>' +
+    '<div><label>Quem pediu</label><input id="fSol" value="' + esc(d.Solicitante) + '"></div>' +
+    '<div><label>Origem</label><select id="fOri">' + opts(ORIGENS, d.Origem, '—') + '</select></div>' +
+    '<div><label>Responsável</label><input id="fResp" list="lResp" value="' + esc(d['Responsável']) + '"><datalist id="lResp">' + nomes.map(function (n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist></div>' +
+    '<div><label>Prazo</label><input id="fPrazo" type="date" value="' + esc(String(d.Prazo || '').slice(0, 10)) + '"></div>' +
+    '<div><label>Prioridade</label><select id="fPri">' + opts(['Alta', 'Média', 'Baixa'], d.Prioridade) + '</select></div>' +
+    '<div><label>Situação</label><select id="fSt">' + opts(D.status, d.Status) + '</select></div>' +
+    '<div class="full"><label>Obra</label><input id="fObra" value="' + esc(d.Obra || D.obra) + '"></div>' +
+    (d['Histórico'] ? '<div class="full"><label>Histórico</label><div class="hist">' + esc(d['Histórico']) + '</div></div>' : '') +
+    '</div><div class="row" style="margin-top:16px"><span class="grow"></span><button class="btn sec" onclick="fechar()">Cancelar</button><button class="btn" onclick="gravarDem(\'' + esc(d.ID || '') + '\')">Salvar</button></div>';
+  abrir();
+}
+function gravarDem(id) {
+  var d = Object.assign({}, id ? acharDem(id) : {}, {
+    ID: id || '', 'Título': el('fTit').value.trim(), 'Descrição': el('fDesc').value.trim(), Solicitante: el('fSol').value.trim(),
+    Origem: el('fOri').value, 'Responsável': el('fResp').value.trim(), Prazo: el('fPrazo').value, Prioridade: el('fPri').value,
+    Status: el('fSt').value, Obra: el('fObra').value.trim()
+  });
+  if (!d['Título']) { toast('Escreva o que precisa ser feito.'); return; }
+  salvar('sisSalvarDemanda', d, 'Demanda salva');
+}
+
+/* ======================= FORNECEDORES ======================= */
+function vFornecedores() {
+  var q = chave(FILTRO.forn), t = FILTRO.fTipo;
+  var fs = D.fornecedores.filter(function (f) {
+    return (!q || chave(f.Nome + ' ' + f['Categoria / serviço'] + ' ' + f.Contato).indexOf(q) >= 0) && (!t || f.Tipo === t);
+  }).sort(function (a, b) { return String(a.Nome).localeCompare(String(b.Nome)); });
+  var semCad = Object.keys(D.historico || {}).filter(function (k) { return !D.fornecedores.some(function (f) { return chave(f.Nome) === k; }); });
+  var h = '<div class="row" style="margin-bottom:14px"><h2 class="grow" style="margin:0">Fornecedores e empreiteiros</h2>' +
+    '<input style="max-width:230px" placeholder="Buscar nome ou serviço…" value="' + esc(FILTRO.forn) + '" oninput="FILTRO.forn=this.value;vFornecedores();this.focus();this.setSelectionRange(this.value.length,this.value.length)">' +
+    '<select style="max-width:210px" onchange="FILTRO.fTipo=this.value;vFornecedores()">' + opts(TIPOS_FORN, FILTRO.fTipo, 'Todos os tipos') + '</select>' +
+    '<button class="btn" onclick="abrirForn()">+ Novo</button></div>';
+  if (semCad.length) h += '<div class="list" style="margin-bottom:14px"><div class="item" onclick="importar()"><div class="grow"><div class="t">' + semCad.length +
+    ' nome(s) aparecem nas Cotações, Contratos, Lançamentos ou Compras e ainda não estão no cadastro</div><div class="s">' + esc(semCad.slice(0, 6).map(function (k) { return D.historico[k].nome; }).join(', ')) +
+    (semCad.length > 6 ? '…' : '') + '</div></div><button class="btn min">Importar todos</button></div></div>';
+  if (!fs.length) { el('main').innerHTML = h + '<div class="empty">Nenhum fornecedor ainda. Clique em "+ Novo" ou em "Importar".</div>'; return; }
+  h += '<div class="forn">' + fs.map(function (f) {
+    var x = hist(f), fech = x.cotacoes.filter(function (c) { return c.escolhido; }).length;
+    var seg = D.interacoes.filter(function (i) { return i['Fornecedor ID'] === f.ID && i['Data do próximo passo'] && String(i['Feito?']).toUpperCase() !== 'SIM'; })
+      .sort(function (a, b) { return a['Data do próximo passo'].localeCompare(b['Data do próximo passo']); })[0];
+    return '<div class="fcard" onclick="abrirForn(\'' + esc(f.ID) + '\')"><div class="row"><div class="grow"><div class="t">' + esc(f.Nome) + '</div><div class="s" style="color:var(--mut);font-size:12px">' +
+      esc([f.Tipo, f['Categoria / serviço']].filter(Boolean).join(' · ')) + '</div></div>' + (f['Situação'] && f['Situação'] !== 'Ativo' ? '<span class="tag red">' + esc(f['Situação']) + '</span>' : '') + '</div>' +
+      '<div style="margin-top:6px">' + estrelas(notaMedia(f)) + '</div>' +
+      '<div class="nums"><div><b>' + x.cotacoes.length + '</b>cotações</div><div><b>' + fech + '</b>fechadas</div><div><b>' + rs(soma(x.contratos, 'valor') || null) + '</b>contratado</div></div>' +
+      (seg ? '<div style="margin-top:10px" class="row"><span class="s grow" style="font-size:12px">↪ ' + esc(seg['Próximo passo'] || 'retorno') + '</span>' + prazoTag(seg['Data do próximo passo']) + '</div>' : '') + '</div>';
+  }).join('') + '</div>';
+  el('main').innerHTML = h;
+}
+function importar() { salvar('sisImportarFornecedores', null, 'Importação concluída').then(function (r) { if (r) toast((r.importados || 0) + ' fornecedor(es) importado(s)'); }); }
+function acharForn(id) { return D.fornecedores.filter(function (f) { return f.ID === id; })[0]; }
+var ABA_F = 'dados';
+function abrirForn(id, aba) {
+  var f = id ? acharForn(id) : { Tipo: 'Fornecedor', 'Situação': 'Ativo' };
+  ABA_F = id ? (aba || ABA_F) : 'dados';
+  var x = id ? hist(f) : null;
+  var h = '<div class="row"><h2 class="grow" style="margin:0">' + esc(f.Nome || 'Novo fornecedor') + '</h2>' + (id ? estrelas(notaMedia(f)) : '') + '</div>';
+  if (id) h += '<div class="tabs2">' + [['dados', 'Cadastro'], ['contatos', 'Contatos e retornos (' + D.interacoes.filter(function (i) { return i['Fornecedor ID'] === id; }).length + ')'],
+    ['obra', 'Na obra (' + (x.cotacoes.length + x.contratos.length + x.compras.length + x.lancamentos.length) + ')']].map(function (a) {
+      return '<button class="' + (ABA_F === a[0] ? 'on' : '') + '" onclick="abrirForn(\'' + esc(id) + '\',\'' + a[0] + '\')">' + a[1] + '</button>'; }).join('') + '</div>';
+  if (ABA_F === 'dados') {
+    h += '<div class="grid2">' +
+      '<div class="full"><label>Nome / razão social *</label><input id="nNome" value="' + esc(f.Nome) + '"></div>' +
+      '<div><label>Tipo</label><select id="nTipo">' + opts(TIPOS_FORN, f.Tipo) + '</select></div>' +
+      '<div><label>Serviço / material que fornece</label><input id="nCat" value="' + esc(f['Categoria / serviço']) + '"></div>' +
+      '<div><label>Pessoa de contato</label><input id="nCont" value="' + esc(f.Contato) + '"></div>' +
+      '<div><label>Telefone / WhatsApp</label><input id="nTel" value="' + esc(f.Telefone) + '"></div>' +
+      '<div><label>E-mail</label><input id="nMail" value="' + esc(f['E-mail']) + '"></div>' +
+      '<div><label>CNPJ / CPF</label><input id="nDoc" value="' + esc(f['CNPJ / CPF']) + '"></div>' +
+      '<div><label>Cidade</label><input id="nCid" value="' + esc(f.Cidade) + '"></div>' +
+      '<div><label>Situação</label><select id="nSit">' + opts(['Ativo', 'Em avaliação', 'Não contratar'], f['Situação']) + '</select></div>' +
+      '</div><h3>Avaliação (1 = ruim, 5 = ótimo)</h3><div class="grid3">' +
+      ['Nota prazo', 'Nota qualidade', 'Nota preço'].map(function (k, i) {
+        return '<div><label>' + ['Cumpre prazo', 'Qualidade', 'Preço'][i] + '</label><select id="nN' + i + '">' + opts(['', '1', '2', '3', '4', '5'], String(f[k] || '')) + '</select></div>'; }).join('') +
+      '</div><div style="margin-top:12px"><label>Observações</label><textarea id="nObs">' + esc(f['Observações']) + '</textarea></div>' +
+      '<div class="row" style="margin-top:16px">' + (f.Telefone ? '<a class="btn sec" target="_blank" href="https://wa.me/55' + esc(String(f.Telefone).replace(/\D/g, '').replace(/^55/, '')) + '">WhatsApp</a>' : '') +
+      '<span class="grow"></span><button class="btn sec" onclick="fechar()">Fechar</button><button class="btn" onclick="gravarForn(\'' + esc(f.ID || '') + '\')">Salvar</button></div>';
+  } else if (ABA_F === 'contatos') {
+    var ints = D.interacoes.filter(function (i) { return i['Fornecedor ID'] === id; }).sort(function (a, b) { return String(b.Data).localeCompare(String(a.Data)); });
+    h += '<div class="grid2" style="background:#f8f9fb;padding:12px;border-radius:10px">' +
+      '<div><label>Tipo de contato</label><select id="iTipo">' + opts(TIPOS_INT, 'WhatsApp') + '</select></div>' +
+      '<div><label>Data</label><input id="iData" type="date" value="' + hoje() + '"></div>' +
+      '<div class="full"><label>O que foi conversado *</label><textarea id="iRes" placeholder="Ex.: pediu prazo até sexta para mandar a proposta da impermeabilização"></textarea></div>' +
+      '<div><label>Próximo passo (opcional)</label><input id="iProx" placeholder="Ex.: cobrar proposta"></div>' +
+      '<div><label>Até quando</label><input id="iProxD" type="date"></div>' +
+      '<div class="full row"><span class="grow"></span><button class="btn" onclick="gravarInt(\'' + esc(id) + '\')">Registrar contato</button></div></div>';
+    h += ints.length ? '<table style="margin-top:12px"><tr><th>Data</th><th>Contato</th><th>Próximo passo</th><th></th></tr>' + ints.map(function (i) {
+      var pend = i['Data do próximo passo'] && String(i['Feito?']).toUpperCase() !== 'SIM';
+      return '<tr><td>' + br(i.Data) + '<div class="s" style="font-size:11px;color:var(--mut)">' + esc(i.Tipo) + ' · ' + esc(i.Autor) + '</div></td><td>' + esc(i.Resumo) + '</td><td>' +
+        esc(i['Próximo passo']) + ' ' + prazoTag(i['Data do próximo passo'], !pend) + '</td><td>' + (pend ? '<button class="btn sec min" onclick="feito(\'' + esc(i.ID) + '\')">✓ feito</button>' : '') + '</td></tr>';
+    }).join('') + '</table>' : '<div class="empty" style="margin-top:12px">Nenhum contato registrado ainda.</div>';
+    h += '<div class="row" style="margin-top:14px"><span class="grow"></span><button class="btn sec" onclick="fechar()">Fechar</button></div>';
+  } else {
+    h += tabela('Cotações', x.cotacoes, [['Nº', 'n'], ['Data', 'data', br], ['Serviço', 'servico'], ['Valor', 'valor', rs, 1], ['Prazo', 'prazo'], ['', 'escolhido', function (v) { return v ? '<span class="tag grn">fechou</span>' : ''; }]]) +
+      tabela('Contratos', x.contratos, [['Nº', 'n'], ['Serviço', 'servico'], ['Forma', 'forma'], ['Valor', 'valor', rs, 1], ['Medido', 'medido', rs, 1], ['%', 'pct', function (v) { return v == null ? '' : Math.round(v * 100) + '%'; }, 1]]) +
+      tabela('Medições', x.medicoes, [['Data', 'data', br], ['Contrato', 'contrato'], ['Período', 'periodo'], ['Líquido', 'liquido', rs, 1], ['Pago', 'pago', function (v) { return v ? '<span class="tag grn">pago</span>' : '<span class="tag amb">a pagar</span>'; }]]) +
+      tabela('Lançamentos (notas e boletos)', x.lancamentos, [['Venc.', 'vencimento', br], ['Descrição', 'descricao'], ['Valor', 'valor', rs, 1], ['Situação', 'status']]) +
+      tabela('Compras', x.compras, [['Material', 'material'], ['Pedido', 'pedido', br], ['Previsto', 'prevista', br], ['Entregue', 'real', br], ['Situação', 'status']]);
+    if (!(x.cotacoes.length + x.contratos.length + x.medicoes.length + x.lancamentos.length + x.compras.length))
+      h += '<div class="empty">Esse nome ainda não aparece nas abas da obra. Confira se está escrito igual nas Cotações, Contratos, Lançamentos ou Compras.</div>';
+    h += '<div class="row" style="margin-top:14px"><span class="grow"></span><button class="btn sec" onclick="fechar()">Fechar</button></div>';
+  }
+  el('modal').innerHTML = h; abrir();
+}
+function tabela(t, lista, cols) {
+  if (!lista.length) return '';
+  return '<h3>' + esc(t) + ' (' + lista.length + ')</h3><div style="overflow-x:auto"><table><tr>' + cols.map(function (c) { return '<th>' + esc(c[0]) + '</th>'; }).join('') + '</tr>' +
+    lista.map(function (r) { return '<tr>' + cols.map(function (c) { var v = r[c[1]]; return '<td' + (c[3] ? ' class="n"' : '') + '>' + (c[2] ? c[2](v) : esc(v)) + '</td>'; }).join('') + '</tr>'; }).join('') + '</table></div>';
+}
+function gravarForn(id) {
+  var f = Object.assign({}, id ? acharForn(id) : {}, {
+    ID: id || '', Nome: el('nNome').value.trim(), Tipo: el('nTipo').value, 'Categoria / serviço': el('nCat').value.trim(), Contato: el('nCont').value.trim(),
+    Telefone: el('nTel').value.trim(), 'E-mail': el('nMail').value.trim(), 'CNPJ / CPF': el('nDoc').value.trim(), Cidade: el('nCid').value.trim(),
+    'Situação': el('nSit').value, 'Nota prazo': el('nN0').value, 'Nota qualidade': el('nN1').value, 'Nota preço': el('nN2').value, 'Observações': el('nObs').value.trim()
+  });
+  if (!f.Nome) { toast('Preencha o nome.'); return; }
+  salvar('sisSalvarFornecedor', f, 'Fornecedor salvo');
+}
+function gravarInt(fid) {
+  var f = acharForn(fid);
+  var i = { 'Fornecedor ID': fid, Fornecedor: f.Nome, Tipo: el('iTipo').value, Data: el('iData').value, Resumo: el('iRes').value.trim(),
+            'Próximo passo': el('iProx').value.trim(), 'Data do próximo passo': el('iProxD').value, 'Feito?': '' };
+  if (!i.Resumo) { toast('Escreva o que foi conversado.'); return; }
+  salvar('sisSalvarInteracao', i, 'Contato registrado').then(function () { abrirForn(fid, 'contatos'); });
+}
+function feito(iid) {
+  var i = Object.assign({}, D.interacoes.filter(function (x) { return x.ID === iid; })[0], { 'Feito?': 'SIM' });
+  salvar('sisSalvarInteracao', i, 'Marcado como feito').then(function () { abrirForn(i['Fornecedor ID'], 'contatos'); });
+}
+
+/* ======================= janela ======================= */
+function abrir() { el('ov').classList.add('on'); }
+function fechar() { el('ov').classList.remove('on'); }
+el('ov').addEventListener('click', function (e) { if (e.target === el('ov')) fechar(); });
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape') fechar(); });
+
+/* ======================= início ======================= */
+el('main').innerHTML = '<div class="empty">Carregando os dados da planilha…</div>';
+api('sisCarregar').then(function (r) { D = r; render(); }).catch(function (e) {
+  el('main').innerHTML = '<div class="empty">Não consegui abrir a planilha: ' + esc(e && e.message ? e.message : e) + '<br><br>Confira se você tem acesso de edição à planilha da obra.</div>';
+});
+</script>
+</body>
+</html>
