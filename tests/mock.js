@@ -22,7 +22,7 @@ window.SIS_MOCK = (function () {
   };
   var n = 10;
   // Tabelas fictícias: cada aba devolve colunas genéricas; o Diário tem colunas próprias para testar o formulário.
-  var TAB = {}, PRES = { P: {} };
+  var TAB = {}, PRES = { P: {} }, OB = [{ id: 'A1', nome: 'OBRA EXEMPLO', resp: 'Eng. Teste' }, { id: 'B2', nome: 'OBRA DOIS', resp: 'Eng. Outro' }];
   function tabela(id) {
     if (TAB[id]) return TAB[id];
     var col = function (i, nome, tipo, extra) { var c = { i: i, letra: String.fromCharCode(65 + i), nome: nome, ajuda: '', auto: false, tipo: tipo || 'texto', opcoes: [] }; for (var k in extra || {}) c[k] = extra[k]; return c; };
@@ -38,12 +38,19 @@ window.SIS_MOCK = (function () {
     t.id = id; t.aba = id; t.chave = 0; t.mostrar = []; t.livres = 100; t.novo = true;
     return (TAB[id] = t);
   }
+  window.sisSS_ = function () { return SpreadsheetApp.getActiveSpreadsheet(); };
   window.SpreadsheetApp = { getActiveSpreadsheet: function () { return {
     getUrl: function () { return 'https://docs.google.com/spreadsheets/d/EXEMPLO/edit'; },
     getSheets: function () { return SIS_MODULOS.filter(function (m) { return m.aba; }).map(function (m, i) { return { getName: function () { return m.aba; }, getSheetId: function () { return i + 1; } }; }); } }; } };
   return function (fn, args) {
     args = args ? JSON.parse(JSON.stringify(args)) : [];
     var a = args[0];
+    var obras = function () { return { usuario: 'usuario', total: OB.length, temModelo: true, obras: OB.map(function (o) { return { id: o.id, nome: o.nome, resp: o.resp, url: 'https://docs.google.com/spreadsheets/d/' + o.id + '/edit' }; }) }; };
+    if (fn === 'sisObras') return obras();
+    if (fn === 'sisObraNova') { OB.push({ id: 'X' + (n++), nome: args[0], resp: args[1] }); return obras(); }
+    if (fn === 'sisObraCadastrar') { OB.push({ id: 'Y' + (n++), nome: 'OBRA CADASTRADA', resp: args[1] }); return obras(); }
+    if (fn === 'sisObraRemover') { OB = OB.filter(function (o) { return o.id !== a; }); return obras(); }
+    if (fn === 'sisModeloDefinir') return obras();
     if (fn === 'sisAbaLer') return JSON.parse(JSON.stringify(tabela(a)));
     if (fn === 'sisAbaSalvar') {
       var t = tabela(a), vals = args[2], l = args[1] || 100 + (n++), linha = t.linhas.filter(function (x) { return x.linha === l; })[0];

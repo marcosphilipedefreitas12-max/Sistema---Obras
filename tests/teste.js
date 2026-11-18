@@ -15,6 +15,9 @@ const fs = require('fs'), path = require('path');
     await p.goto('file://' + path.join(dir, '_pagina.html')); await p.waitForTimeout(600); return p;
   };
   const p = await abrir(1366, 860);
+  await p.screenshot({ path: path.join(out, 'obras.png') });
+  await p.click('text=+ Nova obra'); await p.fill('#oNome', 'Obra Nova Teste'); await p.click('#gaveta footer .btn:not(.sec)'); await p.waitForTimeout(500);
+  await p.click('.obra .abre >> nth=0'); await p.waitForTimeout(600);
   await p.screenshot({ path: path.join(out, 'inicio.png'), fullPage: true });
   // todas as telas do menu abrem sem erro
   for (const id of await p.evaluate(() => CFG.modulos.map(m => m.id))) { await p.evaluate(i => ir(i), id); await p.waitForTimeout(250); }
@@ -30,6 +33,7 @@ const fs = require('fs'), path = require('path');
   await p.evaluate(() => ir('fornecedores')); await p.click('text=Importar todos'); await p.waitForTimeout(500);
   await p.screenshot({ path: path.join(out, 'fornecedores.png'), fullPage: true });
   const m = await abrir(390, 844);
+  await m.screenshot({ path: path.join(out, 'celular_obras.png') }); await m.click('.obra .abre >> nth=0'); await m.waitForTimeout(600);
   await m.screenshot({ path: path.join(out, 'celular.png'), fullPage: true });
   await m.evaluate(() => menuMob()); await m.waitForTimeout(300); await m.screenshot({ path: path.join(out, 'celular_menu.png') });
   await b.close(); fs.unlinkSync(path.join(dir, '_pagina.html'));

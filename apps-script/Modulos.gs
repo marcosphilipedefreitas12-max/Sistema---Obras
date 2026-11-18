@@ -187,7 +187,7 @@ var SIS_MODULOS = [
 /* ---------------------------------------------------------------- config */
 
 function sisConfig_() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = sisSS_();
   var gid = {};
   ss.getSheets().forEach(function (s) { gid[s.getName()] = s.getSheetId(); });
   var mods = SIS_MODULOS.filter(function (m) { return !m.aba || gid[m.aba] !== undefined; }).map(function (m) {
@@ -220,7 +220,7 @@ function sisColLetra_(n) {
 /** Colunas (nome, ajuda, automática?, tipo, opções) e as linhas preenchidas de uma aba. */
 function sisAbaLer(id) {
   var m = sisModulo_(id);
-  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(m.aba);
+  var sh = sisSS_().getSheetByName(m.aba);
   var nc = sisColNum_(m.ult), nl = m.fim - m.ini + 1;
   var cab = sh.getRange(m.hdr, 1, 1, nc);
   var nomes = cab.getDisplayValues()[0], notas = cab.getNotes()[0];
@@ -268,7 +268,7 @@ function sisAbaLer(id) {
 function sisAbaSalvar(id, linha, valores) {
   return sisComTrava_(function () {
     var m = sisModulo_(id);
-    var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(m.aba);
+    var sh = sisSS_().getSheetByName(m.aba);
     var nc = sisColNum_(m.ult), kc = sisColNum_(m.chave);
     if (!linha) {
       if (m.novo === false) throw new Error('Nesta tela não dá para criar linhas novas.');
@@ -305,7 +305,7 @@ function sisAbaLimpar(id, linha) {
     var m = sisModulo_(id);
     if (m.novo === false) throw new Error('Nesta tela as linhas não podem ser apagadas.');
     if (linha < m.ini || linha > m.fim) throw new Error('Linha fora da área de dados.');
-    var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(m.aba);
+    var sh = sisSS_().getSheetByName(m.aba);
     var nc = sisColNum_(m.ult), fmls = sh.getRange(linha, 1, 1, nc).getFormulas()[0];
     for (var c = 0; c < nc; c++) if (!fmls[c]) sh.getRange(linha, c + 1).clearContent();
     return sisAbaLer(id);
@@ -315,7 +315,7 @@ function sisAbaLimpar(id, linha) {
 /* ---------------------------------------------------------------- presença */
 
 function sisPresenca(iso) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet(), sh = ss.getSheetByName('Presença');
+  var ss = sisSS_(), sh = ss.getSheetByName('Presença');
   var nc = sh.getLastColumn();
   var datas = sh.getRange(5, 8, 1, nc - 7).getValues()[0];
   var alvo = iso || sisIso_(new Date()), col = 0;
@@ -336,7 +336,7 @@ function sisPresencaMarcar(linha, col, valor) {
   return sisComTrava_(function () {
     if (linha < 6 || linha > 125 || col < 8) throw new Error('Posição inválida.');
     if (['', 'P', 'F', '½', 'A'].indexOf(valor) < 0) throw new Error('Valor inválido.');
-    SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Presença').getRange(linha, col).setValue(valor);
+    sisSS_().getSheetByName('Presença').getRange(linha, col).setValue(valor);
     return true;
   });
 }
@@ -344,7 +344,7 @@ function sisPresencaMarcar(linha, col, valor) {
 /* ---------------------------------------------------------------- início */
 
 function sisInicio_() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet(), out = { pend: [], numeros: [] };
+  var ss = sisSS_(), out = { pend: [], numeros: [] };
   var mn = ss.getSheetByName('Menu');
   if (mn) {
     var v = mn.getRange(6, 8, 22, 2).getDisplayValues();
