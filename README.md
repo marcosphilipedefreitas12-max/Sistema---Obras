@@ -54,6 +54,13 @@ O menu segue a rotina da obra: **Todo dia** (Diário, Presença, Produção, Lan
 - **Fornecedores** — cadastro, avaliação, contatos e próximos passos, e o histórico da obra (cotações, contratos, medições, lançamentos, compras) puxado pelo nome.
 - **Consultas** (Contas a Pagar, Gestão à Vista, Fluxo de Caixa…) — abrem direto na aba da planilha.
 
+## Relatórios
+
+Menu → **Relatórios** (abaixo do Início). Sai pronto para imprimir ou salvar em PDF, com cabeçalho da obra e campos de assinatura.
+
+- **RDO — Relatório Diário de Obra** (nº = posição do dia no Diário): clima, dia produtivo, efetivo por função e pela folha, equipamentos, serviços executados, produção do dia, ocorrências, qualidade (inspeções e FVS), faltas e ausências com motivo, fotos do dia.
+- **Relatório do período** (esta semana / semana passada / este mês / datas livres): avanço físico, dias com diário, efetivo médio e máximo, homens-dia, gráfico de efetivo, serviços executados por dia, produção somada por serviço, ocorrências, qualidade, custos do período por etapa (só para quem vê custos), faltas por tipo, pendências e demandas em aberto e até 12 fotos.
+
 ## Perfis de acesso
 
 Em cada obra, o Administrador define em **Perfis de acesso** (menu → Administração) o perfil de cada e-mail; fica na aba `Sistema Perfis` da planilha.

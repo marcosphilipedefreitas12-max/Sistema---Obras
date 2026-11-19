@@ -575,3 +575,85 @@ function sisFotoEnviar(id, chave, linha, nome, base64) {
 function sisFotosLiberar_() {
   try { var p = sisPastaObra_(false); if (p) sisFotosCompartilhar_(p, sisSS_()); } catch (e) {}
 }
+
+/* ---------------------------------------------------------------- relatórios (RDO e período) */
+/** Linhas de uma aba entre duas datas (coluna de data = 1ª coluna). Devolve cabeçalho e valores exibidos. */
+function sisPeriodo_(ss, aba, hdr, ini, fim, ncols, de, ate) {
+  var sh = ss.getSheetByName(aba); if (!sh) return { cab: [], linhas: [] };
+  var nc = Math.min(ncols, sh.getLastColumn()), cab = sh.getRange(hdr, 1, 1, nc).getDisplayValues()[0];
+  var rg = sh.getRange(ini, 1, fim - ini + 1, nc), vv = rg.getValues(), dd = rg.getDisplayValues(), out = [];
+  for (var i = 0; i < vv.length; i++) {
+    if (!(vv[i][0] instanceof Date)) continue;
+    var d = sisIso_(vv[i][0]); if (d < de || d > ate) continue;
+    var l = dd[i].slice(); l[0] = d; out.push(l);
+  }
+  out.sort(function (a, b) { return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0; });
+  return { cab: cab, linhas: out };
+}
+function sisFotosBase64_(datas, max, porDia) {
+  var out = [];
+  try {
+    datas.forEach(function (d) {
+      if (out.length >= max) return;
+      var p = sisPastaRegistro_('diario', d, false); if (!p) return;
+      var it = p.getFiles(), n = 0;
+      while (it.hasNext() && out.length < max && n < porDia) {
+        var f = it.next(); if (!/^image\//.test(f.getMimeType())) continue;
+        var b = f.getBlob(); if (b.getBytes().length > 1500000) continue;
+        out.push({ data: d, nome: f.getName(), src: 'data:' + f.getMimeType() + ';base64,' + Utilities.base64Encode(b.getBytes()) }); n++;
+      }
+    });
+  } catch (e) {}
+  return out;
+}
+/** tipo: 'rdo' (de = dia) ou 'periodo' (de..ate). */
+function sisRelatorio(tipo, de, ate) {
+  var ss = sisSS_(), pm = sisPermissoes_(), R = {}, RD = {};
+  if (tipo === 'rdo') ate = de;
+  if (!de || !ate || de > ate) throw new Error('Escolha as datas do relatório.');
+  var rs = ss.getSheetByName('Resumo');
+  if (rs) { var n = rs.getLastRow(), dv = rs.getRange(1, 1, n, 2).getDisplayValues(); dv.forEach(function (x) { RD[x[0]] = x[1]; }); }
+  var cab = {}; ['Obra', 'Engenheiro', 'Fase atual', 'Avanço físico real', 'Avanço físico previsto', 'Término previsto', 'Início da obra', 'Área construída (m²)',
+    'Atividades atrasadas', 'FVS em aberto', 'Inspeções de serviço reprovadas em aberto', 'Lajes concluídas', 'Total de lajes', 'PPC última semana'].forEach(function (k) { cab[k] = RD[k] || ''; });
+  var out = { tipo: tipo, de: de, ate: ate, obra: cab, gerado: Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm'), por: sisUsuario_() };
+  out.diario = sisPeriodo_(ss, 'Diário de Obra', 4, 5, 404, 20, de, ate);
+  out.producao = sisPeriodo_(ss, 'Produção', 5, 6, 1005, 17, de, ate);
+  out.inspecoes = sisPeriodo_(ss, 'Inspeções de Serviço', 4, 5, 404, 25, de, ate);
+  out.fvs = sisPeriodo_(ss, 'Qualidade (FVS)', 4, 5, 404, 10, de, ate);
+  // número do RDO = posição do dia entre os registros do Diário
+  if (tipo === 'rdo') { var todos = sisPeriodo_(ss, 'Diário de Obra', 4, 5, 404, 1, '0000-00-00', de).linhas; out.numero = todos.length; }
+  // presença no período: por dia e por vínculo, e as ausências com motivo
+  var pr = ss.getSheetByName('Presença');
+  if (pr && pm.modulos.indexOf('presenca') >= 0) {
+    var nc = pr.getLastColumn(), datas = pr.getRange(5, 8, 1, nc - 7).getValues()[0], cols = [];
+    for (var i = 0; i < datas.length; i++) if (datas[i] instanceof Date) { var d = sisIso_(datas[i]); if (d >= de && d <= ate) cols.push([i + 8, d]); }
+    var pes = pr.getRange(6, 1, 120, 3).getDisplayValues(), pres = { dias: [], porVinculo: {}, ausencias: [], homensDia: 0, faltas: 0 };
+    if (cols.length) {
+      var rg = pr.getRange(6, cols[0][0], 120, cols[cols.length - 1][0] - cols[0][0] + 1), mv = rg.getValues(), mn = rg.getNotes();
+      cols.forEach(function (c) {
+        var j = c[0] - cols[0][0], dia = { data: c[1], trab: 0 };
+        pes.forEach(function (p, r) {
+          if (!String(p[0]).trim()) return;
+          var v = mv[r][j]; if (v === '' || v === null) return;
+          var cod = SIS_PRES_COD.filter(function (x) { return x.c === String(v); })[0], w = typeof v === 'number' ? v : (cod && cod.conta) || 0;
+          dia.trab += w; pres.homensDia += w; pres.porVinculo[p[2] || 'Outros'] = (pres.porVinculo[p[2] || 'Outros'] || 0) + w;
+          if (cod && !cod.conta) { if (cod.falta) pres.faltas++; pres.ausencias.push({ data: c[1], nome: p[0], funcao: p[1], cod: cod.c, desc: cod.nome, obs: String(mn[r][j] || '').replace(/ — [^—]*$/, '') }); }
+        });
+        pres.dias.push(dia);
+      });
+    }
+    out.presenca = pres;
+  }
+  // custos do período (só para quem vê custos)
+  if (pm.custos) {
+    var la = sisPeriodo_(ss, 'Lançamentos', 4, 5, 503, 15, de, ate), ce = la.cab.indexOf('Etapa'), cv = la.cab.indexOf('Valor (R$)'), porEtapa = {}, tot = 0;
+    var nb = function (x) { return Number(String(x || '').replace(/[^\d,-]/g, '').replace(',', '.')) || 0; };
+    la.linhas.forEach(function (l) { var v = nb(l[cv]); tot += v; var e = l[ce] || 'Sem etapa'; porEtapa[e] = (porEtapa[e] || 0) + v; });
+    out.custos = { total: tot, porEtapa: porEtapa, qtd: la.linhas.length, orcamento: RD['Orçamento (R$)'] || '', realizado: RD['Realizado (R$)'] || '',
+      vencidas: RD['Contas vencidas (R$)'] || '', aVencer7: RD['A vencer em 7 dias (R$)'] || '' };
+  }
+  out.pendencias = (sisInicio_().pend || []).filter(function (p) { return Number(String(p.qtd).replace(/[^\d]/g, '')) > 0; });
+  var dias = (out.diario.linhas.map(function (l) { return l[0]; }));
+  out.fotos = sisFotosBase64_(tipo === 'rdo' ? [de] : dias, tipo === 'rdo' ? 8 : 12, tipo === 'rdo' ? 8 : 2);
+  return out;
+}

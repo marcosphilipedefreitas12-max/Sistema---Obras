@@ -62,6 +62,18 @@ window.SIS_MOCK = (function () {
     if (fn === 'sisPresenca') return { data: a || st.hoje, col: 8, primeira: '2026-09-01', pessoas: [
       { linha: 6, nome: 'Ajudante Teste', funcao: 'Servente', vinculo: 'Diarista', situacao: 'Ativo', valor: PRES.P[6] || '' },
       { linha: 7, nome: 'Pedreiro Teste', funcao: 'Pedreiro', vinculo: 'Prestador / empreiteiro', situacao: 'Ativo', valor: PRES.P[7] || '' }], codigos: SIS_PRES_COD };
+    if (fn === 'sisRelatorio') {
+      var cabD = ['Data', 'Clima manhã', 'Clima tarde', 'Pedreiros', 'Serventes', 'Carpinteiro', 'Armadores', 'Bombeiro', 'Eletric.', 'Terceiros', 'Total efetivo', 'Equipamentos em obra', 'Serviços executados (onde e o quê)', 'Ocorrências / visitas / acidentes', 'Dia produtivo?'];
+      var lin = function (d, n) { return [d, 'Bom', 'Bom', '3', '4', '', '', '', '', '', String(n), 'Betoneira', 'Alvenaria do 2º pavimento', n > 7 ? 'Visita do cliente' : '', 'Sim']; };
+      var linhas = args[0] === 'rdo' ? [lin(args[1], 7)] : [lin('2026-11-16', 7), lin('2026-11-17', 9), lin('2026-11-18', 8)];
+      return { tipo: args[0], de: args[1], ate: args[2], numero: 12, gerado: '19/11/2026 10:00', por: 'usuario',
+        obra: { Obra: 'OBRA EXEMPLO', Engenheiro: 'Eng. Teste', 'Fase atual': 'Estrutura', 'Término previsto': '30/06/2028', 'Avanço físico real': '4,2%', 'Avanço físico previsto': '5,0%' },
+        diario: { cab: cabD, linhas: linhas }, producao: { cab: ['Data', 'Serviço', 'Local (pav. / unidade)', 'Equipe / empreiteiro', 'Nº contrato (opcional)', 'Unid.', 'Quantidade executada', 'Nº de pessoas', 'Dias', 'Homens-dia'], linhas: [[args[1], 'Alvenaria', '2º pav.', 'Equipe A', '', 'm²', '42', '3', '1', '3']] },
+        inspecoes: { cab: [], linhas: [] }, fvs: { cab: [], linhas: [] },
+        presenca: { dias: [], porVinculo: { Diarista: 5 }, ausencias: [{ data: args[1], nome: 'Ajudante Teste', funcao: 'Servente', cod: 'A', desc: 'Atestado médico', obs: 'Consulta' }], homensDia: 21, faltas: 0 },
+        custos: { total: 5000, porEtapa: { Estrutura: 5000 }, qtd: 2, orcamento: 'R$ 1.000.000', realizado: 'R$ 42.000', vencidas: 'R$ 0', aVencer7: 'R$ 3.000' },
+        pendencias: [{ assunto: 'Compras atrasadas', qtd: 1 }], fotos: [] };
+    }
     if (fn === 'sisPresencaMes') {
       var dias = []; for (var d = 1; d <= 30; d++) dias.push('2026-11-' + (d < 10 ? '0' : '') + d);
       var cod = function (i, base) { var w = new Date(dias[i] + 'T12:00:00').getDay(); return w === 0 || w === 6 ? '' : base(i); };
