@@ -53,6 +53,8 @@ function sisCarregar() {
   var ss = sisSS_();
   var pm0 = sisPermissoes_();
   if (pm0.grava) { try { sisGarantirAbas_(); } catch (e) {} }
+  var aviso = '';
+  if (pm0.admin) { try { aviso = sisPresencaAtualizar_(); } catch (e) { aviso = 'Não consegui atualizar os códigos de presença da planilha: ' + e.message; } }
   var obra = '';
   try { obra = String(ss.getSheetByName('Resumo').getRange('B2').getDisplayValue() || ''); } catch (e) {}
   var pm = sisPermissoes_(), veForn = pm.modulos.indexOf('fornecedores') >= 0;
@@ -64,6 +66,7 @@ function sisCarregar() {
   }
   return {
     permissoes: pm,
+    avisoPlanilha: aviso,
     config: sisConfig_(),
     inicio: inicio,
     obra: obra || ss.getName(),
@@ -369,7 +372,7 @@ function sisSS_() {
 function sisChamar(obraId, fn, args) {
   var permitidas = { sisCarregar: sisCarregar, sisSalvarDemanda: sisSalvarDemanda, sisSalvarFornecedor: sisSalvarFornecedor,
     sisSalvarInteracao: sisSalvarInteracao, sisImportarFornecedores: sisImportarFornecedores, sisAbaLer: sisAbaLer,
-    sisAbaSalvar: sisAbaSalvar, sisAbaLimpar: sisAbaLimpar, sisPresenca: sisPresenca, sisPresencaMarcar: sisPresencaMarcar,
+    sisAbaSalvar: sisAbaSalvar, sisAbaLimpar: sisAbaLimpar, sisPresenca: sisPresenca, sisPresencaMes: sisPresencaMes, sisPresencaMarcar: sisPresencaMarcar,
     sisPerfis: sisPerfis, sisPerfisSalvar: sisPerfisSalvar, sisFotos: sisFotos, sisFotoEnviar: sisFotoEnviar,
     sisObras: sisObras, sisObraCadastrar: sisObraCadastrar, sisObraNova: sisObraNova, sisObraRemover: sisObraRemover, sisModeloDefinir: sisModeloDefinir };
   if (!permitidas[fn]) throw new Error('Função não permitida: ' + fn);
@@ -518,7 +521,7 @@ function sisPermitir_(fn, args) {
   if ((/^sisAba/.test(fn) || /^sisFoto/.test(fn)) && pm.modulos.indexOf(args[0]) < 0) nega();
   if (/Fornecedor|Interacao/.test(fn) && pm.modulos.indexOf('fornecedores') < 0) nega();
   if (fn === 'sisSalvarDemanda' && pm.modulos.indexOf('demandas') < 0) nega();
-  if ((fn === 'sisPresenca' || fn === 'sisPresencaMarcar') && pm.modulos.indexOf('presenca') < 0) nega();
+  if (/^sisPresenca/.test(fn) && pm.modulos.indexOf('presenca') < 0) nega();
   if (fn === 'sisPerfisSalvar' && !pm.admin) nega();
 }
 
