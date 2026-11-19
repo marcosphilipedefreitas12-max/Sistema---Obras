@@ -30,7 +30,10 @@ var SIS_MODULOS = [
   { id: 'presenca', grupo: 'dia', aba: 'Presença', tipo: 'presenca',
     serve: 'Presença de cada pessoa cadastrada, dia a dia. Alimenta o pagamento dos diaristas e o custo de mão de obra.',
     quando: 'Todo dia, de manhã, depois de conferir quem chegou.',
-    passos: ['Escolha o dia (já abre em hoje).', 'Toque em P (presente), F (falta), ½ (meio dia) ou A (atestado) para cada pessoa.', 'Pessoas novas são cadastradas na tela Pessoas.'] },
+    passos: ['Escolha o dia (já abre em hoje).', 'Toque em P (presente), ½ (meio período) ou F (falta sem justificativa).',
+             'Para outros casos use "Outro…": falta justificada, atestado, férias, folga, afastado, chuva/obra parada, treinamento, outra obra, suspensão.',
+             'Em faltas e ausências, escreva o motivo (fica como nota na planilha).', 'Equipe de empreiteiro: digite quantas pessoas vieram.',
+             'P, ½ e treinamento contam como dia trabalhado (pagamento do diarista e efetivo do Diário). F e suspensão contam como falta.'] },
   { id: 'producao', grupo: 'dia', aba: 'Produção', tipo: 'tabela', hdr: 5, ini: 6, fim: 1005, chave: 'B', ult: 'R',
     mostrar: ['A', 'B', 'C', 'D', 'G', 'F', 'K', 'M', 'P'], ordem: 'desc',
     serve: 'Quanto cada equipe executou: serviço, local, quantidade e número de pessoas. Mostra a produtividade contra a meta e o valor a medir.',
@@ -322,23 +325,96 @@ function sisPresenca(iso) {
   for (var i = 0; i < datas.length; i++) if (datas[i] instanceof Date && sisIso_(datas[i]) === alvo) { col = i + 8; break; }
   var pes = sh.getRange(6, 1, 120, 3).getDisplayValues();
   var sit = ss.getSheetByName('Pessoas').getRange(6, 15, 120, 1).getDisplayValues();
-  var marc = col ? sh.getRange(6, col, 120, 1).getValues() : [];
+  var marc = col ? sh.getRange(6, col, 120, 1).getValues() : [], notas = col ? sh.getRange(6, col, 120, 1).getNotes() : [];
   var lista = [];
   pes.forEach(function (p, r) {
     if (!String(p[0]).trim()) return;
-    lista.push({ linha: 6 + r, nome: p[0], funcao: p[1], vinculo: p[2], situacao: sit[r][0], valor: col ? String(marc[r][0] || '') : '' });
+    lista.push({ linha: 6 + r, nome: p[0], funcao: p[1], vinculo: p[2], situacao: sit[r][0], valor: col ? String(marc[r][0] === 0 ? '' : marc[r][0] || '') : '',
+      obs: col ? String(notas[r][0] || '').replace(/ — [^—]*$/, '') : '' });
   });
   var primeira = datas[0] instanceof Date ? sisIso_(datas[0]) : '';
-  return { data: alvo, col: col, primeira: primeira, pessoas: lista };
+  return { data: alvo, col: col, primeira: primeira, pessoas: lista, codigos: SIS_PRES_COD };
 }
 
-function sisPresencaMarcar(linha, col, valor) {
+/* Códigos da folha de presença. "conta": vale como dia trabalhado (pagamento e efetivo); "falta": falta sem justificativa. */
+var SIS_PRES_COD = [
+  { c: 'P', nome: 'Presente', conta: 1 },
+  { c: '½', nome: 'Meio período', conta: 0.5 },
+  { c: 'F', nome: 'Falta (sem justificativa)', falta: true },
+  { c: 'FJ', nome: 'Falta justificada / abonada', just: true },
+  { c: 'A', nome: 'Atestado médico', just: true },
+  { c: 'FE', nome: 'Férias', just: true },
+  { c: 'FG', nome: 'Folga / compensação de horas', just: true },
+  { c: 'AF', nome: 'Afastado (INSS / acidente)', just: true },
+  { c: 'CH', nome: 'Chuva ou obra parada (dispensado)', just: true },
+  { c: 'TR', nome: 'Treinamento / integração', conta: 1 },
+  { c: 'OB', nome: 'Trabalhando em outra obra', just: true },
+  { c: 'S', nome: 'Suspensão', falta: true }
+];
+
+function sisPresencaMarcar(linha, col, valor, obs) {
   return sisComTrava_(function () {
     if (linha < 6 || linha > 125 || col < 8) throw new Error('Posição inválida.');
-    if (['', 'P', 'F', '½', 'A'].indexOf(valor) < 0) throw new Error('Valor inválido.');
-    sisSS_().getSheetByName('Presença').getRange(linha, col).setValue(valor);
+    var ok = valor === '' || SIS_PRES_COD.some(function (x) { return x.c === valor; }) || /^\d{1,3}$/.test(String(valor));
+    if (!ok) throw new Error('Código de presença inválido.');
+    var cel = sisSS_().getSheetByName('Presença').getRange(linha, col);
+    cel.setValue(/^\d+$/.test(String(valor)) ? Number(valor) : valor);
+    if (obs !== undefined) cel.setNote(obs ? String(obs).slice(0, 300) + ' — ' + sisUsuario_() : '');
     return true;
   });
+}
+
+/*
+ * Atualiza UMA VEZ a planilha da obra para os códigos novos (lista suspensa e fórmulas que contam
+ * presença: Presença D/E/F, Pagamento Diaristas E/F e Diário de Obra Q/R/S). Só roda para o
+ * Administrador, só se a planilha ainda estiver na versão antiga, e só troca fórmulas que reconhece.
+ */
+function sisPresencaAtualizar_() {
+  var ss = sisSS_(), pr = ss.getSheetByName('Presença'); if (!pr) return '';
+  var f6 = pr.getRange('F6').getFormula();
+  if (!/COUNTIF\(\$H6:\$ALS6,"P"\)/.test(f6)) return ''; // já atualizada (ou planilha diferente)
+  var nc = pr.getLastColumn(), FIM = '$ALS';
+  var trab = '{"P","TR"}', falt = '{"F","S"}', log = [];
+  var linhasD = [], linhasE = [], linhasF = [];
+  for (var r = 6; r <= 125; r++) {
+    var L = '$H' + r + ':' + FIM + r, mes = ',$H$5:' + FIM + '$5,">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1),$H$5:' + FIM + '$5,"<="&EOMONTH(TODAY(),0)';
+    linhasD.push(['=IF(A' + r + '="","",SUMPRODUCT(COUNTIFS(' + L + ',' + trab + mes + '))+0.5*COUNTIFS(' + L + ',"½"' + mes + ')+SUMIFS(' + L + mes + '))']);
+    linhasE.push(['=IF(A' + r + '="","",SUMPRODUCT(COUNTIFS(' + L + ',' + falt + mes + ')))']);
+    linhasF.push(['=IF(A' + r + '="","",SUMPRODUCT(COUNTIF(' + L + ',' + trab + '))+0.5*COUNTIF(' + L + ',"½")+SUMIF(' + L + ',">0"))']);
+  }
+  pr.getRange(6, 4, 120, 1).setFormulas(linhasD); pr.getRange(6, 5, 120, 1).setFormulas(linhasE); pr.getRange(6, 6, 120, 1).setFormulas(linhasF);
+  log.push('Presença');
+  // lista suspensa com todos os códigos (números continuam aceitos para equipe de empreiteiro)
+  var dv = SpreadsheetApp.newDataValidation().requireValueInList(SIS_PRES_COD.map(function (x) { return x.c; }), true).setAllowInvalid(true)
+    .setHelpText(SIS_PRES_COD.map(function (x) { return x.c + ' = ' + x.nome; }).join(' · ')).build();
+  pr.getRange(6, 8, 120, nc - 7).setDataValidation(dv);
+  pr.getRange('D2').setValue('Marque: ' + SIS_PRES_COD.map(function (x) { return x.c + ' = ' + x.nome.toLowerCase(); }).join(' · ') +
+    '. P, ½ e TR contam como dia trabalhado; F e S contam como falta. Para equipe de empreiteiro, digite o NÚMERO de pessoas do dia (ex.: 6).');
+  // Pagamento Diaristas
+  var pg = ss.getSheetByName('Pagamento Diaristas');
+  if (pg && /"P",Presença!/.test(pg.getRange('E6').getFormula())) {
+    var e = [], f = [];
+    for (var r2 = 6; r2 <= 125; r2++) {
+      var P = 'Presença!$H' + r2 + ':' + FIM + r2, per = ',Presença!$H$5:' + FIM + '$5,">="&$B$2,Presença!$H$5:' + FIM + '$5,"<="&$D$2';
+      e.push(['=IF(A' + r2 + '="","",SUMPRODUCT(COUNTIFS(' + P + ',' + trab + per + '))+0.5*COUNTIFS(' + P + ',"½"' + per + '))']);
+      f.push(['=IF(A' + r2 + '="","",SUMPRODUCT(COUNTIFS(' + P + ',' + falt + per + ')))']);
+    }
+    pg.getRange(6, 5, 120, 1).setFormulas(e); pg.getRange(6, 6, 120, 1).setFormulas(f); log.push('Pagamento Diaristas');
+  }
+  // Diário de Obra: efetivo pela folha (Q, R, S)
+  var di = ss.getSheetByName('Diário de Obra');
+  if (di) {
+    var fq = di.getRange(5, 17, 400, 3).getFormulas(), mud = false;
+    for (var i = 0; i < fq.length; i++) for (var j = 0; j < 3; j++) {
+      var g = fq[i][j];
+      if (g && /COUNTIFS\(INDEX\(Presença![^"]*\),"P",/.test(g)) {
+        fq[i][j] = g.replace(/COUNTIFS\((INDEX\(Presença!\$H\$6:\$ALS\$125,0,MATCH\(\$A\d+,Presença!\$H\$5:\$ALS\$5,0\)\)),"P",(Presença!\$C\$6:\$C\$125,"[^"]+")\)/g, 'SUMPRODUCT(COUNTIFS($1,' + trab + ',$2))');
+        mud = true;
+      }
+    }
+    if (mud) { di.getRange(5, 17, 400, 3).setFormulas(fq); log.push('Diário de Obra'); }
+  }
+  return 'Planilha atualizada para os novos códigos de presença (' + log.join(', ') + ').';
 }
 
 /* ---------------------------------------------------------------- início */

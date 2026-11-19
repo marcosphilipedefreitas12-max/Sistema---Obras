@@ -197,7 +197,15 @@
   .seg button { border: 0; border-left: 1px solid var(--linha); background: var(--campo); padding: 7px 13px; cursor: pointer; font-weight: 600; min-width: 40px; }
   .seg button:first-child { border-left: 0; }
   .seg button.on.P { background: var(--verde); color: #fff; } .seg button.on.F { background: var(--verm); color: #fff; }
-  .seg button.on.m { background: var(--sinal); } .seg button.on.A { background: var(--azul); color: #fff; }
+  .seg button.on.m { background: var(--sinal); color: #22272b; }
+  .pres-ctl { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .pres-outro { width: auto; max-width: 290px; padding: 7px 8px; font-size: 13px; }
+  .pres-outro.on { font-weight: 600; border-width: 2px; } .pres-outro.on.just { border-color: var(--azul2); background: var(--azul-f); } .pres-outro.on.falta, .pres-outro.on.outro { border-color: var(--verm); background: var(--verm-f); }
+  .pres-outro.on.trab { border-color: var(--verde); background: var(--verde-f); }
+  .pres-num { width: 96px; padding: 7px 8px; }
+  .pres-obs { margin-top: 6px; padding: 6px 8px; font-size: 13px; max-width: 340px; }
+  .pres-resumo { margin-bottom: 12px; }
+  .legenda-pres { margin-top: 12px; font-size: 13px; } .legenda-pres summary { cursor: pointer; font-weight: 600; } .legenda-pres ul { padding-left: 18px; } .legenda-pres li { margin: 3px 0; }
 
   .aviso { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--tinta); color: var(--fundo); padding: 10px 16px; border-radius: 6px; display: none; z-index: 60; max-width: 90vw; }
   .carregando { position: fixed; top: 0; left: 0; right: 0; height: 3px; background: var(--sinal); transform-origin: left; animation: barra 1.1s ease-in-out infinite; display: none; z-index: 70; }
@@ -635,25 +643,50 @@ function vPresenca(m, data) {
   el('main').innerHTML = carimbo(m.titulo, m.serve, ['Aba da planilha', 'Presença']) + '<div class="corpo"><div id="area"><div class="vazio"><b>Carregando…</b></div></div>' + guia(m, false) + '</div>';
   chamar('sisPresenca', data || hoje()).then(function (r) { PRES = r; desenharPresenca(); });
 }
+function codPres(c) { return (PRES.codigos || []).filter(function (x) { return x.c === c; })[0]; }
+function catPres(v) { // trabalhando / falta / justificada / numero / vazio
+  if (v === '' || v == null) return 'vazio';
+  if (/^\d+$/.test(String(v))) return 'numero';
+  var c = codPres(v); return !c ? 'outro' : c.conta ? 'trab' : c.falta ? 'falta' : 'just';
+}
 function desenharPresenca() {
   var r = PRES, ativos = r.pessoas.filter(function (p) { return p.situacao !== 'Desligado'; });
-  var cont = { P: 0, F: 0, '½': 0, A: 0 }; ativos.forEach(function (p) { if (cont[p.valor] !== undefined) cont[p.valor]++; });
+  var n = { trab: 0, falta: 0, just: 0, vazio: 0, numero: 0, outro: 0 }; ativos.forEach(function (p) { n[catPres(p.valor)]++; });
   var h = '<div class="barra"><label class="info" for="dPres">Dia</label><input id="dPres" type="date" style="width:170px" value="' + r.data + '" onchange="vPresenca(mod(\'presenca\'),this.value)">' +
-    '<span class="info">' + ativos.length + ' ativas: ' + cont.P + ' presentes, ' + cont.F + ' faltas, ' + cont['½'] + ' meio dia, ' + cont.A + ' atestado</span><span class="esp"></span>' +
-    '<button class="btn sec so-grava" onclick="todosPresentes()">Marcar os que faltam como presentes</button></div>';
+    '<span class="esp"></span><button class="btn sec so-grava" onclick="todosPresentes()">Marcar os que faltam como presentes</button></div>';
   if (!r.col) { el('area').innerHTML = h + '<div class="vazio"><b>Esse dia não está no calendário da aba Presença</b>A aba começa em ' + br(r.primeira) + '. Escolha uma data a partir daí.</div>'; return; }
   if (!ativos.length) { el('area').innerHTML = h + '<div class="vazio"><b>Ninguém cadastrado ainda</b>Cadastre as pessoas na tela Pessoas.<br><br><button class="btn" onclick="ir(\'pessoas\')">Ir para Pessoas</button></div>'; return; }
-  h += '<div class="tabela pres"><table><thead><tr><th>Nome</th><th class="nao-mob">Função</th><th class="nao-mob">Vínculo</th><th>Presença</th></tr></thead><tbody>' + ativos.map(function (p) {
-    return '<tr style="cursor:default"><td><b>' + esc(p.nome) + '</b><span class="so-mob info"><br>' + esc(p.funcao) + '</span></td><td class="nao-mob">' + esc(p.funcao) + '</td><td class="nao-mob">' + esc(p.vinculo) + '</td><td><div class="seg" role="group" aria-label="Presença de ' + esc(p.nome) + '">' +
-      ['P', 'F', '½', 'A'].map(function (v) { return '<button class="' + (v === '½' ? 'm' : v) + (p.valor === v ? ' on' : '') + '" aria-pressed="' + (p.valor === v) + '" title="' + { P: 'Presente', F: 'Falta', '½': 'Meio dia', A: 'Atestado' }[v] + '" onclick="marcar(' + p.linha + ',\'' + v + '\')">' + v + '</button>'; }).join('') +
-      '</div></td></tr>';
-  }).join('') + '</tbody></table></div><p class="info">P = presente · F = falta · ½ = meio dia · A = atestado. Toque de novo para desmarcar. Grava na hora.</p>';
+  h += '<div class="faixa pres-resumo"><div><b>' + (n.trab + n.numero) + '</b><span>Trabalhando</span></div><div><b>' + n.falta + '</b><span>Faltas</span></div>' +
+    '<div><b>' + n.just + '</b><span>Ausências justificadas</span></div><div><b' + (n.vazio ? ' style="color:var(--verm)"' : '') + '>' + n.vazio + '</b><span>Sem marcação</span></div></div>';
+  var outros = (r.codigos || []).filter(function (x) { return ['P', '½', 'F'].indexOf(x.c) < 0; });
+  h += '<div class="tabela pres"><table><thead><tr><th>Nome</th><th class="nao-mob">Função</th><th>Presença</th></tr></thead><tbody>' + ativos.map(function (p) {
+    var cat = catPres(p.valor), outro = cat !== 'vazio' && ['P', '½', 'F'].indexOf(p.valor) < 0 && cat !== 'numero', emp = /empreiteiro|prestador/i.test(p.vinculo);
+    var ctl = '<div class="pres-ctl"><div class="seg" role="group" aria-label="Presença de ' + esc(p.nome) + '">' +
+      ['P', '½', 'F'].map(function (v) { var c = codPres(v) || { nome: v };
+        return '<button class="' + (v === '½' ? 'm' : v) + (p.valor === v ? ' on' : '') + '" aria-pressed="' + (p.valor === v) + '" title="' + esc(c.nome) + '" onclick="marcar(' + p.linha + ',\'' + v + '\')">' + v + '</button>'; }).join('') + '</div>' +
+      '<select class="pres-outro' + (outro ? ' on ' + cat : '') + '" aria-label="Outro código para ' + esc(p.nome) + '" onchange="marcar(' + p.linha + ',this.value,true)">' +
+      '<option value="">' + (outro ? '' : 'Outro…') + '</option>' + outros.map(function (x) { return '<option value="' + esc(x.c) + '"' + (p.valor === x.c ? ' selected' : '') + '>' + esc(x.c + ' — ' + x.nome) + '</option>'; }).join('') + '</select>' +
+      (emp ? '<input class="pres-num" inputmode="numeric" placeholder="nº pessoas" title="Equipe do empreiteiro: quantas pessoas vieram" value="' + (cat === 'numero' ? esc(p.valor) : '') + '" onchange="marcar(' + p.linha + ',this.value.replace(/\\D/g,\'\'),true)">' : '') + '</div>';
+    if (cat === 'just' || cat === 'falta') ctl += '<input class="pres-obs" placeholder="Motivo (opcional)" value="' + esc(p.obs || '') + '" onchange="motivo(' + p.linha + ',this.value)">';
+    return '<tr style="cursor:default"><td><b>' + esc(p.nome) + '</b><span class="info"><br><span class="so-mob">' + esc(p.funcao) + ' · </span>' + esc(p.vinculo) + '</span></td><td class="nao-mob">' + esc(p.funcao) + '</td><td>' + ctl + '</td></tr>';
+  }).join('') + '</tbody></table></div>' +
+    '<details class="legenda-pres"><summary>O que significa cada código</summary><ul>' + (r.codigos || []).map(function (x) {
+      return '<li><b>' + esc(x.c) + '</b> ' + esc(x.nome) + ' <span class="info">— ' + (x.conta ? 'conta como dia trabalhado' : x.falta ? 'conta como falta' : 'ausência justificada (não conta como falta nem como dia trabalhado)') + '</span></li>'; }).join('') +
+    '<li><b>número</b> Equipe de empreiteiro: quantas pessoas vieram no dia</li></ul><p class="info">Toque de novo no mesmo botão para desmarcar. Grava na hora na aba Presença. O motivo fica como nota na célula.</p></details>';
   el('area').innerHTML = h;
 }
-function marcar(linha, v) {
-  var p = PRES.pessoas.filter(function (x) { return x.linha === linha; })[0], ant = p.valor;
-  p.valor = p.valor === v ? '' : v; desenharPresenca();
-  api('sisPresencaMarcar', linha, PRES.col, p.valor).catch(function (e) { p.valor = ant; desenharPresenca(); aviso('Não salvou: ' + (e.message || e), 6000); });
+function marcar(linha, v, direto) {
+  var p = PRES.pessoas.filter(function (x) { return x.linha === linha; })[0], ant = p.valor, antObs = p.obs;
+  p.valor = (!direto && p.valor === v) ? '' : v;
+  var limpaObs = catPres(p.valor) !== 'just' && catPres(p.valor) !== 'falta' && p.obs;
+  if (limpaObs) p.obs = '';
+  desenharPresenca();
+  var args = ['sisPresencaMarcar', linha, PRES.col, p.valor]; if (limpaObs) args.push('');
+  api.apply(null, args).catch(function (e) { p.valor = ant; p.obs = antObs; desenharPresenca(); aviso('Não salvou: ' + (e.message || e), 6000); });
+}
+function motivo(linha, txt) {
+  var p = PRES.pessoas.filter(function (x) { return x.linha === linha; })[0]; p.obs = txt.trim();
+  api('sisPresencaMarcar', linha, PRES.col, p.valor, p.obs).then(function () { aviso('Motivo salvo.'); }, function (e) { aviso('Não salvou o motivo: ' + (e.message || e), 6000); });
 }
 function todosPresentes() {
   var fila = PRES.pessoas.filter(function (p) { return p.situacao !== 'Desligado' && !p.valor; });
@@ -807,6 +840,7 @@ function abrirObra(id) {
     if (PM.modulos) CFG.modulos = CFG.modulos.filter(function (m) { return PM.modulos.indexOf(m.id) >= 0; });
     document.body.classList.toggle('somente-leitura', !PM.grava);
     montarMenu(); ir('inicio');
+    if (r.avisoPlanilha) aviso(r.avisoPlanilha, 9000);
   }, function (e) {
     el('main').innerHTML = '<div class="vazio"><b>Não consegui abrir esta obra</b>' + esc(e && e.message ? e.message : e) + '<br><br><button class="btn" onclick="vObras()">Escolher outra obra</button></div>';
   });
