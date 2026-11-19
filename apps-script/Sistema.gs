@@ -372,7 +372,7 @@ function sisSS_() {
 function sisChamar(obraId, fn, args) {
   var permitidas = { sisCarregar: sisCarregar, sisSalvarDemanda: sisSalvarDemanda, sisSalvarFornecedor: sisSalvarFornecedor,
     sisSalvarInteracao: sisSalvarInteracao, sisImportarFornecedores: sisImportarFornecedores, sisAbaLer: sisAbaLer,
-    sisAbaSalvar: sisAbaSalvar, sisAbaLimpar: sisAbaLimpar, sisPresenca: sisPresenca, sisPresencaMarcar: sisPresencaMarcar,
+    sisAbaSalvar: sisAbaSalvar, sisAbaLimpar: sisAbaLimpar, sisPresenca: sisPresenca, sisPresencaMes: sisPresencaMes, sisPresencaMarcar: sisPresencaMarcar,
     sisPerfis: sisPerfis, sisPerfisSalvar: sisPerfisSalvar, sisFotos: sisFotos, sisFotoEnviar: sisFotoEnviar,
     sisObras: sisObras, sisObraCadastrar: sisObraCadastrar, sisObraNova: sisObraNova, sisObraRemover: sisObraRemover, sisModeloDefinir: sisModeloDefinir };
   if (!permitidas[fn]) throw new Error('Função não permitida: ' + fn);
@@ -521,7 +521,7 @@ function sisPermitir_(fn, args) {
   if ((/^sisAba/.test(fn) || /^sisFoto/.test(fn)) && pm.modulos.indexOf(args[0]) < 0) nega();
   if (/Fornecedor|Interacao/.test(fn) && pm.modulos.indexOf('fornecedores') < 0) nega();
   if (fn === 'sisSalvarDemanda' && pm.modulos.indexOf('demandas') < 0) nega();
-  if ((fn === 'sisPresenca' || fn === 'sisPresencaMarcar') && pm.modulos.indexOf('presenca') < 0) nega();
+  if (/^sisPresenca/.test(fn) && pm.modulos.indexOf('presenca') < 0) nega();
   if (fn === 'sisPerfisSalvar' && !pm.admin) nega();
 }
 

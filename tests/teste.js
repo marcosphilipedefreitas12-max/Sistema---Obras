@@ -32,6 +32,8 @@ const fs = require('fs'), path = require('path');
   await p.click('#gaveta >> text=Salvar na planilha'); await p.waitForTimeout(500);
   await p.evaluate(() => ir('presenca')); await p.waitForTimeout(400); await p.click('.seg button.P >> nth=0'); await p.waitForTimeout(400); await p.locator('select.pres-outro').nth(1).selectOption('FJ'); await p.fill('.pres-obs', 'Teste'); await p.locator('.pres-obs').blur(); await p.waitForTimeout(300);
   await p.screenshot({ path: path.join(out, 'presenca.png') });
+  await p.click('text=Mês inteiro'); await p.waitForTimeout(400); await p.screenshot({ path: path.join(out, 'presenca_mes.png'), fullPage: true });
+  if (await p.locator('.mes-grade tbody tr').count() !== 2) erros.push('mês: linhas erradas');
   await p.evaluate(() => ir('demandas')); await p.click('text=+ Nova demanda');
   await p.fill('#fTit', 'Demanda de teste'); await p.click('#gaveta >> text=Salvar'); await p.waitForTimeout(500);
   await p.screenshot({ path: path.join(out, 'demandas.png'), fullPage: true });

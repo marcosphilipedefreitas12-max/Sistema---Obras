@@ -62,6 +62,13 @@ window.SIS_MOCK = (function () {
     if (fn === 'sisPresenca') return { data: a || st.hoje, col: 8, primeira: '2026-09-01', pessoas: [
       { linha: 6, nome: 'Ajudante Teste', funcao: 'Servente', vinculo: 'Diarista', situacao: 'Ativo', valor: PRES.P[6] || '' },
       { linha: 7, nome: 'Pedreiro Teste', funcao: 'Pedreiro', vinculo: 'Prestador / empreiteiro', situacao: 'Ativo', valor: PRES.P[7] || '' }], codigos: SIS_PRES_COD };
+    if (fn === 'sisPresencaMes') {
+      var dias = []; for (var d = 1; d <= 30; d++) dias.push('2026-11-' + (d < 10 ? '0' : '') + d);
+      var cod = function (i, base) { var w = new Date(dias[i] + 'T12:00:00').getDay(); return w === 0 || w === 6 ? '' : base(i); };
+      return { mes: '2026-11', dias: dias, primeira: '2026-10-26', codigos: SIS_PRES_COD, pessoas: [
+        { linha: 6, nome: 'Ajudante Teste', funcao: 'Servente', vinculo: 'Diarista', empresa: '', situacao: 'Ativo', v: dias.map(function (x, i) { return cod(i, function (j) { return j === 9 ? 'F' : j === 10 ? 'FJ' : 'P'; }); }), obs: dias.map(function (x, i) { return i === 10 ? 'Consulta' : ''; }) },
+        { linha: 7, nome: 'Equipe Teste', funcao: 'Pedreiro', vinculo: 'Prestador / empreiteiro', empresa: 'Empreiteira Exemplo', situacao: 'Ativo', v: dias.map(function (x, i) { return cod(i, function (j) { return String(4 + j % 3); }); }), obs: dias.map(function () { return ''; }) }] };
+    }
     if (fn === 'sisPresencaMarcar') { PRES.P[args[0]] = args[2]; return true; }
     if (fn === 'sisSalvarDemanda') { if (!a.ID) { a.ID = 'D' + (n++); st.demandas.push(a); } else st.demandas = st.demandas.map(function (d) { return d.ID === a.ID ? a : d; }); }
     if (fn === 'sisSalvarFornecedor') { if (!a.ID) { a.ID = 'F' + (n++); st.fornecedores.push(a); } else st.fornecedores = st.fornecedores.map(function (d) { return d.ID === a.ID ? a : d; }); }

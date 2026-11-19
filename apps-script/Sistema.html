@@ -110,6 +110,7 @@
   .carimbo .cel small { display: block; font-size: 11px; color: var(--aco); }
   .corpo { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 22px; align-items: start; }
   .corpo.sem-guia { grid-template-columns: minmax(0, 1fr); }
+  .corpo.cheia { grid-template-columns: minmax(0, 1fr); } .corpo.cheia .guia { order: 2; }
   .guia { background: var(--papel); border-top: 4px solid var(--sinal); padding: 14px 16px; position: sticky; top: 16px; font-size: 13px; }
   .guia h2 { font-family: var(--titulo); font-size: 20px; margin: 0; font-weight: 600; display: inline; }
   .guia summary { cursor: pointer; margin-bottom: 8px; list-style-position: outside; }
@@ -205,6 +206,36 @@
   .pres-num { width: 96px; padding: 7px 8px; }
   .pres-obs { margin-top: 6px; padding: 6px 8px; font-size: 13px; max-width: 340px; }
   .pres-resumo { margin-bottom: 12px; }
+  .abas-pres { display: inline-flex; border: 1px solid var(--linha); border-radius: 6px; overflow: hidden; margin-bottom: 12px; }
+  .abas-pres button { border: 0; background: var(--papel); color: var(--tinta); padding: 8px 16px; cursor: pointer; font: inherit; font-weight: 600; }
+  .abas-pres button + button { border-left: 1px solid var(--linha); }
+  .abas-pres button.on { background: var(--azul); color: #fff; }
+  .mes-grade { overflow-x: auto; }
+  .mes-grade table { border-collapse: separate; border-spacing: 0; font-size: 12px; }
+  .mes-grade th, .mes-grade td { padding: 4px 3px; text-align: center; white-space: nowrap; }
+  .mes-grade .fixa { position: sticky; left: 0; background: var(--papel); text-align: left; min-width: 170px; max-width: 220px; white-space: normal; z-index: 2; border-right: 1px solid var(--linha); padding: 5px 8px; }
+  .mes-grade thead .fixa { background: var(--cab); z-index: 3; }
+  .mes-grade .fixa .info { display: block; font-size: 11px; }
+  .mes-grade th.dia a { display: block; color: var(--tinta); cursor: pointer; min-width: 24px; }
+  .mes-grade th.dia small { display: block; font-weight: 400; color: var(--aco); font-size: 10px; }
+  .mes-grade th.hoje { box-shadow: inset 0 -3px 0 var(--sinal); }
+  .mes-grade .fds { background: var(--cab); }
+  .mes-grade td.cel { font-weight: 600; min-width: 24px; position: relative; }
+  .mes-grade td.cel i { position: absolute; top: 0; right: 2px; font-style: normal; color: var(--azul-t); }
+  .mes-grade td.trab { background: var(--verde-f); color: var(--verde); } .mes-grade td.meio { background: var(--ambar-f); color: var(--ambar); }
+  .mes-grade td.falta, .mes-grade td.out { background: var(--verm-f); color: var(--verm); } .mes-grade td.just { background: var(--azul-f); color: var(--azul-t); }
+  .mes-grade td.num { background: var(--verde-f); color: var(--verde); }
+  .mes-grade .tot { background: var(--cab); min-width: 44px; } .mes-grade .tot.ruim { color: var(--verm); font-weight: 700; }
+  .mes-grade tfoot td { border-top: 2px solid var(--linha); font-weight: 600; }
+  .so-imprime { display: none; }
+  @media print {
+    @page { size: A4 landscape; margin: 8mm; }
+    .lado, .topo-mob, .guia, .nao-imprime, .abas-pres, .carimbo, .aviso, .carregando { display: none !important; }
+    .app { display: block; } .corpo { display: block; } body { background: #fff; }
+    .so-imprime { display: block; } .mes-grade { overflow: visible; } .mes-grade table { font-size: 9px; }
+    .mes-grade .fixa { position: static; min-width: 120px; }
+    .assinaturas { display: flex; gap: 60px; margin-top: 50px; } .assinaturas span { border-top: 1px solid #000; padding-top: 4px; min-width: 220px; text-align: center; }
+  }
   .legenda-pres { margin-top: 12px; font-size: 13px; } .legenda-pres summary { cursor: pointer; font-weight: 600; } .legenda-pres ul { padding-left: 18px; } .legenda-pres li { margin: 3px 0; }
 
   .aviso { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--tinta); color: var(--fundo); padding: 10px 16px; border-radius: 6px; display: none; z-index: 60; max-width: 90vw; }
@@ -643,6 +674,68 @@ function vPresenca(m, data) {
   el('main').innerHTML = carimbo(m.titulo, m.serve, ['Aba da planilha', 'Presença']) + '<div class="corpo"><div id="area"><div class="vazio"><b>Carregando…</b></div></div>' + guia(m, false) + '</div>';
   chamar('sisPresenca', data || hoje()).then(function (r) { PRES = r; desenharPresenca(); });
 }
+function abasPres(qual) {
+  return '<div class="abas-pres" role="tablist"><button role="tab" aria-selected="' + (qual === 'dia') + '" class="' + (qual === 'dia' ? 'on' : '') + '" onclick="vPresenca(mod(\'presenca\'))">Lançar o dia</button>' +
+    '<button role="tab" aria-selected="' + (qual === 'mes') + '" class="' + (qual === 'mes' ? 'on' : '') + '" onclick="vPresencaMes()">Mês inteiro</button></div>';
+}
+
+/* ---------------------------------------------------------------- presença: mês inteiro */
+var PMES = null, PMES_F = { vinc: '', q: '' };
+function vPresencaMes(mes) {
+  if (!el('area')) vPresenca(mod('presenca'));
+  var cp = document.querySelector('.corpo'); if (cp) { cp.classList.add('cheia'); var gd = cp.querySelector('.guia'); if (gd) gd.removeAttribute('open'); }
+  el('area').innerHTML = abasPres('mes') + '<div class="vazio"><b>Carregando o mês…</b></div>';
+  chamar('sisPresencaMes', mes || (PMES && PMES.mes) || hoje().slice(0, 7)).then(function (r) { PMES = r; desenharMes(); });
+}
+function valTrab(v) { if (/^\d+$/.test(v)) return Number(v); var c = codPres2(v); return c && c.conta ? c.conta : 0; }
+function codPres2(v) { return ((PMES && PMES.codigos) || []).filter(function (x) { return x.c === v; })[0]; }
+function catMes(v) { if (!v) return ''; if (/^\d+$/.test(v)) return 'num'; var c = codPres2(v); return !c ? 'out' : c.conta ? (c.conta < 1 ? 'meio' : 'trab') : c.falta ? 'falta' : 'just'; }
+function desenharMes() {
+  var r = PMES, f = PMES_F, sem = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+  var ps = r.pessoas.filter(function (p) {
+    return (!f.vinc || (f.vinc === 'emp' ? /empreiteiro|prestador/i.test(p.vinculo) : p.vinculo === f.vinc)) && (!f.q || chave(p.nome + ' ' + p.funcao + ' ' + p.empresa).indexOf(chave(f.q)) >= 0);
+  });
+  var tot = { trab: 0, falta: 0, just: 0 }, porDia = r.dias.map(function () { return 0; });
+  ps.forEach(function (p) {
+    p.t = { trab: 0, falta: 0, just: 0 };
+    p.v.forEach(function (v, i) { var c = catMes(v), w = valTrab(v); p.t.trab += w; porDia[i] += w; if (c === 'falta') p.t.falta++; if (c === 'just') p.t.just++; });
+    tot.trab += p.t.trab; tot.falta += p.t.falta; tot.just += p.t.just;
+  });
+  var nomeMes = r.dias.length ? new Date(r.dias[0] + 'T12:00:00').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }) : r.mes;
+  var h = abasPres('mes') + '<div class="barra nao-imprime"><label class="info" for="mPres">Mês</label><input id="mPres" type="month" style="width:170px" value="' + esc(r.mes) + '" onchange="vPresencaMes(this.value)">' +
+    '<select id="mVinc" style="width:auto" onchange="PMES_F.vinc=this.value;desenharMes()">' + [['', 'Todos os vínculos'], ['Fichado (CLT)', 'Fichados (CLT)'], ['Diarista', 'Diaristas'], ['emp', 'Empreiteiros / prestadores']].map(function (o) {
+      return '<option value="' + esc(o[0]) + '"' + (f.vinc === o[0] ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('') + '</select>' +
+    '<input id="mBusca" placeholder="Buscar nome, função ou empresa" value="' + esc(f.q) + '" style="width:230px" oninput="PMES_F.q=this.value;clearTimeout(window._tq);window._tq=setTimeout(function(){desenharMes();var b=el(\'mBusca\');b.focus();b.setSelectionRange(b.value.length,b.value.length)},300)">' +
+    '<span class="esp"></span><button class="btn sec" onclick="window.print()">Imprimir / salvar PDF</button></div>';
+  if (!r.dias.length) return el('area').innerHTML = h + '<div class="vazio"><b>Esse mês não está no calendário da aba Presença</b>A aba começa em ' + br(r.primeira) + '.</div>';
+  h += '<h2 class="so-imprime">Folha de presença — ' + esc(nomeMes) + '</h2>';
+  h += '<div class="faixa"><div><b>' + ps.length + '</b><span>Pessoas</span></div><div><b>' + num(tot.trab) + '</b><span>Dias trabalhados (homens-dia)</span></div>' +
+    '<div><b>' + tot.falta + '</b><span>Faltas</span></div><div><b>' + tot.just + '</b><span>Ausências justificadas</span></div></div>';
+  h += '<div class="tabela mes-grade"><table><thead><tr><th class="fixa">Nome</th>' + r.dias.map(function (d) {
+    var dt = new Date(d + 'T12:00:00'), fds = dt.getDay() === 0 || dt.getDay() === 6;
+    return '<th class="dia' + (fds ? ' fds' : '') + (d === hoje() ? ' hoje' : '') + '"><a onclick="vPresenca(mod(\'presenca\'),\'' + d + '\')" title="Abrir o dia ' + br(d) + '">' + Number(d.slice(8)) + '<small>' + sem[dt.getDay()] + '</small></a></th>'; }).join('') +
+    '<th class="tot">Trab.</th><th class="tot">Faltas</th><th class="tot">Just.</th></tr></thead><tbody>' + ps.map(function (p) {
+      return '<tr style="cursor:default"><td class="fixa"><b>' + esc(p.nome) + '</b><span class="info">' + esc(p.funcao) + (p.empresa ? ' · ' + esc(p.empresa) : '') + '</span></td>' + p.v.map(function (v, i) {
+        var c = catMes(v), dt = new Date(r.dias[i] + 'T12:00:00'), fds = dt.getDay() === 0 || dt.getDay() === 6, cd = codPres2(v);
+        return '<td class="cel ' + c + (fds ? ' fds' : '') + '" title="' + esc(br(r.dias[i]) + ': ' + (v ? (cd ? cd.nome : v + ' pessoa(s)') : 'sem marcação') + (p.obs[i] ? ' — ' + p.obs[i] : '')) + '">' + esc(v) + (p.obs[i] ? '<i aria-hidden="true">•</i>' : '') + '</td>';
+      }).join('') + '<td class="tot"><b>' + num(p.t.trab) + '</b></td><td class="tot' + (p.t.falta ? ' ruim' : '') + '">' + p.t.falta + '</td><td class="tot">' + p.t.just + '</td></tr>';
+    }).join('') + '</tbody><tfoot><tr><td class="fixa"><b>Efetivo do dia</b></td>' + porDia.map(function (x) { return '<td class="cel">' + (x ? num(x) : '') + '</td>'; }).join('') +
+    '<td class="tot"><b>' + num(tot.trab) + '</b></td><td class="tot">' + tot.falta + '</td><td class="tot">' + tot.just + '</td></tr></tfoot></table></div>';
+  // por empreiteiro
+  var emp = {}; ps.filter(function (p) { return /empreiteiro|prestador/i.test(p.vinculo); }).forEach(function (p) {
+    var k = p.empresa || 'Sem empresa informada'; emp[k] = emp[k] || { pessoas: 0, trab: 0, falta: 0, dias: 0 };
+    emp[k].pessoas++; emp[k].trab += p.t.trab; emp[k].falta += p.t.falta; emp[k].dias += p.v.filter(function (v) { return valTrab(v) > 0; }).length;
+  });
+  var ks = Object.keys(emp).sort();
+  if (ks.length) h += '<h2 style="margin-top:22px">Por empreiteiro</h2><p class="info nao-imprime">Some os homens-dia de cada empresa para conferir a medição. Cadastre o nome do empreiteiro na coluna "Empresa / empreiteiro" da tela Pessoas.</p>' +
+    '<div class="tabela"><table><thead><tr><th>Empresa / empreiteiro</th><th>Linhas na folha</th><th>Dias com gente na obra</th><th>Homens-dia no mês</th><th>Faltas</th></tr></thead><tbody>' +
+    ks.map(function (k) { var e = emp[k]; return '<tr style="cursor:default"><td><b>' + esc(k) + '</b></td><td>' + e.pessoas + '</td><td>' + e.dias + '</td><td><b>' + num(e.trab) + '</b></td><td>' + e.falta + '</td></tr>'; }).join('') + '</tbody></table></div>';
+  h += '<p class="info">Toque no número do dia para abrir e lançar aquele dia. • = tem motivo anotado (passe o mouse ou toque para ver). Sábados e domingos em cinza.</p>' +
+    '<div class="so-imprime assinaturas"><span>Responsável pela obra</span><span>Encarregado</span></div>';
+  el('area').innerHTML = h;
+}
+function num(x) { return (Math.round(x * 10) / 10).toLocaleString('pt-BR'); }
+
 function codPres(c) { return (PRES.codigos || []).filter(function (x) { return x.c === c; })[0]; }
 function catPres(v) { // trabalhando / falta / justificada / numero / vazio
   if (v === '' || v == null) return 'vazio';
@@ -652,7 +745,7 @@ function catPres(v) { // trabalhando / falta / justificada / numero / vazio
 function desenharPresenca() {
   var r = PRES, ativos = r.pessoas.filter(function (p) { return p.situacao !== 'Desligado'; });
   var n = { trab: 0, falta: 0, just: 0, vazio: 0, numero: 0, outro: 0 }; ativos.forEach(function (p) { n[catPres(p.valor)]++; });
-  var h = '<div class="barra"><label class="info" for="dPres">Dia</label><input id="dPres" type="date" style="width:170px" value="' + r.data + '" onchange="vPresenca(mod(\'presenca\'),this.value)">' +
+  var h = abasPres('dia') + '<div class="barra"><label class="info" for="dPres">Dia</label><input id="dPres" type="date" style="width:170px" value="' + r.data + '" onchange="vPresenca(mod(\'presenca\'),this.value)">' +
     '<span class="esp"></span><button class="btn sec so-grava" onclick="todosPresentes()">Marcar os que faltam como presentes</button></div>';
   if (!r.col) { el('area').innerHTML = h + '<div class="vazio"><b>Esse dia não está no calendário da aba Presença</b>A aba começa em ' + br(r.primeira) + '. Escolha uma data a partir daí.</div>'; return; }
   if (!ativos.length) { el('area').innerHTML = h + '<div class="vazio"><b>Ninguém cadastrado ainda</b>Cadastre as pessoas na tela Pessoas.<br><br><button class="btn" onclick="ir(\'pessoas\')">Ir para Pessoas</button></div>'; return; }

@@ -33,7 +33,9 @@ var SIS_MODULOS = [
     passos: ['Escolha o dia (já abre em hoje).', 'Toque em P (presente), ½ (meio período) ou F (falta sem justificativa).',
              'Para outros casos use "Outro…": falta justificada, atestado, férias, folga, afastado, chuva/obra parada, treinamento, outra obra, suspensão.',
              'Em faltas e ausências, escreva o motivo (fica como nota na planilha).', 'Equipe de empreiteiro: digite quantas pessoas vieram.',
-             'P, ½ e treinamento contam como dia trabalhado (pagamento do diarista e efetivo do Diário). F e suspensão contam como falta.'] },
+             'P, ½ e treinamento contam como dia trabalhado (pagamento do diarista e efetivo do Diário). F e suspensão contam como falta.',
+             '"Mês inteiro" mostra a folha do mês de todos, com totais por pessoa, efetivo por dia e o resumo por empreiteiro. Dá para imprimir ou salvar em PDF.',
+             'Empreiteiros: cadastre cada trabalhador na tela Pessoas com vínculo "Prestador / empreiteiro" e o nome da empresa, e marque P como os demais. Se não souber os nomes, cadastre uma linha por equipe e digite quantas pessoas vieram no dia.'] },
   { id: 'producao', grupo: 'dia', aba: 'Produção', tipo: 'tabela', hdr: 5, ini: 6, fim: 1005, chave: 'B', ult: 'R',
     mostrar: ['A', 'B', 'C', 'D', 'G', 'F', 'K', 'M', 'P'], ordem: 'desc',
     serve: 'Quanto cada equipe executou: serviço, local, quantidade e número de pessoas. Mostra a produtividade contra a meta e o valor a medir.',
@@ -334,6 +336,29 @@ function sisPresenca(iso) {
   });
   var primeira = datas[0] instanceof Date ? sisIso_(datas[0]) : '';
   return { data: alvo, col: col, primeira: primeira, pessoas: lista, codigos: SIS_PRES_COD };
+}
+
+/** Folha do mês inteiro (todas as pessoas), para conferência, empreiteiros e impressão. mes = 'yyyy-mm'. */
+function sisPresencaMes(mes) {
+  var ss = sisSS_(), sh = ss.getSheetByName('Presença'), nc = sh.getLastColumn();
+  var datas = sh.getRange(5, 8, 1, nc - 7).getValues()[0], cols = [], dias = [];
+  mes = String(mes || sisIso_(new Date()).slice(0, 7));
+  for (var i = 0; i < datas.length; i++) if (datas[i] instanceof Date && sisIso_(datas[i]).slice(0, 7) === mes) { cols.push(i + 8); dias.push(sisIso_(datas[i])); }
+  var pes = sh.getRange(6, 1, 120, 3).getDisplayValues();
+  var cad = ss.getSheetByName('Pessoas').getRange(6, 5, 120, 11).getDisplayValues(); // E empresa … O situação
+  var marc = [], notas = [];
+  if (cols.length) { var rg = sh.getRange(6, cols[0], 120, cols[cols.length - 1] - cols[0] + 1); marc = rg.getValues(); notas = rg.getNotes(); }
+  var lista = [];
+  pes.forEach(function (p, r) {
+    if (!String(p[0]).trim()) return;
+    var v = cols.map(function (c) { var x = marc[r][c - cols[0]]; return x === '' || x === null || x === 0 ? '' : String(x); });
+    var n = cols.map(function (c) { return String(notas[r][c - cols[0]] || ''); });
+    var sit = cad[r][10];
+    if (sit === 'Desligado' && !v.some(function (x) { return x; })) return;
+    lista.push({ linha: 6 + r, nome: p[0], funcao: p[1], vinculo: p[2], empresa: cad[r][0], situacao: sit, v: v, obs: n });
+  });
+  var primeira = datas[0] instanceof Date ? sisIso_(datas[0]) : '';
+  return { mes: mes, dias: dias, primeira: primeira, pessoas: lista, codigos: SIS_PRES_COD };
 }
 
 /* Códigos da folha de presença. "conta": vale como dia trabalhado (pagamento e efetivo); "falta": falta sem justificativa. */
