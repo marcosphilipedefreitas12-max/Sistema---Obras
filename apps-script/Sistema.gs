@@ -53,6 +53,8 @@ function sisCarregar() {
   var ss = sisSS_();
   var pm0 = sisPermissoes_();
   if (pm0.grava) { try { sisGarantirAbas_(); } catch (e) {} }
+  var aviso = '';
+  if (pm0.admin) { try { aviso = sisPresencaAtualizar_(); } catch (e) { aviso = 'Não consegui atualizar os códigos de presença da planilha: ' + e.message; } }
   var obra = '';
   try { obra = String(ss.getSheetByName('Resumo').getRange('B2').getDisplayValue() || ''); } catch (e) {}
   var pm = sisPermissoes_(), veForn = pm.modulos.indexOf('fornecedores') >= 0;
@@ -64,6 +66,7 @@ function sisCarregar() {
   }
   return {
     permissoes: pm,
+    avisoPlanilha: aviso,
     config: sisConfig_(),
     inicio: inicio,
     obra: obra || ss.getName(),

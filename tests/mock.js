@@ -61,7 +61,7 @@ window.SIS_MOCK = (function () {
     if (fn === 'sisAbaLimpar') { var t2 = tabela(a); t2.linhas = t2.linhas.filter(function (x) { return x.linha !== args[1]; }); return JSON.parse(JSON.stringify(t2)); }
     if (fn === 'sisPresenca') return { data: a || st.hoje, col: 8, primeira: '2026-09-01', pessoas: [
       { linha: 6, nome: 'Ajudante Teste', funcao: 'Servente', vinculo: 'Diarista', situacao: 'Ativo', valor: PRES.P[6] || '' },
-      { linha: 7, nome: 'Pedreiro Teste', funcao: 'Pedreiro', vinculo: 'Empreiteiro', situacao: 'Ativo', valor: PRES.P[7] || '' }] };
+      { linha: 7, nome: 'Pedreiro Teste', funcao: 'Pedreiro', vinculo: 'Prestador / empreiteiro', situacao: 'Ativo', valor: PRES.P[7] || '' }], codigos: SIS_PRES_COD };
     if (fn === 'sisPresencaMarcar') { PRES.P[args[0]] = args[2]; return true; }
     if (fn === 'sisSalvarDemanda') { if (!a.ID) { a.ID = 'D' + (n++); st.demandas.push(a); } else st.demandas = st.demandas.map(function (d) { return d.ID === a.ID ? a : d; }); }
     if (fn === 'sisSalvarFornecedor') { if (!a.ID) { a.ID = 'F' + (n++); st.fornecedores.push(a); } else st.fornecedores = st.fornecedores.map(function (d) { return d.ID === a.ID ? a : d; }); }
