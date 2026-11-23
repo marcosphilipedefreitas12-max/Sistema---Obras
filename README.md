@@ -49,10 +49,17 @@ O menu segue a rotina da obra: **Todo dia** (Diário, Presença, Produção, Lan
 - **Início** — gráficos (avanço físico previsto × real, orçamento × realizado com divisão por tipo, contas a pagar, efetivo diário, equipe por função, orçado × gasto por etapa), pendências da planilha (aba Menu) com atalho para a tela certa, números principais (Resumo), demandas e retornos do dia.
 - **Telas de lançamento** — lista com busca; "+ Novo registro" abre um formulário com a explicação de cada campo (tirada das notas do cabeçalho da planilha). Só grava nas colunas sem fórmula; o que a planilha calcula aparece no fim, só para consulta. Painel "Como lançar" com quando e como preencher.
 - **Fotos no Diário** — no registro do dia, "📷 Adicionar fotos" (no celular abre a câmera). A foto é reduzida no aparelho e vai para a pasta "Fotos — <obra>" no Google Drive (subpasta por dia); o link da pasta fica na coluna de fotos do Diário. A pasta é compartilhada com quem tem acesso à planilha (o Administrador reforça isso ao salvar os Perfis). Outras telas podem ganhar fotos com `fotos: '<coluna>'` em `SIS_MODULOS`.
-- **Presença** — P / F / ½ / A por pessoa, gravando na hora.
+- **Presença** — P / ½ / F e "Outro…" (FJ falta justificada, A atestado, FE férias, FG folga, AF afastado, CH chuva/obra parada, TR treinamento, OB outra obra, S suspensão), motivo como nota na célula e nº de pessoas para equipe de empreiteiro. P, ½ e TR contam como dia trabalhado; F e S como falta. Na primeira vez que o Administrador abre a obra, o sistema atualiza a lista suspensa e as fórmulas da planilha (Presença D–F, Pagamento Diaristas E–F, Diário Q–S) para os códigos novos. **Mês inteiro**: folha do mês de todos (filtro por vínculo e busca), totais por pessoa, efetivo por dia, resumo **por empreiteiro** (homens-dia para conferir medição, pela coluna "Empresa / empreiteiro" de Pessoas) e impressão em A4 deitado com campo de assinatura.
 - **Demandas** — quadro A fazer → Em andamento → Aguardando terceiros → Concluída, com responsável, prazo e histórico automático.
 - **Fornecedores** — cadastro, avaliação, contatos e próximos passos, e o histórico da obra (cotações, contratos, medições, lançamentos, compras) puxado pelo nome.
 - **Consultas** (Contas a Pagar, Gestão à Vista, Fluxo de Caixa…) — abrem direto na aba da planilha.
+
+## Relatórios
+
+Menu → **Relatórios** (abaixo do Início). Sai pronto para imprimir ou salvar em PDF, com cabeçalho da obra e campos de assinatura.
+
+- **RDO — Relatório Diário de Obra** (nº = posição do dia no Diário): clima, dia produtivo, efetivo por função e pela folha, equipamentos, serviços executados, produção do dia, ocorrências, qualidade (inspeções e FVS), faltas e ausências com motivo, fotos do dia.
+- **Relatório do período** (esta semana / semana passada / este mês / datas livres): avanço físico, dias com diário, efetivo médio e máximo, homens-dia, gráfico de efetivo, serviços executados por dia, produção somada por serviço, ocorrências, qualidade, custos do período por etapa (só para quem vê custos), faltas por tipo, pendências e demandas em aberto e até 12 fotos.
 
 ## Perfis de acesso
 
