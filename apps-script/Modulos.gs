@@ -265,7 +265,11 @@ function sisAbaLer(id) {
     cols.forEach(function (col) { var v = vals[r][col.i]; if (!col.auto) bruto[col.i] = v instanceof Date ? sisIso_(v) : v; });
     linhas.push({ linha: m.ini + r, d: cols.map(function (col) { return disp[r][col.i]; }), v: bruto });
   }
-  if (m.ordem === 'desc') linhas.reverse();
+  if (m.ordem === 'desc') {
+    // mais recente primeiro: pela data da 1ª coluna (quando for data); empate ou sem data, pela linha
+    var dt = function (r) { var x = vals[r.linha - m.ini][0]; return x instanceof Date ? x.getTime() : -Infinity; };
+    linhas.sort(function (a, b) { var da = dt(a), db = dt(b); return db !== da ? (db > da ? 1 : -1) : b.linha - a.linha; });
+  }
   var ix = function (L) { var n = sisColNum_(L) - 1; for (var k = 0; k < cols.length; k++) if (cols[k].i === n) return k; return -1; };
   return { id: id, aba: m.aba, chave: ix(m.chave), mostrar: (m.mostrar || []).map(ix).filter(function (x) { return x >= 0; }),
            cols: cols, linhas: linhas, livres: nl - linhas.length, novo: m.novo !== false };
