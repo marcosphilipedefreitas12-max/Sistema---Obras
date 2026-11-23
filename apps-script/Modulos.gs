@@ -71,12 +71,14 @@ var SIS_MODULOS = [
     serve: 'Ciclo de cada laje: previsto × real, com farol de atraso.',
     quando: 'No início, na concretagem e no término de cada pavimento.',
     passos: ['Abra o pavimento e preencha a data real de início, da concretagem da laje e do término.', 'Ciclo real, farol e situação são automáticos.'] },
-  { id: 'diaristas', grupo: 'semana', aba: 'Pagamento Diaristas', tipo: 'diaristas',
-    serve: 'Quanto cada diarista tem a receber até hoje (pela Presença), o que já foi lançado para pagamento e o que já foi pago.',
+  { id: 'diaristas', grupo: 'semana', aba: 'Pagamento Diaristas', tipo: 'diaristas', titulo: 'Pagamentos da equipe',
+    serve: 'Diaristas: quanto cada um tem a receber até hoje (pela Presença). Fichados: pagamentos do mês pelo holerite. Em ambos, o que foi lançado e o que já foi pago.',
     quando: 'No dia de pagar (semana ou quinzena) e sempre que quiser conferir o que está em aberto.',
     passos: ['O valor em aberto soma todos os dias trabalhados (P, ½, TR) ainda não pagos, até hoje.', 'Clique em "Lançar pagamento", confira o período e escolha "Já foi pago" ou "Lançar para pagar".',
              'O pagamento vai também para a aba Lançamentos (Mão de obra), entrando no custo da obra.', 'Quando o financeiro pagar, abra o histórico e clique em "Marcar como pago".',
-             'Se o diarista foi fichado (CLT), informe "Diarista até" (o último dia como diarista): os dias depois disso não entram mais.'] },
+             'Se o diarista foi fichado (CLT), informe "Diarista até" (o último dia como diarista): os dias depois disso não entram mais.',
+             'Aba "Fichados (CLT)": escolha o mês e lance adiantamento, salário e vale-transporte/alimentação com o valor do holerite do RH; depois marque como pago.',
+             '"Relatório para o RH" mostra dias trabalhados, faltas, atestados e férias de cada fichado no mês, pronto para imprimir ou salvar em PDF.'] },
   { id: 'monitoramento', grupo: 'semana', aba: 'Monitoramento', tipo: 'tabela', hdr: 4, ini: 5, fim: 304, chave: 'A', ult: 'M',
     mostrar: ['A', 'C', 'E', 'G', 'H', 'J', 'K'], ordem: 'desc',
     serve: 'Leituras dos marcos e fissurômetros nos vizinhos. Avisa quando o deslocamento passa do limite.',
@@ -1024,7 +1026,7 @@ function sisDiaristaLancar(linha, de, ate, data, forma, pago) {
 }
 function sisDiaristaLanc_(lanc) {
   var obs = String(sisSS_().getSheetByName('Lançamentos').getRange(lanc, 12).getValue());
-  if (!/\[DIARIAS /.test(obs)) throw new Error('Esse lançamento não é de diárias.');
+  if (!/\[(DIARIAS|CLT) /.test(obs)) throw new Error('Esse lançamento não é de diárias nem de fichado.');
 }
 function sisDiaristaPago(lanc, data) { sisDiaristaLanc_(lanc); sisAbaSalvar('lancamentos', lanc, { 14: 'Pago', 15: data || sisIso_(new Date()) }); return sisDiaristas(); }
 function sisDiaristaCancelar(lanc) { sisDiaristaLanc_(lanc); sisAbaSalvar('lancamentos', lanc, { 14: 'Cancelado' }); return sisDiaristas(); }
@@ -1032,4 +1034,59 @@ function sisDiaristaAte(linha, iso) {
   var a = sisDiarAte_(); if (iso) a[linha] = String(iso).slice(0, 10); else delete a[linha];
   PropertiesService.getScriptProperties().setProperty('SIS_DIAR_ATE_' + sisSS_().getId(), JSON.stringify(a));
   return sisDiaristas();
+}
+
+
+/* ---------------------------------------------------------------- FICHADOS (CLT) */
+/* O valor vem do holerite do RH (digitado); o sistema só controla lançado → pago e junta a presença do mês.
+   Pagamentos = linhas da aba Lançamentos com [CLT aaaa-mm TIPO] nas Observações (TIPO: ADIANTAMENTO, SALARIO, BENEFICIOS). */
+var SIS_CLT_TIPOS = { ADIANTAMENTO: 'Adiantamento (vale)', SALARIO: 'Salário do mês', BENEFICIOS: 'Vale-transporte / alimentação' };
+function sisFichados(mes) {
+  var ss = sisSS_(), ate = sisDiarAte_(), pm = sisPermissoes_();
+  mes = String(mes || sisIso_(new Date()).slice(0, 7)).slice(0, 7);
+  var num = function (x) { return typeof x === 'number' ? x : Number(String(x || '').replace(/[^\d,-]/g, '').replace(',', '.')) || 0; };
+  var iso = function (x) { return x instanceof Date ? sisIso_(x) : ''; };
+  var pe = ss.getSheetByName('Pessoas').getRange(6, 1, 120, 16).getValues();
+  var pres = sisPresencaMes(mes), porLinha = {}; pres.pessoas.forEach(function (x) { porLinha[x.linha] = x; });
+  var lv = ss.getSheetByName('Lançamentos').getRange(5, 1, 499, 17).getValues(), pags = {};
+  lv.forEach(function (r, i) {
+    var m = String(r[11] || '').match(/\[CLT (\d{4}-\d{2}) (ADIANTAMENTO|SALARIO|BENEFICIOS)\]/); if (!m || m[1] !== mes) return;
+    var nome = String(r[3] || '').trim().toLowerCase();
+    (pags[nome] = pags[nome] || []).push({ lanc: 5 + i, tipo: m[2], valor: pm.custos ? num(r[7]) : 0, status: String(r[14] || 'Lançado'), venc: iso(r[8]), pagoEm: iso(r[15]), forma: String(r[13] || '') });
+  });
+  var fimMes = new Date(Date.UTC(Number(mes.slice(0, 4)), Number(mes.slice(5, 7)), 0)).toISOString().slice(0, 10), iniMes = mes + '-01', lista = [];
+  pe.forEach(function (p, i) {
+    var nome = String(p[1] || '').trim(), linha = 6 + i; if (!nome) return;
+    var clt = /fichado|clt/i.test(String(p[3])), adm = ate[linha] ? sisMaisDias_(ate[linha], 1) : (clt ? iso(p[12]) : '');
+    if (!clt && !ate[linha]) return;
+    var saida = iso(p[13]);
+    if (adm && adm > fimMes) return; if (saida && saida < iniMes) return;
+    var pr = porLinha[linha], cont = {}, datas = {}, obs = [];
+    if (pr) pr.v.forEach(function (v, j) {
+      var d = pres.dias[j]; if (!v || (adm && d < adm) || (saida && d > saida)) return;
+      cont[v] = (cont[v] || 0) + 1; (datas[v] = datas[v] || []).push(d);
+      if (pr.obs[j]) obs.push(d.slice(8) + '/' + d.slice(5, 7) + ' ' + v + ': ' + pr.obs[j]);
+    });
+    lista.push({ linha: linha, nome: nome, funcao: String(p[2] || ''), vinculo: String(p[3] || ''), empresa: String(p[4] || ''), salario: pm.custos ? num(p[7]) : 0, etapa: String(p[9] || ''),
+      admissao: adm, saida: saida, proporcional: !!(adm && adm > iniMes) || !!(saida && saida < fimMes), situacao: String(p[14] || ''), temPix: !!String(p[11] || '').trim(),
+      cont: cont, datas: datas, obs: obs, semPresenca: !pr, pagamentos: pags[nome.toLowerCase()] || [] });
+  });
+  return { mes: mes, hoje: sisIso_(new Date()), dias: pres.dias, tipos: SIS_CLT_TIPOS, codigos: SIS_PRES_COD, pessoas: lista };
+}
+/** Soma dias a um texto aaaa-mm-dd (conta pura, sem fuso). */
+function sisMaisDias_(iso, n) { var d = new Date(Date.UTC(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10)) + n)); return d.toISOString().slice(0, 10); }
+/** Lança um pagamento de fichado com o valor do holerite. */
+function sisFichadoLancar(linha, mes, tipo, valor, data, forma, pago) {
+  if (!SIS_CLT_TIPOS[tipo]) throw new Error('Tipo de pagamento inválido.');
+  mes = String(mes || '').slice(0, 7); if (!/^\d{4}-\d{2}$/.test(mes)) throw new Error('Mês inválido.');
+  var v = Number(String(valor).replace(/\./g, '').replace(',', '.')); if (typeof valor === 'number') v = valor;
+  if (!(v > 0)) throw new Error('Informe o valor do holerite.');
+  var p = sisFichados(mes).pessoas.filter(function (x) { return x.linha === linha; })[0];
+  if (!p) throw new Error('Pessoa não encontrada entre os fichados desse mês.');
+  var hoje = sisIso_(new Date()), pix = String(sisSS_().getSheetByName('Pessoas').getRange(linha, 12).getValue() || '');
+  var w = { 0: hoje, 1: p.etapa || '', 2: SIS_CLT_TIPOS[tipo] + ' ' + mes.slice(5) + '/' + mes.slice(0, 4) + ' — ' + p.nome, 3: p.nome, 5: 'Mão de obra', 6: 1, 7: v, 8: data || hoje,
+    11: '[CLT ' + mes + ' ' + tipo + '] Valor do holerite. Lançado pelo sistema por ' + sisUsuario_(), 13: forma || 'PIX', 14: pago ? 'Pago' : 'Lançado' };
+  if (pago) w[15] = data || hoje; if (pix) w[16] = pix;
+  sisAbaSalvar('lancamentos', 0, w);
+  return sisFichados(mes);
 }
