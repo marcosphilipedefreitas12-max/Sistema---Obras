@@ -91,7 +91,7 @@ function sisSalvarDemanda(d) {
     var linha = d.ID ? sisAcharLinha_(sh, d.ID) : 0;
     var antigo = linha ? sisLinhaObj_(sh, linha, SIS_COLS.dem) : {};
     var hist = String(antigo['Histórico'] || '');
-    var marca = Utilities.formatDate(agora, Session.getScriptTimeZone(), 'dd/MM HH:mm') + ' ' + quem + ': ';
+    var marca = Utilities.formatDate(agora, sisTz_(), 'dd/MM HH:mm') + ' ' + quem + ': ';
     if (!linha) {
       d.ID = sisNovoId_('D');
       d['Criada em'] = agora;
@@ -339,16 +339,29 @@ function sisNum_(v) {
   return typeof v === 'number' ? v : (v === '' || v === null ? null : Number(String(v).replace(/\./g, '').replace(',', '.')) || null);
 }
 
+/** Fuso da PLANILHA (não o do projeto de script), para a data gravada e a lida serem o mesmo dia. */
+var SIS_TZ = null;
+function sisTz_() {
+  if (SIS_TZ) return SIS_TZ;
+  try { SIS_TZ = sisSS_().getSpreadsheetTimeZone(); } catch (e) {}
+  return SIS_TZ || (SIS_TZ = Session.getScriptTimeZone() || 'America/Sao_Paulo');
+}
+
 function sisIso_(d) {
   if (!(d instanceof Date) || isNaN(d)) return '';
-  return Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  return Utilities.formatDate(d, sisTz_(), 'yyyy-MM-dd');
+}
+
+/** 'aaaa-mm-dd' → data ao MEIO-DIA no fuso da planilha (meio-dia não muda de dia com diferença de fuso). */
+function sisDia_(a, m, d) {
+  return Utilities.parseDate(a + '-' + ('0' + m).slice(-2) + '-' + ('0' + d).slice(-2) + ' 12:00', sisTz_(), 'yyyy-MM-dd HH:mm');
 }
 
 function sisData_(s) {
   if (!s) return '';
   if (s instanceof Date) return s;
   var m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);
-  return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : '';
+  return m ? sisDia_(Number(m[1]), Number(m[2]), Number(m[3])) : '';
 }
 
 /* ======================================================== VÁRIAS OBRAS */
@@ -376,7 +389,7 @@ function sisChamar(obraId, fn, args) {
     sisPerfis: sisPerfis, sisPerfisSalvar: sisPerfisSalvar, sisFotos: sisFotos, sisFotoEnviar: sisFotoEnviar, sisRelatorio: sisRelatorio,
     sisObras: sisObras, sisObraCadastrar: sisObraCadastrar, sisObraNova: sisObraNova, sisObraRemover: sisObraRemover, sisModeloDefinir: sisModeloDefinir };
   if (!permitidas[fn]) throw new Error('Função não permitida: ' + fn);
-  SIS_OBRA_ID = String(obraId || ''); SIS_SS = null; SIS_PERFIL = null;
+  SIS_OBRA_ID = String(obraId || ''); SIS_SS = null; SIS_PERFIL = null; SIS_TZ = null;
   if (!/^sisObra|^sisObras$|^sisModelo/.test(fn)) sisPermitir_(fn, args || []);
   return permitidas[fn].apply(null, args || []);
 }

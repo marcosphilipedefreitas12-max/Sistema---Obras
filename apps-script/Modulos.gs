@@ -291,7 +291,7 @@ function sisAbaSalvar(id, linha, valores) {
       if (typeof v === 'string') {
         v = v.trim();
         var dm = v.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-        if (dm) v = new Date(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3]));
+        if (dm) v = sisDia_(Number(dm[1]), Number(dm[2]), Number(dm[3]));
         else if (v !== '' && /^-?[\d.]*,?\d+%?$/.test(v) && !/^0\d/.test(v) && !/@|[a-z]/i.test(String(fmts[c])))
           v = /%$/.test(v) ? Number(v.replace('%', '').replace(/\./g, '').replace(',', '.')) / 100 : Number(v.replace(/\./g, '').replace(',', '.'));
       }
@@ -615,7 +615,7 @@ function sisRelatorio(tipo, de, ate) {
   if (rs) { var n = rs.getLastRow(), dv = rs.getRange(1, 1, n, 2).getDisplayValues(); dv.forEach(function (x) { RD[x[0]] = x[1]; }); }
   var cab = {}; ['Obra', 'Engenheiro', 'Fase atual', 'Avanço físico real', 'Avanço físico previsto', 'Término previsto', 'Início da obra', 'Área construída (m²)',
     'Atividades atrasadas', 'FVS em aberto', 'Inspeções de serviço reprovadas em aberto', 'Lajes concluídas', 'Total de lajes', 'PPC última semana'].forEach(function (k) { cab[k] = RD[k] || ''; });
-  var out = { tipo: tipo, de: de, ate: ate, obra: cab, gerado: Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm'), por: sisUsuario_() };
+  var out = { tipo: tipo, de: de, ate: ate, obra: cab, gerado: Utilities.formatDate(new Date(), sisTz_(), 'dd/MM/yyyy HH:mm'), por: sisUsuario_() };
   out.diario = sisPeriodo_(ss, 'Diário de Obra', 4, 5, 404, 20, de, ate);
   out.producao = sisPeriodo_(ss, 'Produção', 5, 6, 1005, 17, de, ate);
   out.inspecoes = sisPeriodo_(ss, 'Inspeções de Serviço', 4, 5, 404, 25, de, ate);

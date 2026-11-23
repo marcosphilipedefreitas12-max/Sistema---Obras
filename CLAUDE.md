@@ -12,7 +12,7 @@
 - Implantação SEMPRE "Executar como: Usuário que acessa" (senão quem tem o link mexe em tudo com a conta do dono).
 - Fotos (`Modulos.gs`): módulo com `fotos: '<letra>'` ganha bloco de fotos no formulário; arquivos no Drive (`DriveApp`, pasta por obra em Script Property `SIS_FOTOS_<idPlanilha>`, subpasta por tela e por chave do registro). A foto é reduzida no navegador (1600 px, JPEG) e enviada uma a uma.
 - Presença: códigos em `SIS_PRES_COD` (`Modulos.gs`). Mudou o que conta como trabalhado/falta? Atualizar também `sisPresencaAtualizar_` (migração única, só Administrador, só se reconhecer a fórmula antiga). Fórmulas usam `SUMPRODUCT(COUNTIFS(..., {"P","TR"}, ...))` (funciona no Sheets, Excel e LibreOffice).
-- `google.script.run` não aceita `Date` no retorno: converter para texto `yyyy-MM-dd` (`sisIso_`).
+- `google.script.run` não aceita `Date` no retorno: converter para texto `yyyy-MM-dd` (`sisIso_`). Datas sempre no fuso da PLANILHA (`sisTz_()`), e texto → data com `sisData_`/`sisDia_` (meio-dia), nunca `new Date(a, m, d)` — o fuso do projeto de script pode ser outro e a data cai no dia anterior.
 - Escapar todo texto vindo da planilha com `esc()` antes de pôr no HTML.
 - Cada tela da planilha é um item de `SIS_MODULOS` (`Modulos.gs`): aba, linha do cabeçalho (`hdr`, `hdr2` se o nome está mesclado na linha de cima), primeira/última linha de dados, coluna-chave, última coluna, colunas da lista (`mostrar`) e os textos `serve` / `quando` / `passos`. Ao mudar o layout de uma aba na planilha, atualizar aqui.
 - `sisAbaSalvar` nunca grava em célula com fórmula (confere a 1ª linha de dados).
