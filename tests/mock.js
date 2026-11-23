@@ -23,7 +23,7 @@ window.SIS_MOCK = (function () {
   var n = 10;
   // Tabelas fictícias: cada aba devolve colunas genéricas; o Diário tem colunas próprias para testar o formulário.
   var SEG = (function () { var d = new Date(st.hoje + 'T12:00:00'); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.toISOString().slice(0, 10); })();
-  var IA = { ligado: false }, PERFIS = [], TAB = {}, PRES = { P: {} }, OB = [{ id: 'A1', nome: 'OBRA EXEMPLO', resp: 'Eng. Teste' }, { id: 'B2', nome: 'OBRA DOIS', resp: 'Eng. Outro' }];
+  var CONSV = {}, IA = { ligado: false }, PERFIS = [], TAB = {}, PRES = { P: {} }, OB = [{ id: 'A1', nome: 'OBRA EXEMPLO', resp: 'Eng. Teste' }, { id: 'B2', nome: 'OBRA DOIS', resp: 'Eng. Outro' }];
   function tabela(id) {
     if (TAB[id]) return TAB[id];
     var col = function (i, nome, tipo, extra) { var c = { i: i, letra: String.fromCharCode(65 + i), nome: nome, ajuda: '', auto: false, tipo: tipo || 'texto', opcoes: [] }; for (var k in extra || {}) c[k] = extra[k]; return c; };
@@ -110,6 +110,17 @@ window.SIS_MOCK = (function () {
         diario: rl.diario, producao: rl.producao, presenca: rl.presenca, pendencias: rl.pendencias, inspecoes: rl.inspecoes, fvs: rl.fvs, custosPeriodo: rl.custos,
         custoMes: { '2026-10': { Fundação: 20000 }, '2026-11': { Fundação: 30000, Preliminares: 10000 } }, contasAbertas: [{ venc: '2026-11-20', desc: 'Concreto', valor: 4000 }],
         etapasOrc: [['Fundação', 200000, 50000], ['Preliminares', 30000, 10000]], planSemana: 0, motivos: { 'Material não chegou': 1 }, demandasAtrasadas: [], obras: [{ id: 'A1', nome: 'OBRA EXEMPLO' }, { id: 'B2', nome: 'OBRA DOIS' }] };
+    }
+    if (fn === 'sisOrcConfirmar') return !!a;
+    if (fn === 'sisConsultaLer' || fn === 'sisConsultaGravar') {
+      if (fn === 'sisConsultaGravar') CONSV[args[1] + ',' + args[2]] = args[3];
+      var L = function (r, c, v) { return CONSV[r + ',' + c] != null ? CONSV[r + ',' + c] : v; };
+      return { id: a, aba: a, ncol: 4, mesc: [], linhas: [
+        [{ v: 'Título da aba' }, { v: '' }, { v: '' }, { v: '' }],
+        [{ v: 'Explicação da aba de exemplo, com texto longo para ocupar a linha inteira da tabela.' }, { v: '' }, { v: '' }, { v: '' }],
+        [{ v: 'Etapa', e: 2 }, { v: 'Orçado', e: 2 }, { v: 'Gasto', e: 2 }, { v: 'Saldo', e: 2 }],
+        [{ v: 'Fundação' }, { v: L(4, 2, 'R$ 200.000,00') }, { v: 'R$ 50.000,00', f: 1 }, { v: 'R$ 150.000,00', f: 1 }],
+        [{ v: 'Estrutura' }, { v: L(5, 2, 'R$ 400.000,00') }, { v: 'R$ 0,00', f: 1 }, { v: 'R$ 400.000,00', f: 1 }]] };
     }
     if (fn === 'sisFotos') return { fotos: [], pasta: '' };
     if (fn === 'sisFotoEnviar') return { pasta: 'https://drive.google.com/drive/folders/EXEMPLO', foto: { id: 'X' + (n++), nome: args[3], url: '#' } };
