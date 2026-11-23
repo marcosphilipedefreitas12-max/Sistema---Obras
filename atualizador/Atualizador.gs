@@ -17,7 +17,7 @@ var DEPLOYMENT_ID = 'COLE_AQUI_O_CODIGO_DE_IMPLANTACAO'; // o código que aparec
 
 var REPO = 'marcosphilipedefreitas12-max/Sistema---Obras', RAMO = 'main';
 var ARQUIVOS = [
-  { caminho: 'apps-script/Sistema.gs', nome: 'Sistema', tipo: 'SERVER_JS' },
+  { caminho: 'apps-script/Sistema.gs', nome: 'Código', tipo: 'SERVER_JS' }, // no projeto o .gs não pode ter o mesmo nome do Sistema.html
   { caminho: 'apps-script/Modulos.gs', nome: 'Modulos', tipo: 'SERVER_JS' },
   { caminho: 'apps-script/Sistema.html', nome: 'Sistema', tipo: 'HTML' }
 ];
