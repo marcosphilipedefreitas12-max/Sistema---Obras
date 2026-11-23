@@ -51,12 +51,15 @@ var SIS_MODULOS = [
   { id: 'contas', grupo: 'dia', aba: 'Contas a Pagar', tipo: 'consulta',
     serve: 'O que vence hoje e nos próximos dias. Só consulta: o status muda em Lançamentos.', quando: 'Toda manhã.' },
 
-  { id: 'planejamento', grupo: 'semana', aba: 'Planejamento Semanal', tipo: 'tabela', hdr: 4, ini: 5, fim: 404, chave: 'B', ult: 'M',
+  { id: 'planejamento', grupo: 'semana', aba: 'Planejamento Semanal', tipo: 'tabela', hdr: 4, ini: 5, fim: 404, chave: 'B', ult: 'N', dias: 'N',
     mostrar: ['A', 'B', 'C', 'D', 'E', 'F', 'I', 'M'], ordem: 'desc',
     serve: 'O que a obra se compromete a fazer na semana e o que foi cumprido (PPC). Mostra os motivos de não cumprir.',
     quando: 'Segunda: planejar. Sexta: marcar o que foi concluído e o motivo do que não foi.',
-    passos: ['Segunda: uma linha por atividade, com local, equipe, quantidade e o que precisa antes (restrição).', 'Durante a semana: marque quando a restrição for resolvida.',
-             'Sexta: "Concluída?" S ou N; se N, escolha o motivo.', 'Semana e status são automáticos.'] },
+    passos: ['No "Quadro da semana", escolha a semana nas setas e clique em "+ Nova atividade" (ou no dia vazio, para já marcar aquele dia).',
+             'Marque os dias em que o serviço acontece (Seg a Sáb). Sem dia marcado, ele aparece na semana toda.',
+             'Informe local, equipe, quantidade e o que precisa antes (restrição). Restrição não resolvida aparece com ⚠.',
+             'Durante a semana: marque quando a restrição for resolvida.', 'Sexta: "Concluída?" S, Parcial ou N; se não, escolha o motivo. O PPC da semana é calculado na hora.',
+             '"Copiar o que não foi concluído" leva para a semana seguinte as atividades que ficaram para trás.'] },
   { id: 'cronograma', grupo: 'semana', aba: 'Cronograma', tipo: 'tabela', hdr: 6, ini: 7, fim: 67, chave: 'C', ult: 'N',
     mostrar: ['A', 'B', 'C', 'H', 'I', 'J', 'K', 'L'],
     serve: 'Todas as atividades da obra, com dependências, duração, datas e % concluído.',
@@ -197,7 +200,7 @@ function sisConfig_() {
   ss.getSheets().forEach(function (s) { gid[s.getName()] = s.getSheetId(); });
   var mods = SIS_MODULOS.filter(function (m) { return !m.aba || gid[m.aba] !== undefined; }).map(function (m) {
     return { id: m.id, grupo: m.grupo, aba: m.aba || '', titulo: m.titulo || m.aba || (m.id === 'demandas' ? 'Demandas' : 'Fornecedores'),
-             tipo: m.tipo, fotos: m.fotos ? sisColNum_(m.fotos) - 1 : -1, serve: m.serve || '', quando: m.quando || '', passos: m.passos || [], novo: m.novo !== false,
+             tipo: m.tipo, fotos: m.fotos ? sisColNum_(m.fotos) - 1 : -1, dias: m.dias ? sisColNum_(m.dias) - 1 : -1, serve: m.serve || '', quando: m.quando || '', passos: m.passos || [], novo: m.novo !== false,
              link: m.aba ? ss.getUrl() + '#gid=' + gid[m.aba] : '' };
   });
   return { grupos: SIS_GRUPOS, modulos: mods, url: ss.getUrl() };
@@ -233,6 +236,7 @@ function sisAbaLer(id) {
     var cima = sh.getRange(m.hdr - 1, 1, 1, nc), nc2 = cima.getDisplayValues()[0], nt2 = cima.getNotes()[0];
     for (var k = 0; k < nc; k++) if (!String(nomes[k]).trim() && String(nc2[k]).trim().length < 60) { nomes[k] = nc2[k]; notas[k] = notas[k] || nt2[k]; }
   }
+  if (m.dias) { var di = sisColNum_(m.dias) - 1; if (!String(nomes[di]).trim()) { nomes[di] = 'Dias da semana'; notas[di] = notas[di] || 'Dias em que a atividade acontece. Vazio = semana toda.'; } }
   var mod = sh.getRange(m.ini, 1, 1, nc);
   var fmls = mod.getFormulas()[0], fmts = mod.getNumberFormats()[0], dvs = mod.getDataValidations()[0];
   var cols = [];
@@ -282,6 +286,7 @@ function sisAbaSalvar(id, linha, valores) {
       if (!linha) throw new Error('A aba "' + m.aba + '" está cheia (linhas ' + m.ini + ' a ' + m.fim + '). Peça para aumentar.');
     }
     if (linha < m.ini || linha > m.fim) throw new Error('Linha fora da área de dados.');
+    if (m.dias) { var hd = sh.getRange(m.hdr, sisColNum_(m.dias)); if (!String(hd.getValue()).trim()) hd.setValue('Dias da semana').setNote('Dias em que a atividade acontece (Seg, Ter, Qua, Qui, Sex, Sáb, Dom). Vazio = semana toda. Preenchido pelo Sistema de Obras.'); }
     var fmls = sh.getRange(linha, 1, 1, nc).getFormulas()[0];
     var fmts = sh.getRange(linha, 1, 1, nc).getNumberFormats()[0];
     Object.keys(valores).forEach(function (k) {
@@ -656,4 +661,30 @@ function sisRelatorio(tipo, de, ate) {
   var dias = (out.diario.linhas.map(function (l) { return l[0]; }));
   out.fotos = sisFotosBase64_(tipo === 'rdo' ? [de] : dias, tipo === 'rdo' ? 8 : 12, tipo === 'rdo' ? 8 : 2);
   return out;
+}
+
+/* ---------------------------------------------------------------- planejamento: reprogramar */
+/** Copia para a semana seguinte as atividades da semana (segunda = seg) que não foram concluídas (Concluída? ≠ S). */
+function sisPlanReprogramar(seg) {
+  return sisComTrava_(function () {
+    var m = sisModulo_('planejamento'), sh = sisSS_().getSheetByName(m.aba), nl = m.fim - m.ini + 1;
+    var v = sh.getRange(m.ini, 1, nl, 14).getValues(), ini = sisData_(seg), prox = new Date(ini.getTime() + 7 * 864e5);
+    var copiar = [], livres = [];
+    v.forEach(function (r, i) {
+      if (!String(r[1]).trim()) { livres.push(m.ini + i); return; }
+      var d = r[0] instanceof Date ? r[0] : null;
+      if (d && sisIso_(d) >= seg && sisIso_(d) < sisIso_(prox) && String(r[8]).trim() !== 'S') copiar.push(r);
+    });
+    // não duplica o que já foi copiado (mesma atividade e local na semana seguinte)
+    var jaTem = {}; v.forEach(function (r) { if (r[0] instanceof Date && sisIso_(r[0]) >= sisIso_(prox) && sisIso_(r[0]) < sisIso_(new Date(prox.getTime() + 7 * 864e5))) jaTem[r[1] + '|' + r[2]] = 1; });
+    copiar = copiar.filter(function (r) { return !jaTem[r[1] + '|' + r[2]]; });
+    if (copiar.length > livres.length) throw new Error('Não há linhas livres suficientes na aba.');
+    copiar.forEach(function (r, i) {
+      var L = livres[i];
+      sh.getRange(L, 1, 1, 8).setValues([[prox, r[1], r[2], r[3], r[4], r[5], r[6], r[7]]]);
+      sh.getRange(L, 11).setValue('Reprogramada da semana de ' + Utilities.formatDate(ini, sisTz_(), 'dd/MM') + (r[10] ? ' — ' + r[10] : ''));
+      sh.getRange(L, 14).setValue(r[13] || '');
+    });
+    var r2 = sisAbaLer('planejamento'); r2.copiadas = copiar.length; return r2;
+  });
 }
