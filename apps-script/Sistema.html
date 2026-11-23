@@ -170,6 +170,12 @@
   .auto span:nth-child(odd) { color: var(--aco); } .auto span:nth-child(even) { text-align: right; font-weight: 500; }
   .duas { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
 
+  .fich-est { margin: 0 0 10px; border-left: 3px solid var(--linha2); padding: 2px 0 2px 10px; }
+  .fich-est summary { cursor: pointer; padding: 4px 0; }
+  .est-tab { border-collapse: collapse; width: 100%; max-width: 560px; margin: 6px 0; font-size: 13px; }
+  .est-tab td { padding: 4px 6px; border-bottom: 1px solid var(--linha2); } .est-tab td.num { text-align: right; white-space: nowrap; }
+  .est-tab tr.tot td { border-top: 2px solid var(--tinta); } .est-tab tr.sub td { color: var(--aco); }
+  .est-cfg { gap: 16px; } .est-cfg input[type=checkbox] { width: auto; min-height: 0; } .est-cfg label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
   .faixa.dinheiro b { font-size: 24px; }
   .fich-pres { margin: 2px 0 10px; } .fich-pres .ruim { color: var(--verm); }
   .fich-pags { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--linha2); }
@@ -1444,7 +1450,7 @@ function desenharFichados() {
   var r = FICH, t = { lanc: 0, pago: 0 }, nomeMes = new Date(r.mes + '-15T12:00:00').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
   r.pessoas.forEach(function (p) { p.pagamentos.forEach(function (g) { if (g.status === 'Pago') t.pago += g.valor; else if (g.status !== 'Cancelado') t.lanc += g.valor; }); });
   var h = abasDiar('clt') + '<div class="barra nao-imprime"><label class="info" for="fMes">Mês (competência)</label><input id="fMes" type="month" style="width:170px" value="' + esc(r.mes) + '" onchange="vFichados(this.value)">' +
-    '<span class="esp"></span><button class="btn sec" onclick="relFichados()">Relatório para o RH</button></div>';
+    '<span class="esp"></span>' + (PM.grava && PM.custos ? '<a class="info" style="cursor:pointer;text-decoration:underline" onclick="folhaAdiant()">Adiantamento: ' + numd(r.cfg.adiant) + '% do salário</a>' : '') + '<button class="btn sec" onclick="relFichados()">Relatório para o RH</button></div>';
   h += '<div class="faixa dinheiro"><div><b>' + r.pessoas.length + '</b><span>Fichado' + (r.pessoas.length === 1 ? '' : 's') + ' em ' + esc(nomeMes) + '</span></div><div><b>' + rsd(t.lanc) + '</b><span>Lançado, falta pagar</span></div>' +
     '<div><b>' + rsd(t.pago) + '</b><span>Pago no mês</span></div><div><b>' + rsd(t.lanc + t.pago) + '</b><span>Total do mês (holerites)</span></div></div>';
   if (!r.pessoas.length) h += '<div class="vazio"><b>Nenhum fichado nesse mês</b>Na tela Pessoas, use o vínculo "Fichado (CLT)" e a data de entrada (admissão).</div>';
@@ -1455,6 +1461,7 @@ function desenharFichados() {
     var x = '<section class="diar"><div class="diar-cab"><div><h3>' + esc(p.nome) + '</h3><span class="info">' + esc(p.funcao) + (PM.custos && p.salario ? ' · salário ' + rsd(p.salario) : '') + '</span> ' + tags + '</div></div>' +
       '<p class="fich-pres"><b>' + numd(pr.trab) + '</b> dia' + (pr.trab === 1 ? '' : 's') + ' trabalhado' + (pr.trab === 1 ? '' : 's') + pr.outros.map(function (o) {
         return ' · <span class="' + (o[0].falta ? 'ruim' : '') + '"><b>' + o[1] + '</b> ' + esc(o[0].nome.toLowerCase()) + '</span>'; }).join('') + '</p>';
+    x += folhaBloco(p);
     x += '<div class="fich-pags">' + Object.keys(r.tipos).map(function (tp) {
       var gs = p.pagamentos.filter(function (g) { return g.tipo === tp; }), ativos = gs.filter(function (g) { return g.status !== 'Cancelado'; });
       return '<div class="fich-pag"><small>' + esc(r.tipos[tp]) + '</small>' + gs.map(function (g) {
@@ -1468,11 +1475,64 @@ function desenharFichados() {
   }).join('');
   el('area').innerHTML = h;
 }
+/* ---- estimativa de folha (CLT). Só estimativa: o valor que vale é o do holerite do RH.
+   Tabelas 2026: INSS = Portaria Interministerial MPS/MF nº 13/2026; IRRF = tabela desde 05/2025 + redução da Lei 15.270/2025.
+   Todo ano: conferir e atualizar FOLHA (ano novo → faixas novas do INSS). */
+var FOLHA = { ano: 2026,
+  inss: [[1621.00, 0.075, 0], [2902.84, 0.09, 24.32], [4354.27, 0.12, 111.41], [8475.55, 0.14, 198.50]],
+  ir: [[2428.80, 0, 0], [2826.65, 0.075, 182.16], [3751.05, 0.15, 394.16], [4664.68, 0.225, 675.49], [Infinity, 0.275, 908.73]],
+  dep: 189.59, simplificado: 607.20, isento: 5000, redMax: 312.89, redAte: 7350, redA: 978.62, redB: 0.133145, vt: 0.06, fgts: 0.08 };
+function r2(v) { return Math.round(v * 100 + 1e-6) / 100; }
+function inssCalc(b) { var t = FOLHA.inss[FOLHA.inss.length - 1], f = FOLHA.inss.filter(function (x) { return b <= x[0]; })[0] || t; return r2(Math.min(b, t[0]) * f[1] - f[2]); }
+function irCalc(bruto, inss, dep) {
+  var base = bruto - Math.max(inss + dep * FOLHA.dep, FOLHA.simplificado), f = FOLHA.ir.filter(function (x) { return base <= x[0]; })[0], imp = Math.max(0, base * f[1] - f[2]);
+  var red = bruto <= FOLHA.isento ? Math.min(imp, FOLHA.redMax) : bruto <= FOLHA.redAte ? Math.max(0, FOLHA.redA - FOLHA.redB * bruto) : 0;
+  return r2(Math.max(0, imp - red));
+}
+function folhaEstimar(p) {
+  if (!p.salario) return null;
+  var mes = FICH.mes, ini = mes + '-01', fim = new Date(Date.UTC(+mes.slice(0, 4), +mes.slice(5, 7), 0)).toISOString().slice(0, 10), cfg = FICH.cfg.p[p.linha] || { vt: false, dep: 0 };
+  var de = p.admissao && p.admissao > ini ? p.admissao : ini, ate = p.saida && p.saida < fim ? p.saida : fim;
+  var dias = de === ini && ate === fim ? 30 : Math.min(30, Math.round((Date.parse(ate) - Date.parse(de)) / 864e5) + 1), dia = p.salario / 30;
+  var base = r2(dia * dias), faltas = (p.datas.F || []).concat(p.datas.S || []), semanas = {};
+  faltas.forEach(function (d) { var t = new Date(d + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() - t.getUTCDay()); semanas[t.toISOString().slice(0, 10)] = 1; });
+  var dsr = Object.keys(semanas).length, descFaltas = r2(dia * (faltas.length + dsr)), bruto = Math.max(0, r2(base - descFaltas));
+  var inss = inssCalc(bruto), ir = irCalc(bruto, inss, cfg.dep), vt = cfg.vt ? r2(base * FOLHA.vt) : 0, liquido = r2(bruto - inss - ir - vt), adiant = r2(base * FICH.cfg.adiant / 100);
+  var avisos = [];
+  if ((p.cont.FE || 0) + (p.cont.AF || 0)) avisos.push('Tem férias ou afastamento no mês: a estimativa não cobre isso.');
+  if (FICH.mes > FICH.hoje.slice(0, 7) || FICH.mes === FICH.hoje.slice(0, 7)) avisos.push('Mês ainda em andamento: faltas contadas até hoje.');
+  if (+mes.slice(0, 4) !== FOLHA.ano) avisos.push('Tabelas de INSS/IR de ' + FOLHA.ano + ': podem estar desatualizadas para ' + mes.slice(0, 4) + '.');
+  return { dias: dias, base: base, faltas: faltas.length, dsr: dsr, descFaltas: descFaltas, bruto: bruto, inss: inss, ir: ir, vt: vt, liquido: liquido, adiant: Math.min(adiant, liquido), saldo: r2(liquido - Math.min(adiant, liquido)), fgts: r2(bruto * FOLHA.fgts), cfg: cfg, avisos: avisos };
+}
+function folhaBloco(p) {
+  var e = folhaEstimar(p); if (!e || !PM.custos) return '';
+  var lanc = p.pagamentos.filter(function (g) { return g.status !== 'Cancelado' && g.tipo !== 'BENEFICIOS'; }).reduce(function (a, g) { return a + g.valor; }, 0);
+  var lin = function (t, v, cls) { return '<tr class="' + (cls || '') + '"><td>' + t + '</td><td class="num">' + v + '</td></tr>'; };
+  return '<details class="fich-est"' + (FICH_EST[p.linha] ? ' open' : '') + ' ontoggle="FICH_EST[' + p.linha + ']=this.open"><summary>Estimativa do mês: líquido ≈ <b>' + rsd(e.liquido) + '</b>' + (lanc ? ' · holerite lançado ' + rsd(lanc) + (Math.abs(lanc - e.liquido) >= 1 ? ' (diferença ' + rsd(lanc - e.liquido) + ')' : '') : '') + '</summary>' +
+    '<table class="est-tab"><tbody>' + lin('Salário' + (e.dias < 30 ? ' proporcional (' + e.dias + ' dias de 30)' : ''), rsd(e.base)) +
+    (e.descFaltas ? lin('− Faltas/suspensão: ' + e.faltas + ' dia(s) + ' + e.dsr + ' descanso(s) semanal(is) perdido(s)', '− ' + rsd(e.descFaltas)) : '') +
+    lin('− INSS (tabela ' + FOLHA.ano + ')', '− ' + rsd(e.inss)) + lin('− Imposto de Renda' + (e.cfg.dep ? ' (' + e.cfg.dep + ' dependente' + (e.cfg.dep > 1 ? 's' : '') + ')' : ''), e.ir ? '− ' + rsd(e.ir) : 'isento') +
+    (e.vt ? lin('− Vale-transporte (6% do salário)', '− ' + rsd(e.vt)) : '') + lin('<b>= Líquido estimado</b>', '<b>' + rsd(e.liquido) + '</b>', 'tot') +
+    lin('Adiantamento (' + numd(FICH.cfg.adiant) + '% do salário)', rsd(e.adiant), 'sub') + lin('Saldo do salário (líquido − adiantamento)', rsd(e.saldo), 'sub') +
+    lin('FGTS 8% (custo da empresa, não sai do salário)', rsd(e.fgts), 'sub') + '</tbody></table>' +
+    (PM.grava ? '<div class="barra est-cfg"><label><input type="checkbox" ' + (e.cfg.vt ? 'checked ' : '') + 'onchange="folhaCfg(' + p.linha + ')" id="vt' + p.linha + '"> Usa vale-transporte</label>' +
+      '<label>Dependentes no IR <input type="number" min="0" max="20" style="width:64px" value="' + e.cfg.dep + '" onchange="folhaCfg(' + p.linha + ')" id="dp' + p.linha + '"></label></div>' : '') +
+    '<p class="info">' + e.avisos.concat(['Estimativa com as regras usuais de folha. Não entram hora extra, adicionais, pensão, 13º, férias e outros descontos. O valor que vale é o do holerite do RH.']).map(esc).join(' ') + '</p></details>';
+}
+function folhaCfg(linha) {
+  chamar('sisFichadoConfig', linha, { vt: el('vt' + linha).checked, dep: el('dp' + linha).value }).then(function (c) { FICH.cfg = c; FICH_EST[linha] = 1; desenharFichados(); }).catch(function () {});
+}
+function folhaAdiant() {
+  abrirGaveta('<header><h2>Adiantamento (vale)</h2><div class="info">Vale para todos os fichados desta obra</div></header><div class="conteudo">' +
+    campo('Percentual sobre o salário', '<input id="fAd" type="number" min="0" max="100" step="1" value="' + FICH.cfg.adiant + '">', 'O mais comum é 40%. Usado só para sugerir o valor do adiantamento e do saldo do salário.') +
+    '</div><footer><span style="flex:1"></span><button class="btn sec" onclick="fecharGaveta()">Cancelar</button><button class="btn so-grava" onclick="chamar(\'sisFichadoConfig\',0,{adiant:Number(el(\'fAd\').value)}).then(function(c){FICH.cfg=c;fecharGaveta();desenharFichados()}).catch(function(){})">Salvar</button></footer>');
+}
+var FICH_EST = {};
 function lancarFichado(linha, tipo) {
-  var p = FICH.pessoas.filter(function (x) { return x.linha === linha; })[0], mesBR = FICH.mes.slice(5) + '/' + FICH.mes.slice(0, 4);
+  var p = FICH.pessoas.filter(function (x) { return x.linha === linha; })[0], e = PM.custos ? folhaEstimar(p) : null, sug = e ? (tipo === 'ADIANTAMENTO' ? e.adiant : tipo === 'SALARIO' ? e.saldo : 0) : 0, mesBR = FICH.mes.slice(5) + '/' + FICH.mes.slice(0, 4);
   abrirGaveta('<header><h2>Lançar pagamento</h2><div class="info">' + esc(p.nome) + ' · competência ' + mesBR + ' · grava na aba Lançamentos</div></header><div class="conteudo">' +
     campo('Tipo', '<select id="fTipo">' + Object.keys(FICH.tipos).map(function (k) { return '<option value="' + k + '"' + (k === tipo ? ' selected' : '') + '>' + esc(FICH.tipos[k]) + '</option>'; }).join('') + '</select>') +
-    campo('Valor (R$)', '<input id="fValor" inputmode="decimal" placeholder="Ex.: 1.850,40">', 'O valor líquido que está no holerite do RH. O sistema não calcula desconto nem imposto.') +
+    campo('Valor (R$)', '<input id="fValor" inputmode="decimal" placeholder="Ex.: 1.850,40" value="' + (sug ? sug.toFixed(2).replace('.', ',') : '') + '">', sug ? 'Já veio preenchido com a estimativa. Troque pelo valor do holerite do RH, que é o que vale.' : 'O valor líquido que está no holerite do RH.') +
     campo('Situação', '<select id="fPago"><option value="">Lançar para pagar (vai para o financeiro)</option><option value="1">Já foi pago</option></select>', 'Se escolher "Já foi pago", a data abaixo vira a data do pagamento.') +
     campo('Data (vencimento ou pagamento)', '<input id="fData" type="date" value="' + hoje() + '">') +
     campo('Forma de pagamento', '<select id="fForma">' + ['PIX', 'Transferência', 'Dinheiro', 'Boleto', 'Cheque', 'Cartão'].map(function (f) { return '<option>' + f + '</option>'; }).join('') + '</select>') +

@@ -94,9 +94,11 @@ window.SIS_MOCK = (function () {
       if (fn === 'sisFichadoLancar') FI.pags.push({ linha: args[0], mes: args[1], lanc: 100 + FI.pags.length, tipo: args[2], valor: Number(String(args[3]).replace(/\./g, '').replace(',', '.')), status: args[6] ? 'Pago' : 'Lançado', venc: args[4], pagoEm: args[6] ? args[4] : '', forma: args[5] });
       if (fn === 'sisDiaristaPago') FI.pags.forEach(function (g) { if (g.lanc === args[0]) { g.status = 'Pago'; g.pagoEm = args[1]; } });
       if (fn === 'sisDiaristaCancelar') FI.pags.forEach(function (g) { if (g.lanc === args[0]) g.status = 'Cancelado'; });
+      FI.cfg = FI.cfg || { adiant: 40, p: {} };
+      if (fn === 'sisFichadoConfig') { if (args[0] === 0) FI.cfg.adiant = args[1].adiant; else FI.cfg.p[args[0]] = { vt: !!args[1].vt, dep: Number(args[1].dep) || 0 }; return FI.cfg; }
       var mesF = fn === 'sisFichados' ? args[0] : (FI.mes || '2026-11'); FI.mes = mesF;
       if (fn !== 'sisFichados' && fn !== 'sisFichadoLancar') return SIS_MOCK('sisDiaristas', []);
-      return { mes: mesF, hoje: st.hoje, dias: [], codigos: SIS_PRES_COD, tipos: { ADIANTAMENTO: 'Adiantamento (vale)', SALARIO: 'Salário do mês', BENEFICIOS: 'Vale-transporte / alimentação' }, pessoas: [
+      return { mes: mesF, hoje: st.hoje, dias: [], cfg: FI.cfg, codigos: SIS_PRES_COD, tipos: { ADIANTAMENTO: 'Adiantamento (vale)', SALARIO: 'Salário do mês', BENEFICIOS: 'Vale-transporte / alimentação' }, pessoas: [
         { linha: 8, nome: 'Fichado Teste', funcao: 'Mestre de obras', vinculo: 'Fichado (CLT)', salario: 4200, admissao: '2026-08-03', saida: '', cont: { P: 14, '½': 1, F: 1, A: 2 }, datas: { F: ['2026-11-09'], A: ['2026-11-12', '2026-11-13'] }, obs: ['12/11 A: Atestado de 2 dias'], semPresenca: false },
         { linha: 9, nome: 'Novo Fichado', funcao: 'Engenheiro', vinculo: 'Fichado (CLT)', salario: 6000, admissao: '2026-11-17', saida: '', cont: { P: 2 }, datas: {}, obs: [], semPresenca: false }
       ].map(function (p) { p.pagamentos = FI.pags.filter(function (g) { return g.linha === p.linha && g.mes === mesF; }); return p; }) };
