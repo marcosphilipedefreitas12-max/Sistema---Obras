@@ -828,3 +828,74 @@ function sisIaPerguntar(historico) {
   sisComTrava_(function () { var u = sisIaUso_(); u.n = (u.n || 0) + 1; u.ent = (u.ent || 0) + ent; u.sai = (u.sai || 0) + sai; p.setProperty('SIS_IA_USO_' + sisIaMes_(), JSON.stringify(u)); });
   return { texto: texto || (propostas.length ? 'Preparei para você conferir:' : 'Não consegui responder agora. Tente reformular.'), propostas: propostas };
 }
+
+/* ---------------------------------------------------------------- VISÃO EXECUTIVA */
+/** Dados da Visão Executiva de uma obra (a escolhida no filtro). Só leitura. */
+function sisExecutivo(obraId, de, ate) {
+  if (obraId && obraId !== SIS_OBRA_ID) { SIS_OBRA_ID = String(obraId); SIS_SS = null; SIS_PERFIL = null; SIS_TZ = null; }
+  var ss = sisSS_(), pm = sisPermissoes_(), hoje = sisIso_(new Date());
+  if (!de) de = sisIso_(new Date(Date.now() - 30 * 864e5)); if (!ate) ate = hoje;
+  var num = function (x) { return typeof x === 'number' ? x : (Number(String(x || '').replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.')) || 0); };
+  var R = {}, RD = {}, rs = ss.getSheetByName('Resumo');
+  if (rs) { var n = rs.getLastRow(), rg = rs.getRange(1, 1, n, 2), dv = rg.getDisplayValues(), vv = rg.getValues(); for (var i = 0; i < n; i++) { R[dv[i][0]] = vv[i][1] instanceof Date ? sisIso_(vv[i][1]) : vv[i][1]; RD[dv[i][0]] = dv[i][1]; } }
+  var out = { obraId: SIS_OBRA_ID || ss.getId(), obra: sisNomeObra_(ss), de: de, ate: ate, hoje: hoje, custos: pm.custos, perfil: pm.perfil, admin: pm.admin,
+    prazoContratual: PropertiesService.getScriptProperties().getProperty('SIS_PRAZO_' + ss.getId()) || '' };
+  ['Engenheiro', 'Fase atual', 'Início da obra', 'Término previsto', 'Atividades atrasadas', 'Efetivo médio (7 dias)', 'Lajes concluídas', 'Total de lajes', 'Atraso da estrutura (dias úteis)',
+   'Término da estrutura — previsto', 'Término da estrutura — ritmo real', 'PPC última semana', 'PPC médio 4 semanas', 'Produtividade média — % da meta (30 dias)', 'FVS em aberto',
+   'Inspeções de serviço reprovadas em aberto', 'Compras atrasadas', 'Unidades liberadas para entrega', 'Total de unidades', 'Unidades entregues ao cliente', 'Área construída (m²)'].forEach(function (k) { out[k] = RD[k] || ''; });
+  out.avanco = { real: num(R['Avanço físico real']), previsto: num(R['Avanço físico previsto']) };
+  if (pm.custos) out.fin = { orcamento: num(R['Orçamento (R$)']), realizado: num(R['Realizado (R$)']), vencidas: num(R['Contas vencidas (R$)']), aVencer7: num(R['A vencer em 7 dias (R$)']),
+    pagarMes: num(R['A pagar — mês atual (R$)']), pagarProx: num(R['A pagar — próximo mês (R$)']), mo: num(R['Mão de obra e serviços (R$)']), material: num(R['Material (R$)']), equip: num(R['Equipamento (R$)']),
+    custoFichados: num(R['Custo fichados — estimado (R$)']), custoDiaristas: num(R['Custo diaristas (R$)']), custoPrestadores: num(R['Custo prestadores / empreiteiros (R$)']),
+    acimaOrcado: num(R['Itens do orçamento com gasto acima do orçado']), previstoAcum: num(R['Previsto acumulado até o mês atual (R$)']) };
+  // curva S
+  var cs = ss.getSheetByName('Curva S'); out.curva = [];
+  if (cs) cs.getRange(5, 1, Math.max(1, cs.getLastRow() - 4), 3).getValues().forEach(function (r) { if (r[0] instanceof Date && r[1] !== '') out.curva.push([sisIso_(r[0]), num(r[1]), r[2] === '' || r[2] === null ? null : num(r[2])]); });
+  // cronograma
+  var cr = ss.getSheetByName('Cronograma'); out.crono = [];
+  if (cr) cr.getRange(7, 1, 61, 14).getValues().forEach(function (r) {
+    if (!String(r[2]).trim()) return;
+    out.crono.push({ id: r[0], etapa: String(r[1] || 'Sem etapa'), ativ: String(r[2]), resp: String(r[3] || ''), ini: r[8] instanceof Date ? sisIso_(r[8]) : '', fim: r[9] instanceof Date ? sisIso_(r[9]) : '',
+      pct: num(r[10]), status: String(r[11] || ''), prevHoje: num(r[13]) });
+  });
+  // período: reaproveita o relatório (sem fotos)
+  var rel = sisRelatorio('periodo', de, ate); delete rel.fotos;
+  out.diario = rel.diario; out.producao = rel.producao; out.presenca = rel.presenca || null; out.pendencias = rel.pendencias; out.inspecoes = rel.inspecoes; out.fvs = rel.fvs;
+  if (pm.custos) {
+    out.custosPeriodo = rel.custos;
+    var la = ss.getSheetByName('Lançamentos'), meses = {}, venc = [];
+    if (la) la.getRange(5, 1, 499, 16).getValues().forEach(function (r) {
+      if (!(r[0] instanceof Date)) return; var v = num(r[7]), m = sisIso_(r[0]).slice(0, 7), et = String(r[1] || 'Sem etapa');
+      meses[m] = meses[m] || {}; meses[m][et] = (meses[m][et] || 0) + v;
+      var st = String(r[14] || ''), vto = r[8] instanceof Date ? sisIso_(r[8]) : '';
+      if (vto && !/pago/i.test(st) && String(r[9]).toUpperCase() !== 'S') venc.push({ venc: vto, desc: String(r[2]).slice(0, 80), forn: String(r[3] || ''), valor: v, etapa: et });
+    });
+    out.custoMes = meses; out.contasAbertas = venc.sort(function (a, b) { return a.venc < b.venc ? -1 : 1; }).slice(0, 60);
+    var ct = ss.getSheetByName('Contratos'), comp = 0, contr = 0, medido = 0;
+    if (ct) ct.getRange(5, 1, 60, 16).getValues().forEach(function (r) { if (!String(r[0]).trim()) return; contr += num(r[8]); medido += num(r[13]); comp += num(r[15]); });
+    out.fin.contratado = contr; out.fin.medido = medido; out.fin.comprometido = comp;
+    var oa = ss.getSheetByName('Orçamento Analítico'); out.etapasOrc = [];
+    if (oa) { var c2 = oa.getRange(9, 1, 1, 20).getDisplayValues()[0], cE = c2.indexOf('Etapa'), cO = c2.indexOf('Custo direto (R$)'), cG = c2.indexOf('Gasto (R$)'), et = {}, ordem = [];
+      if (cE >= 0 && cO >= 0 && cG >= 0) oa.getRange(10, 1, 500, 20).getValues().forEach(function (r) { var e = String(r[cE] || '').trim(); if (!e) return; if (!et[e]) { et[e] = [0, 0]; ordem.push(e); } et[e][0] += num(r[cO]); et[e][1] += num(r[cG]); });
+      out.etapasOrc = ordem.map(function (e) { return [e, et[e][0], et[e][1]]; }).filter(function (x) { return x[1] || x[2]; }); }
+  }
+  // planejamento da semana atual e motivos de não cumprimento no período
+  var pl = ss.getSheetByName('Planejamento Semanal'), seg = sisIso_(new Date(Date.now() - ((new Date().getDay() + 6) % 7) * 864e5)), semN = 0, motivos = {};
+  if (pl) pl.getRange(5, 1, 400, 10).getValues().forEach(function (r) {
+    if (!(r[0] instanceof Date) || !String(r[1]).trim()) return; var d = sisIso_(r[0]);
+    if (d >= seg && d <= sisIso_(new Date(Date.now() + 6 * 864e5))) semN++;
+    if (d >= de && d <= ate && String(r[8]) !== 'S' && r[9]) motivos[r[9]] = (motivos[r[9]] || 0) + 1;
+  });
+  out.planSemana = semN; out.motivos = motivos;
+  try { out.demandasAtrasadas = sisLer_(SIS_ABAS.dem, SIS_COLS.dem).filter(function (d) { return d.Status !== 'Concluída' && d.Prazo && String(d.Prazo) < hoje; })
+    .map(function (d) { return { titulo: d['Título'], resp: d['Responsável'], prazo: d.Prazo }; }); } catch (e) { out.demandasAtrasadas = []; }
+  out.obras = (sisObras().obras || []).map(function (o) { return { id: o.id, nome: o.nome }; });
+  return out;
+}
+
+/** Administrador: guarda o prazo contratual da obra (data de entrega prevista em contrato). */
+function sisExecPrazo(iso) {
+  var ss = sisSS_(), k = 'SIS_PRAZO_' + ss.getId(), p = PropertiesService.getScriptProperties();
+  if (iso) p.setProperty(k, String(iso).slice(0, 10)); else p.deleteProperty(k);
+  return p.getProperty(k) || '';
+}

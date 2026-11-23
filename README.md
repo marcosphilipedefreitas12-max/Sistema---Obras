@@ -61,6 +61,10 @@ O menu segue a rotina da obra: **Todo dia** (Diário, Presença, Produção, Lan
 - **Fornecedores** — cadastro, avaliação, contatos e próximos passos, e o histórico da obra (cotações, contratos, medições, lançamentos, compras) puxado pelo nome.
 - **Consultas** (Contas a Pagar, Gestão à Vista, Fluxo de Caixa…) — abrem direto na aba da planilha.
 
+## Visão Executiva
+
+Menu → **Visão Executiva** (primeiro item). Para CEO, diretoria e gestores: filtros por empreendimento (obras que a pessoa acessa), período, etapa, responsável e status; faixa "Saúde da obra" (sob controle / atenção / crítica, pelos alertas); indicadores de Engenharia, Financeiro (só quem vê custos), Cronograma e Equipe; **Atenção da gestão** (alertas automáticos com criticidade, data, impacto, responsável e ação recomendada); **Análise gerencial** (frases geradas só com os dados da planilha); gráficos (Curva S, orçado × gasto por etapa, custos por mês, produtividade por serviço, efetivo, cronograma por etapa, ocorrências e dias improdutivos); **Marcos e entregas** por etapa; e **Relatório executivo (PDF)**. O prazo contratual é informado pelo Administrador na própria tela. Perfil novo **Diretoria**: vê tudo, inclusive custos, e não grava.
+
 ## Relatórios
 
 Menu → **Relatórios** (abaixo do Início). Sai pronto para imprimir ou salvar em PDF, com cabeçalho da obra e campos de assinatura.
@@ -83,6 +87,7 @@ Em cada obra, o Administrador define em **Perfis de acesso** (menu → Administr
 | Administrador | Tudo e definir perfis (o dono da planilha é sempre Administrador) |
 | Engenheiro | Ver e lançar em todas as telas, inclusive custos |
 | Encarregado | Lançar o dia a dia; sem custos, pagamentos, fornecedores e dados das pessoas; não apaga |
+| Diretoria | Ver tudo, inclusive custos e a Visão Executiva; não grava |
 | Consulta | Só ver (sem custos); não grava |
 
 Lista vazia = todos como Engenheiro. Com alguém na lista, quem não está nela entra como Consulta. O servidor confere o perfil em cada chamada. A proteção de base continua sendo o compartilhamento da planilha — a implantação deve ser **"Executar como: Usuário que acessa o app da Web"**.
