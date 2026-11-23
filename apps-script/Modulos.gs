@@ -692,3 +692,139 @@ function sisPlanReprogramar(seg) {
     var r2 = sisAbaLer('planejamento'); r2.copiadas = copiar.length; return r2;
   });
 }
+
+/* ---------------------------------------------------------------- ASSISTENTE (Claude) */
+/*
+ * Chat com o Claude dentro do sistema. Fica DESLIGADO até o Administrador colar a chave da API
+ * (platform.claude.com) na tela do Assistente. A chave fica nas propriedades do script — nunca no GitHub.
+ * O assistente só LÊ dados; para gravar, ele PROPÕE e a pessoa confirma na tela (grava pelas funções
+ * normais, com as mesmas permissões do perfil).
+ */
+var SIS_IA_MODELOS = [['claude-haiku-5-5', 'Claude Haiku 5.5 — rápido e econômico'], ['claude-sonnet-5-5', 'Claude Sonnet 5.5 — mais caprichado']];
+var SIS_IA_PRECO = { 'claude-haiku-5-5': [0.10, 0.50], 'claude-sonnet-5-5': [2, 10] }; // US$ por milhão de tokens (entrada, saída)
+
+function sisIaProps_() { return PropertiesService.getScriptProperties(); }
+function sisIaMes_() { return Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'yyyy-MM'); }
+function sisIaUso_() { try { return JSON.parse(sisIaProps_().getProperty('SIS_IA_USO_' + sisIaMes_()) || '{}'); } catch (e) { return {}; } }
+
+/** Estado para a tela (sem a chave). */
+function sisIaEstado_() {
+  var p = sisIaProps_(), chave = p.getProperty('SIS_IA_CHAVE') || '', u = sisIaUso_(), mod = p.getProperty('SIS_IA_MODELO') || SIS_IA_MODELOS[0][0], pr = SIS_IA_PRECO[mod] || [0, 0];
+  return { ligado: !!chave && p.getProperty('SIS_IA_LIGADO') === '1', temChave: !!chave, chaveFim: chave ? chave.slice(-4) : '', modelo: mod, modelos: SIS_IA_MODELOS,
+    limite: Number(p.getProperty('SIS_IA_LIMITE') || 300), usoMes: { perguntas: u.n || 0, entrada: u.ent || 0, saida: u.sai || 0,
+      custoUS: Math.round(((u.ent || 0) * pr[0] + (u.sai || 0) * pr[1]) / 1e3) / 1000 } };
+}
+function sisIaConfig() { return sisIaEstado_(); }
+function sisIaSalvarConfig(c) {
+  var p = sisIaProps_();
+  if (c.chave) { if (!/^sk-ant-/.test(String(c.chave).trim())) throw new Error('A chave da API começa com "sk-ant-". Confira o que foi colado.'); p.setProperty('SIS_IA_CHAVE', String(c.chave).trim()); }
+  if (c.apagarChave) p.deleteProperty('SIS_IA_CHAVE');
+  if (c.modelo && SIS_IA_PRECO[c.modelo]) p.setProperty('SIS_IA_MODELO', c.modelo);
+  if (c.limite != null) p.setProperty('SIS_IA_LIMITE', String(Math.max(0, Math.min(5000, Number(c.limite) || 0))));
+  p.setProperty('SIS_IA_LIGADO', c.ligado ? '1' : '0');
+  return sisIaEstado_();
+}
+
+/** Ferramentas que o assistente pode usar (só leitura + propostas). */
+function sisIaFerramentas_(pm) {
+  var mods = SIS_MODULOS.filter(function (m) { return m.tipo === 'tabela' && pm.modulos.indexOf(m.id) >= 0; }).map(function (m) { return m.id; });
+  var t = [
+    { name: 'ler_tela', description: 'Lê os registros de uma tela/aba da planilha da obra. Use para responder perguntas com dados reais. Telas: ' + mods.join(', ') + '.',
+      input_schema: { type: 'object', properties: { tela: { type: 'string', enum: mods }, busca: { type: 'string', description: 'texto para filtrar (opcional)' },
+        de: { type: 'string', description: 'data inicial aaaa-mm-dd (opcional, filtra pela 1ª coluna de data)' }, ate: { type: 'string', description: 'data final aaaa-mm-dd (opcional)' } }, required: ['tela'] } },
+    { name: 'relatorio_periodo', description: 'Resumo da obra num período: diário (clima, efetivo, serviços, ocorrências), produção, qualidade, presença (homens-dia, ausências)' + (pm.custos ? ', custos' : '') + ' e pendências.',
+      input_schema: { type: 'object', properties: { de: { type: 'string' }, ate: { type: 'string' } }, required: ['de', 'ate'] } },
+    { name: 'propor_lancamento', description: 'PROPÕE gravar um registro numa tela (não grava: a pessoa confirma na tela). Use os nomes de coluna exatamente como vêm de ler_tela. Datas em aaaa-mm-dd. Para alterar um registro existente, informe a linha.',
+      input_schema: { type: 'object', properties: { tela: { type: 'string', enum: mods }, linha: { type: 'integer', description: 'linha da aba (só para alterar)' },
+        valores: { type: 'object', description: 'nome da coluna → valor', additionalProperties: { type: 'string' } }, resumo: { type: 'string', description: 'uma frase dizendo o que será gravado' } }, required: ['tela', 'valores', 'resumo'] } }
+  ];
+  if (pm.modulos.indexOf('presenca') >= 0) t.push({ name: 'presenca_mes', description: 'Folha de presença de um mês (aaaa-mm): código de cada pessoa por dia (P presente, ½ meio, F falta, FJ justificada, A atestado, FE férias, FG folga, AF afastado, CH chuva, TR treinamento, OB outra obra, S suspensão; número = equipe de empreiteiro).',
+    input_schema: { type: 'object', properties: { mes: { type: 'string' } }, required: ['mes'] } });
+  if (pm.modulos.indexOf('demandas') >= 0) t.push({ name: 'propor_demanda', description: 'PROPÕE criar uma demanda/tarefa (a pessoa confirma na tela).',
+    input_schema: { type: 'object', properties: { titulo: { type: 'string' }, descricao: { type: 'string' }, responsavel: { type: 'string' }, prazo: { type: 'string', description: 'aaaa-mm-dd' }, prioridade: { type: 'string', enum: ['Baixa', 'Média', 'Alta', 'Urgente'] } }, required: ['titulo'] } });
+  return t;
+}
+
+function sisIaTexto_(t, max) { // tabela compacta para o modelo
+  var cab = t.cols.map(function (c) { return c.nome; }), out = ['linha\t' + cab.join('\t')];
+  t.linhas.slice(0, max).forEach(function (l) { out.push(l.linha + '\t' + l.d.map(function (x) { return String(x).replace(/\s+/g, ' ').slice(0, 160); }).join('\t')); });
+  if (t.linhas.length > max) out.push('… mais ' + (t.linhas.length - max) + ' registro(s); filtre por data ou busca.');
+  return out.join('\n');
+}
+
+function sisIaFerramenta_(nome, inp, pm, propostas) {
+  if (nome === 'ler_tela') {
+    if (pm.modulos.indexOf(inp.tela) < 0) return 'Sem permissão para esta tela.';
+    var t = sisAbaLer(inp.tela), q = String(inp.busca || '').toLowerCase();
+    t.linhas = t.linhas.filter(function (l) {
+      var d0 = String(l.v[0] || ''), okD = (!inp.de || d0 >= inp.de) && (!inp.ate || d0 <= inp.ate || !/^\d{4}-/.test(d0));
+      if ((inp.de || inp.ate) && !/^\d{4}-/.test(d0)) okD = false;
+      return okD && (!q || l.d.join(' ').toLowerCase().indexOf(q) >= 0);
+    });
+    return sisIaTexto_(t, 80);
+  }
+  if (nome === 'relatorio_periodo') {
+    var r = sisRelatorio('periodo', inp.de, inp.ate); delete r.fotos;
+    ['diario', 'producao', 'inspecoes', 'fvs'].forEach(function (k) { if (r[k]) r[k] = { cab: r[k].cab, linhas: r[k].linhas.slice(0, 60) }; });
+    return JSON.stringify(r).slice(0, 60000);
+  }
+  if (nome === 'presenca_mes') {
+    var pmz = sisPresencaMes(inp.mes);
+    return 'dias: ' + pmz.dias.join(',') + '\n' + pmz.pessoas.map(function (p) { return p.nome + ' (' + p.funcao + ', ' + p.vinculo + (p.empresa ? ', ' + p.empresa : '') + '): ' + p.v.map(function (x) { return x || '-'; }).join(' '); }).join('\n');
+  }
+  if (nome === 'propor_lancamento') {
+    if (pm.modulos.indexOf(inp.tela) < 0 || !pm.grava) return 'Sem permissão para gravar nesta tela.';
+    var tt = sisAbaLer(inp.tela), vals = {}, campos = [], nao = [];
+    Object.keys(inp.valores || {}).forEach(function (k) {
+      var c = tt.cols.filter(function (x) { return x.nome.toLowerCase() === k.toLowerCase(); })[0];
+      if (!c || c.auto) { nao.push(k); return; }
+      vals[c.i] = String(inp.valores[k]); campos.push({ nome: c.nome, valor: String(inp.valores[k]) });
+    });
+    if (!campos.length) return 'Nenhuma coluna reconhecida. Colunas que dá para preencher: ' + tt.cols.filter(function (c) { return !c.auto; }).map(function (c) { return c.nome; }).join(' | ');
+    propostas.push({ tipo: 'aba', tela: inp.tela, titulo: sisModulo_(inp.tela).titulo || sisModulo_(inp.tela).aba || inp.tela, linha: inp.linha || 0, valores: vals, campos: campos, resumo: inp.resumo || '' });
+    return 'Proposta criada e mostrada para a pessoa confirmar.' + (nao.length ? ' Colunas ignoradas (não existem ou são automáticas): ' + nao.join(', ') : '');
+  }
+  if (nome === 'propor_demanda') {
+    if (pm.modulos.indexOf('demandas') < 0 || !pm.grava) return 'Sem permissão para criar demandas.';
+    var d = { 'Título': inp.titulo, 'Descrição': inp.descricao || '', 'Responsável': inp.responsavel || '', 'Prazo': inp.prazo || '', 'Prioridade': inp.prioridade || 'Média', 'Status': 'A fazer', 'Origem': 'Assistente' };
+    propostas.push({ tipo: 'demanda', titulo: 'Nova demanda', dados: d, campos: Object.keys(d).filter(function (k) { return d[k]; }).map(function (k) { return { nome: k, valor: d[k] }; }), resumo: inp.titulo });
+    return 'Proposta de demanda mostrada para a pessoa confirmar.';
+  }
+  return 'Ferramenta desconhecida.';
+}
+
+/** Uma rodada de conversa. historico: [{role:'user'|'assistant', content:'texto'}]. */
+function sisIaPerguntar(historico) {
+  var p = sisIaProps_(), est = sisIaEstado_(), pm = sisPermissoes_();
+  if (!est.ligado) throw new Error('O Assistente está desligado. O administrador pode ligá-lo na tela do Assistente.');
+  if (est.usoMes.perguntas >= est.limite) throw new Error('O limite de ' + est.limite + ' perguntas deste mês foi atingido. O administrador pode aumentar na configuração do Assistente.');
+  var ss = sisSS_(), rs = ss.getSheetByName('Resumo'), resumo = [];
+  if (rs) rs.getRange(1, 1, rs.getLastRow(), 2).getDisplayValues().forEach(function (x) { if (x[0] && x[1] && x[0] !== 'Campo' && (pm.custos || !/R\$/.test(x[0]))) resumo.push(x[0] + ': ' + x[1]); });
+  var sistema = 'Você é o assistente do Sistema de Obras, falando em português do Brasil, de forma simples e direta, com um engenheiro ou a equipe de uma obra de construção civil em Belo Horizonte. ' +
+    'Hoje é ' + sisIso_(new Date()) + '. Quem pergunta: ' + sisUsuario_() + ' (perfil ' + pm.perfil + '). ' +
+    'Use SEMPRE as ferramentas para buscar dados antes de responder sobre números, pessoas, datas ou custos; nunca invente. Se não achar, diga que não achou. ' +
+    'Para gravar qualquer coisa, use propor_lancamento ou propor_demanda: você não grava, a pessoa confirma na tela. Ao propor, use os nomes de coluna exatos lidos com ler_tela. ' +
+    (pm.custos ? '' : 'Esta pessoa NÃO pode ver valores em R$; não informe custos. ') +
+    'Não peça nem repita CPF, PIX ou dados bancários. Respostas curtas; use listas quando ajudar.\n\nRESUMO ATUAL DA OBRA:\n' + resumo.join('\n');
+  var msgs = (historico || []).slice(-12).map(function (m) { return { role: m.role === 'assistant' ? 'assistant' : 'user', content: String(m.content || '').slice(0, 8000) }; });
+  var ferr = sisIaFerramentas_(pm), propostas = [], ent = 0, sai = 0, texto = '';
+  for (var volta = 0; volta < 6; volta++) {
+    var r = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', { method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+      headers: { 'x-api-key': p.getProperty('SIS_IA_CHAVE'), 'anthropic-version': '2023-06-01' },
+      payload: JSON.stringify({ model: est.modelo, max_tokens: 1500, system: sistema, tools: ferr, messages: msgs }) });
+    var c = r.getResponseCode(), j = {}; try { j = JSON.parse(r.getContentText()); } catch (e) {}
+    if (c !== 200) throw new Error('O Assistente não respondeu (erro ' + c + '): ' + ((j.error && j.error.message) || r.getContentText().slice(0, 200)) +
+      (c === 401 ? ' — confira a chave da API.' : c === 402 || /credit|billing/i.test(r.getContentText()) ? ' — confira os créditos/cartão em platform.claude.com.' : ''));
+    ent += (j.usage && j.usage.input_tokens) || 0; sai += (j.usage && j.usage.output_tokens) || 0;
+    var usos = (j.content || []).filter(function (b) { return b.type === 'tool_use'; });
+    texto = (j.content || []).filter(function (b) { return b.type === 'text'; }).map(function (b) { return b.text; }).join('\n');
+    if (j.stop_reason !== 'tool_use' || !usos.length) break;
+    msgs.push({ role: 'assistant', content: j.content });
+    msgs.push({ role: 'user', content: usos.map(function (u) {
+      var res; try { res = sisIaFerramenta_(u.name, u.input || {}, pm, propostas); } catch (e) { res = 'Erro: ' + e.message; }
+      return { type: 'tool_result', tool_use_id: u.id, content: String(res) };
+    }) });
+  }
+  sisComTrava_(function () { var u = sisIaUso_(); u.n = (u.n || 0) + 1; u.ent = (u.ent || 0) + ent; u.sai = (u.sai || 0) + sai; p.setProperty('SIS_IA_USO_' + sisIaMes_(), JSON.stringify(u)); });
+  return { texto: texto || (propostas.length ? 'Preparei para você conferir:' : 'Não consegui responder agora. Tente reformular.'), propostas: propostas };
+}

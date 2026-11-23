@@ -23,7 +23,7 @@ window.SIS_MOCK = (function () {
   var n = 10;
   // Tabelas fictícias: cada aba devolve colunas genéricas; o Diário tem colunas próprias para testar o formulário.
   var SEG = (function () { var d = new Date(st.hoje + 'T12:00:00'); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.toISOString().slice(0, 10); })();
-  var PERFIS = [], TAB = {}, PRES = { P: {} }, OB = [{ id: 'A1', nome: 'OBRA EXEMPLO', resp: 'Eng. Teste' }, { id: 'B2', nome: 'OBRA DOIS', resp: 'Eng. Outro' }];
+  var IA = { ligado: false }, PERFIS = [], TAB = {}, PRES = { P: {} }, OB = [{ id: 'A1', nome: 'OBRA EXEMPLO', resp: 'Eng. Teste' }, { id: 'B2', nome: 'OBRA DOIS', resp: 'Eng. Outro' }];
   function tabela(id) {
     if (TAB[id]) return TAB[id];
     var col = function (i, nome, tipo, extra) { var c = { i: i, letra: String.fromCharCode(65 + i), nome: nome, ajuda: '', auto: false, tipo: tipo || 'texto', opcoes: [] }; for (var k in extra || {}) c[k] = extra[k]; return c; };
@@ -96,6 +96,8 @@ window.SIS_MOCK = (function () {
     if (fn === 'sisImportarFornecedores') { Object.keys(st.historico).forEach(function (k) { if (!st.fornecedores.some(function (f) { return f.Nome.toLowerCase() === k; })) st.fornecedores.push({ ID: 'F' + (n++), Nome: st.historico[k].nome, Tipo: 'Fornecedor', 'Situação': 'Ativo' }); }); }
     var r = JSON.parse(JSON.stringify(st)); if (fn === 'sisImportarFornecedores') r.importados = 2;
     if (fn === 'sisPlanReprogramar') { var tp = tabela('planejamento'); var r0 = JSON.parse(JSON.stringify(tp)); r0.copiadas = 1; return r0; }
+    if (fn === 'sisIaConfig' || fn === 'sisIaSalvarConfig') { if (fn === 'sisIaSalvarConfig') IA.ligado = !!a.ligado; return { ligado: IA.ligado, temChave: IA.ligado, chaveFim: 'abcd', modelo: 'claude-haiku-5-5', modelos: [['claude-haiku-5-5', 'Haiku'], ['claude-sonnet-5-5', 'Sonnet']], limite: 300, usoMes: { perguntas: 0, entrada: 0, saida: 0, custoUS: 0 } }; }
+    if (fn === 'sisIaPerguntar') return { texto: 'Resposta de **teste**.\n- item 1', propostas: [{ tipo: 'demanda', titulo: 'Nova demanda', dados: { 'Título': 'Comprar cimento', Status: 'A fazer' }, campos: [{ nome: 'Título', valor: 'Comprar cimento' }], resumo: 'Comprar cimento' }] };
     if (fn === 'sisFotos') return { fotos: [], pasta: '' };
     if (fn === 'sisFotoEnviar') return { pasta: 'https://drive.google.com/drive/folders/EXEMPLO', foto: { id: 'X' + (n++), nome: args[3], url: '#' } };
     if (fn === 'sisPerfis') return { lista: PERFIS, dono: 'usuario@exemplo.com', compartilhados: ['mestre@exemplo.com'], perfis: ['Administrador', 'Engenheiro', 'Encarregado', 'Consulta'], desc: { Administrador: 'Tudo.', Engenheiro: 'Tudo menos perfis.', Encarregado: 'Dia a dia, sem custos.', Consulta: 'Só vê.' } };
