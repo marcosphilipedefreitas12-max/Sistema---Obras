@@ -12,6 +12,12 @@ Sistema de gerenciamento das obras: todas as partes da planilha da obra (diário
 
 **Nenhum dado da obra fica neste repositório.** Quem não tem acesso à planilha não consegue ver nada no sistema.
 
+## Atualização automática
+
+Projeto separado `atualizador/` (Atualizador.gs + appsscript.json), só do dono. A cada hora baixa `apps-script/Sistema.gs`, `Modulos.gs` e `Sistema.html` do ramo `main`; se mudaram, troca esses arquivos no projeto do sistema (mantém Script_Obra e o manifesto; remove a cópia antiga com outro nome, ex.: "Código"), cria uma versão nova e atualiza a implantação existente — o link não muda. Avisa por e-mail quando atualiza ou quando falha (o sistema continua na versão anterior).
+
+Instalar uma vez: ligar a **API do Google Apps Script** em https://script.google.com/home/usersettings; criar um projeto novo em script.google.com, colar os dois arquivos, preencher `SCRIPT_ID` (projeto do sistema → Configurações → ID do script) e `DEPLOYMENT_ID` (o código AKfycb… da implantação) e executar `instalar`. Depois disso, juntar um pedido (merge) no GitHub já basta para o sistema se atualizar em até 1 hora (ou execute `atualizarAgora`).
+
 ## Várias obras
 
 Um único link serve para todas as obras. Cada obra é uma planilha (cópia do Modelo) e a lista de obras fica guardada no próprio script. Como o sistema roda com a conta de quem acessa, **cada pessoa só vê as obras cujas planilhas foram compartilhadas com ela** (Compartilhar → Editor). A diretoria, com acesso a todas, vê todas.
@@ -49,6 +55,7 @@ O menu segue a rotina da obra: **Todo dia** (Diário, Presença, Produção, Lan
 - **Início** — gráficos (avanço físico previsto × real, orçamento × realizado com divisão por tipo, contas a pagar, efetivo diário, equipe por função, orçado × gasto por etapa), pendências da planilha (aba Menu) com atalho para a tela certa, números principais (Resumo), demandas e retornos do dia.
 - **Telas de lançamento** — lista com busca; "+ Novo registro" abre um formulário com a explicação de cada campo (tirada das notas do cabeçalho da planilha). Só grava nas colunas sem fórmula; o que a planilha calcula aparece no fim, só para consulta. Painel "Como lançar" com quando e como preencher.
 - **Fotos no Diário** — no registro do dia, "📷 Adicionar fotos" (no celular abre a câmera). A foto é reduzida no aparelho e vai para a pasta "Fotos — <obra>" no Google Drive (subpasta por dia); o link da pasta fica na coluna de fotos do Diário. A pasta é compartilhada com quem tem acesso à planilha (o Administrador reforça isso ao salvar os Perfis). Outras telas podem ganhar fotos com `fotos: '<coluna>'` em `SIS_MODULOS`.
+- **Planejamento Semanal** — "Quadro da semana": setas para trocar de semana, uma linha por atividade e barras nos dias em que ela acontece (Seg a Sáb; Dom se usado), cor pelo status (planejada, concluída, parcial, não concluída), ⚠ para restrição pendente, PPC da semana calculado na hora, "+" no dia para planejar nele, e "Copiar o que não foi concluído para a próxima semana". No celular vira agenda por dia. Os dias ficam na coluna N da aba ("Dias da semana", criada pelo sistema).
 - **Presença** — P / ½ / F e "Outro…" (FJ falta justificada, A atestado, FE férias, FG folga, AF afastado, CH chuva/obra parada, TR treinamento, OB outra obra, S suspensão), motivo como nota na célula e nº de pessoas para equipe de empreiteiro. P, ½ e TR contam como dia trabalhado; F e S como falta. Na primeira vez que o Administrador abre a obra, o sistema atualiza a lista suspensa e as fórmulas da planilha (Presença D–F, Pagamento Diaristas E–F, Diário Q–S) para os códigos novos. **Mês inteiro**: folha do mês de todos (filtro por vínculo e busca), totais por pessoa, efetivo por dia, resumo **por empreiteiro** (homens-dia para conferir medição, pela coluna "Empresa / empreiteiro" de Pessoas) e impressão em A4 deitado com campo de assinatura.
 - **Demandas** — quadro A fazer → Em andamento → Aguardando terceiros → Concluída, com responsável, prazo e histórico automático.
 - **Fornecedores** — cadastro, avaliação, contatos e próximos passos, e o histórico da obra (cotações, contratos, medições, lançamentos, compras) puxado pelo nome.

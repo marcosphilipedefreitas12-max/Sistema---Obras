@@ -22,6 +22,7 @@ window.SIS_MOCK = (function () {
   };
   var n = 10;
   // Tabelas fictícias: cada aba devolve colunas genéricas; o Diário tem colunas próprias para testar o formulário.
+  var SEG = (function () { var d = new Date(st.hoje + 'T12:00:00'); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.toISOString().slice(0, 10); })();
   var PERFIS = [], TAB = {}, PRES = { P: {} }, OB = [{ id: 'A1', nome: 'OBRA EXEMPLO', resp: 'Eng. Teste' }, { id: 'B2', nome: 'OBRA DOIS', resp: 'Eng. Outro' }];
   function tabela(id) {
     if (TAB[id]) return TAB[id];
@@ -34,6 +35,13 @@ window.SIS_MOCK = (function () {
     } : {
       cols: [col(0, 'Item'), col(1, 'Descrição'), col(2, 'Valor', 'numero'), col(3, 'Status', 'texto', { opcoes: ['Aberto', 'Concluído'] })],
       linhas: [{ linha: 5, d: ['1', 'Registro de exemplo', '10', 'Aberto'], v: { 0: '1', 1: 'Registro de exemplo', 2: 10, 3: 'Aberto' } }]
+    };
+    if (id === 'planejamento') t = {
+      cols: [col(0, 'Data (qualquer dia da semana)', 'data'), col(1, 'Atividade / serviço'), col(2, 'Local (pav. / unidade)'), col(3, 'Equipe / responsável'), col(4, 'Qtd planejada', 'numero'), col(5, 'Unid.'),
+             col(6, 'O que precisa antes (restrição)', 'texto', { opcoes: ['Nenhuma', 'Material'] }), col(7, 'Restrição resolvida?', 'texto', { opcoes: ['S', 'N'] }), col(8, 'Concluída?', 'texto', { opcoes: ['S', 'Parcial', 'N'] }),
+             col(9, 'Motivo (se não concluída)'), col(10, 'Observações'), col(13, 'Dias da semana')],
+      linhas: [{ linha: 5, d: ['18/11/26', 'Alvenaria 2º pav.', 'Pav. 2', 'Equipe A', '120', 'm²', 'Material', 'N', '', '', '', 'Seg, Ter, Qua'], v: { 0: SEG, 1: 'Alvenaria 2º pav.', 2: 'Pav. 2', 3: 'Equipe A', 4: 120, 5: 'm²', 6: 'Material', 7: 'N', 13: 'Seg, Ter, Qua' } },
+               { linha: 6, d: ['18/11/26', 'Limpeza do canteiro', 'Canteiro', 'Serventes', '', '', 'Nenhuma', '', 'S', '', '', ''], v: { 0: SEG, 1: 'Limpeza do canteiro', 2: 'Canteiro', 3: 'Serventes', 6: 'Nenhuma', 8: 'S' } }]
     };
     t.id = id; t.aba = id; t.chave = 0; t.mostrar = []; t.livres = 100; t.novo = true;
     return (TAB[id] = t);
@@ -87,6 +95,7 @@ window.SIS_MOCK = (function () {
     if (fn === 'sisSalvarInteracao') { if (!a.ID) { a.ID = 'I' + (n++); a.Autor = 'usuario'; st.interacoes.push(a); } else st.interacoes = st.interacoes.map(function (d) { return d.ID === a.ID ? a : d; }); }
     if (fn === 'sisImportarFornecedores') { Object.keys(st.historico).forEach(function (k) { if (!st.fornecedores.some(function (f) { return f.Nome.toLowerCase() === k; })) st.fornecedores.push({ ID: 'F' + (n++), Nome: st.historico[k].nome, Tipo: 'Fornecedor', 'Situação': 'Ativo' }); }); }
     var r = JSON.parse(JSON.stringify(st)); if (fn === 'sisImportarFornecedores') r.importados = 2;
+    if (fn === 'sisPlanReprogramar') { var tp = tabela('planejamento'); var r0 = JSON.parse(JSON.stringify(tp)); r0.copiadas = 1; return r0; }
     if (fn === 'sisFotos') return { fotos: [], pasta: '' };
     if (fn === 'sisFotoEnviar') return { pasta: 'https://drive.google.com/drive/folders/EXEMPLO', foto: { id: 'X' + (n++), nome: args[3], url: '#' } };
     if (fn === 'sisPerfis') return { lista: PERFIS, dono: 'usuario@exemplo.com', compartilhados: ['mestre@exemplo.com'], perfis: ['Administrador', 'Engenheiro', 'Encarregado', 'Consulta'], desc: { Administrador: 'Tudo.', Engenheiro: 'Tudo menos perfis.', Encarregado: 'Dia a dia, sem custos.', Consulta: 'Só vê.' } };

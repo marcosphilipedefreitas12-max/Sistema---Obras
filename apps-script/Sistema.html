@@ -228,6 +228,37 @@
   .mes-grade .tot { background: var(--cab); min-width: 44px; } .mes-grade .tot.ruim { color: var(--verm); font-weight: 700; }
   .mes-grade tfoot td { border-top: 2px solid var(--linha); font-weight: 600; }
   .so-imprime { display: none; }
+  .sem-nav .sem-tit { font-family: var(--titulo); font-size: 21px; font-weight: 600; padding: 0 6px; }
+  .quadro-sem { background: var(--papel); border: 1px solid var(--linha); overflow-x: auto; }
+  .q-cab, .q-lin { display: grid; grid-template-columns: minmax(220px, 1.6fr) repeat(var(--nd), minmax(64px, 1fr)); }
+  .q-cab { background: var(--cab); font-weight: 600; font-size: 13px; border-bottom: 1px solid var(--linha); }
+  .q-cab > div { padding: 8px 10px; } .q-dia { text-align: center; } .q-dia small { display: block; font-weight: 400; color: var(--aco); font-size: 11px; }
+  .q-dia.hoje { box-shadow: inset 0 -3px 0 var(--sinal); }
+  .q-lin { border-bottom: 1px solid var(--linha2); } .q-lin:hover { background: var(--hover); }
+  .q-ativ { padding: 9px 10px; cursor: pointer; border-right: 1px solid var(--linha2); min-width: 0; }
+  .q-ativ b { display: block; font-weight: 600; } .q-ativ .info { display: block; font-size: 12px; }
+  .q-ativ:focus-visible { outline: 3px solid var(--sinal); outline-offset: -3px; }
+  .q-cel { display: flex; align-items: center; position: relative; min-height: 44px; }
+  .q-cel.fds { background: var(--cab); } .q-cel.hoje { background: var(--azul-f); }
+  .q-bar { display: block; height: 22px; width: 100%; margin: 0 4px; border-radius: 4px; cursor: pointer; background: var(--azul2); }
+  .q-bar.p { margin-left: 0; border-top-left-radius: 0; border-bottom-left-radius: 0; } .q-bar.n { margin-right: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+  .q-bar.ok { background: var(--verde); } .q-bar.parcial { background: var(--ambar); } .q-bar.nao { background: var(--verm); }
+  .q-bar.toda { background: repeating-linear-gradient(135deg, var(--azul2) 0 6px, var(--azul-f) 6px 10px); }
+  .legenda .q-bar { display: inline-block; width: 18px; height: 10px; margin: 0 5px 0 0; vertical-align: -1px; cursor: default; }
+  .q-alerta { color: var(--ambar); }
+  .q-st { display: inline-block; margin-top: 4px; font-size: 11px; padding: 1px 6px; border-radius: 3px; background: var(--st); color: var(--st-t); }
+  .q-st.ok { background: var(--verde-f); color: var(--verde); } .q-st.parcial { background: var(--ambar-f); color: var(--ambar); } .q-st.nao { background: var(--verm-f); color: var(--verm); }
+  .q-add .q-ativ { cursor: default; font-size: 12px; } .q-mais { margin: auto; border: 1px dashed var(--campo-b); background: none; color: var(--aco); border-radius: 4px; width: 32px; height: 28px; cursor: pointer; font-size: 16px; }
+  .q-mais:hover { border-color: var(--azul2); color: var(--azul-t); }
+  .agenda-sem { display: none; }
+  .ag-dia { background: var(--papel); border: 1px solid var(--linha); margin-bottom: 10px; padding: 10px 12px; } .ag-dia.hoje { border-left: 4px solid var(--sinal); }
+  .ag-dia h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-family: var(--titulo); font-size: 19px; } .ag-dia h3 small { color: var(--aco); font-family: var(--texto); font-size: 12px; font-weight: 400; } .ag-dia h3 .btn { margin-left: auto; }
+  .ag-it { display: block; padding: 8px 10px; border-left: 4px solid var(--azul2); background: var(--cab); margin-bottom: 6px; cursor: pointer; }
+  .ag-it.ok { border-color: var(--verde); } .ag-it.parcial { border-color: var(--ambar); } .ag-it.nao { border-color: var(--verm); } .ag-it .info { display: block; font-size: 12px; }
+  .dias-sel { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0; } .dias-sel label { border: 1px solid var(--campo-b); border-radius: 4px; padding: 6px 10px; cursor: pointer; font-weight: 600; margin: 0; }
+  .dias-sel label.on { background: var(--azul); color: #fff; border-color: var(--azul); } .dias-sel input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .dias-sel label:focus-within { outline: 3px solid var(--sinal); }
+  @media (max-width: 820px) { .quadro-sem { display: none; } .agenda-sem { display: block; } }
   .rel-escolha { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-bottom: 20px; }
   .rel-escolha .barra { margin: 8px 0 0; flex-wrap: wrap; }
   .rel-acoes { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
@@ -690,10 +721,11 @@ function vTabela(m, forcar) {
   if (CACHE[m.id] && !forcar) usar(CACHE[m.id]); else chamar('sisAbaLer', m.id).then(usar);
 }
 function desenharTabela(m) {
+  if (m.dias >= 0 && (VISTA[m.id] || 'quadro') === 'quadro') return desenharQuadro(m);
   var t = CACHE[m.id], q = chave(BUSCA[m.id] || ''), lim = LIMITE[m.id] || 100;
   var cols = t.mostrar.length ? t.mostrar : t.cols.map(function (c, i) { return i; }).slice(0, 7);
   var ls = q ? t.linhas.filter(function (l) { return chave(l.d.join(' ')).indexOf(q) >= 0; }) : t.linhas;
-  var h = '<div class="barra"><input type="search" id="buscaTab" aria-label="Buscar nesta lista" placeholder="Buscar nesta lista…" value="' + esc(BUSCA[m.id] || '') + '" oninput="BUSCA[\'' + m.id + '\']=this.value;desenharTabela(mod(\'' + m.id + '\'));manterFoco(\'#buscaTab\')">' +
+  var h = (m.dias >= 0 ? abasVista(m) : '') + '<div class="barra"><input type="search" id="buscaTab" aria-label="Buscar nesta lista" placeholder="Buscar nesta lista…" value="' + esc(BUSCA[m.id] || '') + '" oninput="BUSCA[\'' + m.id + '\']=this.value;desenharTabela(mod(\'' + m.id + '\'));manterFoco(\'#buscaTab\')">' +
     '<span class="info">' + ls.length + ' registro(s)</span><span class="esp"></span>' +
     '<a class="btn sec" target="_blank" href="' + esc(m.link) + '">Ver na planilha</a><button class="btn sec" onclick="vTabela(mod(\'' + m.id + '\'),true)">Atualizar</button>' +
     (t.novo ? '<button class="btn so-grava" onclick="abrirLinha(\'' + m.id + '\',0)">+ Novo registro</button>' : '') + '</div>';
@@ -713,13 +745,18 @@ function valorCampo(c, v) {
   if (c.tipo === 'numero' && typeof v === 'number') return String(Math.round(v * 1e6) / 1e6).replace('.', ',');
   return String(v);
 }
-function abrirLinha(id, linha) {
-  var m = mod(id), t = CACHE[id], l = linha ? t.linhas.filter(function (x) { return x.linha === linha; })[0] : { linha: 0, d: [], v: {} };
+function abrirLinha(id, linha, pre) {
+  var m = mod(id), t = CACHE[id], l = linha ? t.linhas.filter(function (x) { return x.linha === linha; })[0] : { linha: 0, d: [], v: pre || {} };
   var digit = t.cols.filter(function (c) { return !c.auto; }), auto = t.cols.filter(function (c) { return c.auto; });
-  var h = '<header><h2>' + esc(linha ? (l.d[t.chave] || 'Registro') : 'Novo registro') + '</h2><div class="info">' + esc(m.titulo) + (linha ? ', linha ' + linha + ' da aba' : '') + '</div></header><div class="conteudo">';
+  if (m.dias >= 0) { // dias da semana logo depois da atividade
+    var cd = digit.filter(function (c) { return c.i === m.dias; })[0], pk = digit.indexOf(t.cols[t.chave]);
+    if (cd && pk >= 0) { digit.splice(digit.indexOf(cd), 1); digit.splice(pk + 1, 0, cd); }
+  }
+  var h = '<header><h2>' + esc(linha ? (l.d[t.chave] || 'Registro') : (m.dias >= 0 ? 'Nova atividade' : 'Novo registro')) + '</h2><div class="info">' + esc(m.titulo) + (linha ? ', linha ' + linha + ' da aba' : '') + '</div></header><div class="conteudo">';
   if (!linha) h += '<p class="info" style="margin-top:0">Preencha o que tiver agora. O que ficar em branco pode ser completado depois.</p>';
   h += digit.map(function (c) {
     var v = valorCampo(c, l.v[c.i]), idc = 'c' + c.i, ctl, obrig = t.cols[t.chave] === c;
+    if (m.dias === c.i) return campoDias(c, v);
     if (m.fotos === c.i) return '<input type="hidden" id="' + idc + '" value="' + esc(v) + '">' + blocoFotos(id, linha); // coluna de fotos vira o bloco de fotos
     if (c.tipo === 'data') ctl = '<input id="' + idc + '" type="date" value="' + esc(String(v).slice(0, 10)) + '">';
     else if (c.opcoes.length && c.opcoes.length <= 12) ctl = '<select id="' + idc + '">' + opts(v && c.opcoes.indexOf(v) < 0 ? [v].concat(c.opcoes) : c.opcoes, v, '') + '</select>';
@@ -811,6 +848,82 @@ function salvarLinha(id, linha) {
 function limparLinha(id, linha) {
   if (!confirm('Apagar o que foi digitado nesta linha? As fórmulas da planilha continuam.')) return;
   chamar('sisAbaLimpar', id, linha).then(function (r) { CACHE[id] = r; fecharGaveta(); desenharTabela(mod(id)); aviso('Registro apagado.'); });
+}
+
+/* ---------------------------------------------------------------- planejamento: quadro da semana */
+var VISTA = {}, SEMANA = null, DIAS_SEM = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+function abasVista(m) {
+  var v = VISTA[m.id] || 'quadro';
+  return '<div class="abas-pres" role="tablist"><button role="tab" aria-selected="' + (v === 'quadro') + '" class="' + (v === 'quadro' ? 'on' : '') + '" onclick="VISTA[\'' + m.id + '\']=\'quadro\';desenharTabela(mod(\'' + m.id + '\'))">Quadro da semana</button>' +
+    '<button role="tab" aria-selected="' + (v === 'lista') + '" class="' + (v === 'lista' ? 'on' : '') + '" onclick="VISTA[\'' + m.id + '\']=\'lista\';desenharTabela(mod(\'' + m.id + '\'))">Lista</button></div>';
+}
+function segundaDe(iso) { var d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.toISOString().slice(0, 10); }
+function diasDe(txt) { var s = String(txt || ''), out = []; DIAS_SEM.forEach(function (d, i) { if (new RegExp('\\b' + d.normalize('NFD').replace(/[̀-ͯ]/g, '').slice(0, 3), 'i').test(s.normalize('NFD').replace(/[̀-ͯ]/g, ''))) out.push(i); }); return out; }
+function campoDias(c, v) {
+  var on = diasDe(v);
+  return '<div class="campo"><label>' + esc(c.nome) + '</label><input type="hidden" id="c' + c.i + '" value="' + esc(v) + '">' +
+    '<div class="dias-sel" role="group" aria-label="Dias da semana">' + DIAS_SEM.map(function (d, i) {
+      return '<label class="' + (on.indexOf(i) >= 0 ? 'on' : '') + '"><input type="checkbox" value="' + d + '"' + (on.indexOf(i) >= 0 ? ' checked' : '') + ' onchange="this.parentNode.classList.toggle(\'on\',this.checked);atualizaDias(' + c.i + ')">' + d + '</label>'; }).join('') +
+    '</div><small>Marque os dias em que o serviço acontece. Sem nenhum dia marcado, vale a semana toda.</small></div>';
+}
+function atualizaDias(i) { el('c' + i).value = Array.prototype.slice.call(document.querySelectorAll('.dias-sel input:checked')).map(function (x) { return x.value; }).join(', '); }
+function idxCol(t, re) { for (var i = 0; i < t.cols.length; i++) if (re.test(t.cols[i].nome)) return i; return -1; }
+function desenharQuadro(m) {
+  var t = CACHE[m.id], seg = SEMANA || segundaDe(hoje()), fimS = somaDias(seg, 6), nova = mod(m.id) && t.novo;
+  var iA = 0, iB = t.chave, iC = idxCol(t, /^local/i), iD = idxCol(t, /equipe/i), iE = idxCol(t, /qtd/i), iF = idxCol(t, /^unid/i), iG = idxCol(t, /precisa antes|restri[cç][aã]o\)/i),
+      iH = idxCol(t, /restri[cç][aã]o resolvida/i), iI = idxCol(t, /^conclu/i), iJ = idxCol(t, /^motivo/i), iN = m.dias;
+  var raw = function (l, i) { return i < 0 ? '' : (l.v[i] != null && l.v[i] !== '' ? l.v[i] : l.d[i]); };
+  var ls = t.linhas.filter(function (l) { var d = String(raw(l, iA)).slice(0, 10); return /^\d{4}-/.test(d) && d >= seg && d <= fimS; });
+  var st = function (l) { var c = String(raw(l, iI)).trim(); return c === 'S' ? 'ok' : /parcial/i.test(c) ? 'parcial' : c === 'N' ? 'nao' : 'plan'; };
+  var restr = function (l) { var g = String(raw(l, iG)).trim(); return g && !/nenhuma/i.test(g) && String(raw(l, iH)).trim() !== 'S'; };
+  var nOk = ls.filter(function (l) { return st(l) === 'ok'; }).length, fechadas = ls.filter(function (l) { return st(l) !== 'plan'; }).length, nR = ls.filter(restr).length;
+  var usaDom = ls.some(function (l) { return diasDe(raw(l, iN)).indexOf(6) >= 0; }), nd = usaDom ? 7 : 6;
+  var h = abasVista(m) + '<div class="barra sem-nav"><button class="btn sec" aria-label="Semana anterior" onclick="SEMANA=somaDias(\'' + seg + '\',-7);desenharTabela(mod(\'' + m.id + '\'))">‹</button>' +
+    '<b class="sem-tit">Semana de ' + brCurta(seg).slice(0, 5) + ' a ' + brCurta(fimS) + '</b>' +
+    '<button class="btn sec" aria-label="Próxima semana" onclick="SEMANA=somaDias(\'' + seg + '\',7);desenharTabela(mod(\'' + m.id + '\'))">›</button>' +
+    (seg !== segundaDe(hoje()) ? '<button class="btn sec peq" onclick="SEMANA=null;desenharTabela(mod(\'' + m.id + '\'))">Voltar para esta semana</button>' : '') +
+    '<span class="esp"></span><button class="btn sec" onclick="vTabela(mod(\'' + m.id + '\'),true)">Atualizar</button>' +
+    (nova ? '<button class="btn so-grava" onclick="novaAtiv(\'' + m.id + '\',\'' + seg + '\',-1)">+ Nova atividade</button>' : '') + '</div>';
+  h += '<div class="faixa"><div><b>' + ls.length + '</b><span>Atividades na semana</span></div><div><b>' + nOk + '</b><span>Concluídas</span></div>' +
+    '<div><b>' + (ls.length ? Math.round(nOk / ls.length * 100) + '%' : '—') + '</b><span>PPC da semana' + (fechadas < ls.length ? ' (parcial)' : '') + '</span></div>' +
+    '<div><b' + (nR ? ' style="color:var(--ambar)"' : '') + '>' + nR + '</b><span>Restrições pendentes</span></div></div>';
+  if (!ls.length) {
+    el('area').innerHTML = h + '<div class="vazio"><b>Nada planejado para esta semana</b>' + (nova ? 'Clique em "+ Nova atividade" ou em um dia do quadro.' : '') +
+      (t.linhas.some(function (l) { return String(raw(l, iA)).slice(0, 10) < seg; }) && nova ? '<br><br><button class="btn sec so-grava" onclick="reprogramar(\'' + somaDias(seg, -7) + '\')">Trazer o que não foi concluído na semana passada</button>' : '') + '</div>';
+    return;
+  }
+  var cab = '<div class="q-cab"><div class="q-ativ">Atividade</div>' + DIAS_SEM.slice(0, nd).map(function (d, i) { var iso = somaDias(seg, i);
+    return '<div class="q-dia' + (iso === hoje() ? ' hoje' : '') + (i >= 5 ? ' fds' : '') + '">' + d + '<small>' + brCurta(iso).slice(0, 5) + '</small></div>'; }).join('') + '</div>';
+  var linhas = ls.map(function (l) {
+    var ds = diasDe(raw(l, iN)), toda = !ds.length, s = st(l), r = restr(l), q = [raw(l, iE), raw(l, iF)].filter(String).join(' ');
+    var info = '<div class="q-ativ" tabindex="0" role="button" onkeydown="if(event.key===\'Enter\')this.click()" onclick="abrirLinha(\'' + m.id + '\',' + l.linha + ')"><b>' + (r ? '<span class="q-alerta" title="Restrição pendente: ' + esc(raw(l, iG)) + '">⚠</span> ' : '') + esc(l.d[iB]) + '</b>' +
+      '<span class="info">' + esc([raw(l, iC), raw(l, iD), q].filter(String).join(' · ')) + '</span>' + (s !== 'plan' ? stTagQ(s, raw(l, iJ)) : '') + '</div>';
+    return '<div class="q-lin">' + info + DIAS_SEM.slice(0, nd).map(function (d, i) {
+      var on = toda ? i < 5 : ds.indexOf(i) >= 0, iso = somaDias(seg, i), prev = on && i > 0 && (toda ? i - 1 < 5 : ds.indexOf(i - 1) >= 0), next = on && (toda ? i + 1 < 5 : ds.indexOf(i + 1) >= 0);
+      return '<div class="q-cel' + (iso === hoje() ? ' hoje' : '') + (i >= 5 ? ' fds' : '') + '">' + (on ? '<span class="q-bar ' + s + (toda ? ' toda' : '') + (prev ? ' p' : '') + (next ? ' n' : '') + '" onclick="abrirLinha(\'' + m.id + '\',' + l.linha + ')" title="' + esc(l.d[iB]) + ' — ' + d + '"></span>' : '') + '</div>';
+    }).join('') + '</div>';
+  }).join('');
+  var vazios = nova ? '<div class="q-lin q-add so-grava"><div class="q-ativ info">Toque no dia para planejar uma atividade nele</div>' + DIAS_SEM.slice(0, nd).map(function (d, i) {
+    return '<div class="q-cel' + (i >= 5 ? ' fds' : '') + '"><button class="q-mais" aria-label="Nova atividade na ' + d + '" onclick="novaAtiv(\'' + m.id + '\',\'' + seg + '\',' + i + ')">+</button></div>'; }).join('') + '</div>' : '';
+  var legenda = '<div class="legenda"><span><i class="q-bar plan"></i>Planejada</span><span><i class="q-bar ok"></i>Concluída</span><span><i class="q-bar parcial"></i>Parcial</span><span><i class="q-bar nao"></i>Não concluída</span><span>⚠ Restrição pendente</span><span><i class="q-bar plan toda"></i>Sem dia marcado (semana toda)</span></div>';
+  // celular: agenda por dia
+  var agenda = DIAS_SEM.slice(0, nd).map(function (d, i) {
+    var iso = somaDias(seg, i), doDia = ls.filter(function (l) { var ds = diasDe(raw(l, iN)); return ds.length ? ds.indexOf(i) >= 0 : i < 5; });
+    return '<section class="ag-dia' + (iso === hoje() ? ' hoje' : '') + '"><h3>' + d + ' <small>' + brCurta(iso).slice(0, 5) + '</small>' + (nova ? '<button class="btn sec peq so-grava" onclick="novaAtiv(\'' + m.id + '\',\'' + seg + '\',' + i + ')">+ Atividade</button>' : '') + '</h3>' +
+      (doDia.length ? doDia.map(function (l) { var s = st(l);
+        return '<a class="ag-it ' + s + '" onclick="abrirLinha(\'' + m.id + '\',' + l.linha + ')"><b>' + (restr(l) ? '⚠ ' : '') + esc(l.d[iB]) + '</b><span class="info">' + esc([raw(l, iC), raw(l, iD)].filter(String).join(' · ')) + '</span>' + (s !== 'plan' ? stTagQ(s, '') : '') + '</a>'; }).join('') : '<p class="info">Nada planejado.</p>') + '</section>';
+  }).join('');
+  var rep = nova && fechadas ? '<div class="barra so-grava" style="margin-top:12px"><span class="info">Na sexta, depois de marcar o que foi concluído:</span><button class="btn sec" onclick="reprogramar(\'' + seg + '\')">Copiar o que não foi concluído para a próxima semana</button></div>' : '';
+  el('area').innerHTML = h + '<div class="quadro-sem" style="--nd:' + nd + '">' + cab + linhas + vazios + '</div><div class="agenda-sem">' + agenda + '</div>' + legenda + rep;
+}
+function stTagQ(s, motivo) { var t = { ok: 'Concluída', parcial: 'Parcial', nao: 'Não concluída' }[s]; return '<span class="q-st ' + s + '">' + t + (motivo ? ' — ' + esc(motivo) : '') + '</span>'; }
+function novaAtiv(id, seg, dia) {
+  var t = CACHE[id], pre = {}; pre[0] = dia >= 0 ? somaDias(seg, dia) : seg; if (dia >= 0) pre[mod(id).dias] = DIAS_SEM[dia];
+  abrirLinha(id, 0, pre);
+}
+function reprogramar(seg) {
+  if (!confirm('Copiar para a semana seguinte as atividades da semana de ' + br(seg) + ' que não foram concluídas?')) return;
+  chamar('sisPlanReprogramar', seg).then(function (r) { CACHE.planejamento = r; SEMANA = somaDias(seg, 7); desenharTabela(mod('planejamento')); aviso(r.copiadas + ' atividade(s) copiada(s) para a semana de ' + br(somaDias(seg, 7)) + '.'); }).catch(function () {});
 }
 
 /* ---------------------------------------------------------------- presença */
