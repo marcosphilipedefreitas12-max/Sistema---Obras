@@ -92,6 +92,7 @@ window.SIS_MOCK = (function () {
         { linha: 7, nome: 'Equipe Teste', funcao: 'Pedreiro', vinculo: 'Prestador / empreiteiro', empresa: 'Empreiteira Exemplo', situacao: 'Ativo', v: dias.map(function (x, i) { return cod(i, function (j) { return String(4 + j % 3); }); }), obs: dias.map(function () { return ''; }) }].map(function (p) { p.he = dias.map(function (d) { return ((st.he || {})[d + '|' + p.linha]) || ''; }); return p; }) };
     }
     function HE_R() { st.fich = st.fich || { pags: [] }; st.fich.cfg = st.fich.cfg || { adiant: 40, p: {} }; st.fich.cfg.he = st.fich.cfg.he || { util: 50, sab: 50, df: 100, divisor: 220, bloco: 3, parcial: 'inteiro' }; return st.fich.cfg.he; }
+    if (fn === 'sisAtalhos') { st.atalhos = args[0]; return args[0]; }
     if (fn === 'sisPensao') { st.pens = st.pens || {}; var sv = args[0]; if (sv) { if (Number(sv.pens)) st.pens[sv.linha] = { pens: Number(sv.pens), base: sv.base }; else delete st.pens[sv.linha]; } return JSON.parse(JSON.stringify(st.pens)); }
     if (/^sisFichado/.test(fn) || (/^sisDiarista(Pago|Cancelar)$/.test(fn) && st.fich && st.fich.pags.some(function (g) { return g.lanc === args[0]; }))) {
       var FI = st.fich = st.fich || { pags: [] };
@@ -174,7 +175,7 @@ window.SIS_MOCK = (function () {
     if (fn === 'sisPerfis') return { lista: PERFIS, dono: 'usuario@exemplo.com', compartilhados: ['mestre@exemplo.com'], perfis: ['Administrador', 'Engenheiro', 'Encarregado', 'Consulta'], desc: { Administrador: 'Tudo.', Engenheiro: 'Tudo menos perfis.', Encarregado: 'Dia a dia, sem custos.', Consulta: 'Só vê.' } };
     if (fn === 'sisPerfisSalvar') { PERFIS = a; return SIS_MOCK('sisPerfis', []); }
     if (fn === 'sisCarregar') {
-      r.config = sisConfig_();
+      r.config = sisConfig_(); r.atalhos = st.atalhos || null;
       r.permissoes = { perfil: 'Administrador', descricao: 'Tudo.', grava: true, apaga: true, custos: true, admin: true, modulos: r.config.modulos.map(function (m) { return m.id; }) };
       r.inicio = { pend: [{ assunto: 'Boletos vencidos', qtd: 0 }, { assunto: 'Dias sem registro no Diário', qtd: 2 }, { assunto: 'Compras atrasadas', qtd: 1 }],
         painel: { avanco: { real: 0.042, previsto: 0.05 }, termino: '03/07/2029', atrasadas: 1,
