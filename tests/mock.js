@@ -89,13 +89,14 @@ window.SIS_MOCK = (function () {
         { linha: 6, nome: 'Ajudante Teste', funcao: 'Servente', vinculo: 'Diarista', empresa: '', situacao: 'Ativo', v: dias.map(function (x, i) { return cod(i, function (j) { return j === 9 ? 'F' : j === 10 ? 'FJ' : 'P'; }); }), obs: dias.map(function (x, i) { return i === 10 ? 'Consulta' : ''; }) },
         { linha: 7, nome: 'Equipe Teste', funcao: 'Pedreiro', vinculo: 'Prestador / empreiteiro', empresa: 'Empreiteira Exemplo', situacao: 'Ativo', v: dias.map(function (x, i) { return cod(i, function (j) { return String(4 + j % 3); }); }), obs: dias.map(function () { return ''; }) }] };
     }
+    if (fn === 'sisPensao') { st.pens = st.pens || {}; var sv = args[0]; if (sv) { if (Number(sv.pens)) st.pens[sv.linha] = { pens: Number(sv.pens), base: sv.base }; else delete st.pens[sv.linha]; } return JSON.parse(JSON.stringify(st.pens)); }
     if (/^sisFichado/.test(fn) || (/^sisDiarista(Pago|Cancelar)$/.test(fn) && st.fich && st.fich.pags.some(function (g) { return g.lanc === args[0]; }))) {
       var FI = st.fich = st.fich || { pags: [] };
       if (fn === 'sisFichadoLancar') FI.pags.push({ linha: args[0], mes: args[1], lanc: 100 + FI.pags.length, tipo: args[2], valor: Number(String(args[3]).replace(/\./g, '').replace(',', '.')), status: args[6] ? 'Pago' : 'Lançado', venc: args[4], pagoEm: args[6] ? args[4] : '', forma: args[5] });
       if (fn === 'sisDiaristaPago') FI.pags.forEach(function (g) { if (g.lanc === args[0]) { g.status = 'Pago'; g.pagoEm = args[1]; } });
       if (fn === 'sisDiaristaCancelar') FI.pags.forEach(function (g) { if (g.lanc === args[0]) g.status = 'Cancelado'; });
       FI.cfg = FI.cfg || { adiant: 40, p: {} };
-      if (fn === 'sisFichadoConfig') { if (args[0] === 0) FI.cfg.adiant = args[1].adiant; else FI.cfg.p[args[0]] = { vt: !!args[1].vt, dep: Number(args[1].dep) || 0, pens: Number(args[1].pens) || 0, pensBase: args[1].pensBase || 'liq' }; return FI.cfg; }
+      if (fn === 'sisFichadoConfig') { if (args[0] === 0) FI.cfg.adiant = args[1].adiant; else FI.cfg.p[args[0]] = { vt: !!args[1].vt, dep: Number(args[1].dep) || 0 }; return FI.cfg; }
       var mesF = fn === 'sisFichados' ? args[0] : (FI.mes || '2026-11'); FI.mes = mesF;
       if (fn !== 'sisFichados' && fn !== 'sisFichadoLancar') return SIS_MOCK('sisDiaristas', []);
       return { mes: mesF, hoje: st.hoje, dias: [], cfg: FI.cfg, codigos: SIS_PRES_COD, tipos: { ADIANTAMENTO: 'Adiantamento (vale)', SALARIO: 'Salário do mês', BENEFICIOS: 'Vale-transporte / alimentação' }, pessoas: [
