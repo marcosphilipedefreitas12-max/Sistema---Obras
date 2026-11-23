@@ -170,7 +170,17 @@
   .auto span:nth-child(odd) { color: var(--aco); } .auto span:nth-child(even) { text-align: right; font-weight: 500; }
   .duas { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
 
-  .faixa { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--linha); background: var(--papel); margin-bottom: 12px; }
+  .diar { border: 1px solid var(--linha); background: var(--papel); padding: 12px 14px; margin-bottom: 10px; }
+.diar-cab { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: flex-start; justify-content: space-between; margin-bottom: 6px; }
+.diar-cab h3 { margin: 0; font-family: var(--titulo); font-size: 20px; }
+.diar-bt { display: flex; gap: 6px; flex-wrap: wrap; }
+.diar .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.diar .tabela { margin-top: 10px; }
+.diar-conta { padding: 10px 12px; border-left: 3px solid var(--sinal); background: var(--fundo); margin: 4px 0 12px; }
+.diar-conta .info { display: block; margin-top: 4px; }
+.diar-outras { margin-top: 14px; }
+.duas { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
+.faixa { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--linha); background: var(--papel); margin-bottom: 12px; }
   .faixa div { padding: 14px 16px; border-left: 1px solid var(--linha); }
   .faixa div:first-child { border-left: 0; }
   .faixa b { display: block; font-family: var(--titulo); font-size: 30px; font-weight: 600; line-height: 1.05; }
@@ -514,6 +524,7 @@ function ir(id) {
   if (m.tipo === 'presenca') return vPresenca(m);
   if (m.tipo === 'demandas') return vDemandas(m);
   if (m.tipo === 'fornecedores') return vFornecedores(m);
+  if (m.tipo === 'diaristas') return vDiaristas(m);
 }
 function carimbo(titulo, serve, extra) {
   return '<section class="carimbo"><div class="tit"><h1>' + esc(titulo) + '</h1><p>' + esc(serve) + '</p></div><div class="cel">' +
@@ -1356,6 +1367,94 @@ function abasPres(qual) {
   return '<div class="abas-pres" role="tablist"><button role="tab" aria-selected="' + (qual === 'dia') + '" class="' + (qual === 'dia' ? 'on' : '') + '" onclick="vPresenca(mod(\'presenca\'))">Lançar o dia</button>' +
     '<button role="tab" aria-selected="' + (qual === 'mes') + '" class="' + (qual === 'mes' ? 'on' : '') + '" onclick="vPresencaMes()">Mês inteiro</button></div>';
 }
+
+/* ---------------------------------------------------------------- pagamento de diaristas */
+var DIAR = null, DIAR_ABERTO = {};
+function rsd(v) { return PM.custos ? 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'; }
+function numd(q) { return String(Math.round(q * 10) / 10).replace('.', ','); }
+function vDiaristas(m) {
+  el('main').innerHTML = carimbo(m.titulo, m.serve, ['Grava em', 'Lançamentos']) + '<div class="corpo"><div id="area"><div class="vazio"><b>Calculando as diárias…</b></div></div>' + guia(m, false) + '</div>';
+  chamar('sisDiaristas').then(function (r) { DIAR = r; desenharDiaristas(); }).catch(function () {});
+}
+function desenharDiaristas() {
+  var r = DIAR, t = { dias: 0, aberto: 0, lancado: 0, pago: 0 };
+  r.pessoas.forEach(function (p) {
+    t.dias += p.aberto.qtd; t.aberto += p.aberto.valor;
+    p.lanc = 0; p.pago = 0; p.ultPago = '';
+    p.pagamentos.forEach(function (x) { if (x.status === 'Pago') { p.pago += x.valor; if (x.pagoEm > p.ultPago) p.ultPago = x.pagoEm; } else if (x.status !== 'Cancelado') p.lanc += x.valor; });
+    t.lancado += p.lanc; t.pago += p.pago;
+  });
+  var h = '<div class="faixa dinheiro"><div><b>' + rsd(t.aberto) + '</b><span>Em aberto até hoje (' + numd(t.dias) + ' diária' + (t.dias === 1 ? '' : 's') + ')</span></div>' +
+    '<div><b>' + rsd(t.lancado) + '</b><span>Lançado, aguardando pagamento</span></div><div><b>' + rsd(t.pago) + '</b><span>Já pago (pelo sistema)</span></div>' +
+    '<div><b>' + r.pessoas.length + '</b><span>Diarista' + (r.pessoas.length === 1 ? '' : 's') + '</span></div></div>';
+  if (!r.pessoas.length) h += '<div class="vazio"><b>Nenhum diarista cadastrado</b>Na tela Pessoas, use o vínculo "Diarista" e preencha o valor da diária.</div>';
+  h += r.pessoas.map(function (p) {
+    var a = p.aberto, aberto = !!DIAR_ABERTO[p.linha];
+    var tags = (p.diaristaAte ? '<span class="st azul">Diarista até ' + brCurta(p.diaristaAte) + '</span> ' : '') + (p.situacao && p.situacao !== 'Ativo' ? '<span class="st">' + esc(p.situacao) + '</span> ' : '') +
+      (p.semPresenca ? '<span class="st verm">Não achei na Presença</span> ' : '') + (!p.diaria ? '<span class="st ambar">Sem valor de diária</span> ' : '');
+    var x = '<section class="diar"><div class="diar-cab"><div><h3>' + esc(p.nome) + '</h3><span class="info">' + esc(p.funcao) + (p.pagamento ? ' · pagamento ' + esc(p.pagamento.toLowerCase()) : '') + (PM.custos && p.diaria ? ' · diária ' + rsd(p.diaria) : '') + '</span> ' + tags + '</div>' +
+      '<div class="diar-bt"><button class="btn sec" onclick="DIAR_ABERTO[' + p.linha + ']=!DIAR_ABERTO[' + p.linha + '];desenharDiaristas()" aria-expanded="' + aberto + '">' + (aberto ? 'Fechar histórico' : 'Histórico (' + p.pagamentos.length + ')') + '</button>' +
+      (a.qtd ? '<button class="btn so-grava" onclick="lancarDiarias(' + p.linha + ')">Lançar pagamento</button>' : '') + '</div></div>' +
+      '<div class="kpis"><div class="kpi' + (a.qtd ? ' at' : '') + '"><b>' + rsd(a.valor) + '</b><span>Em aberto: ' + numd(a.qtd) + ' diária' + (a.qtd === 1 ? '' : 's') + '</span><small>' + (a.qtd ? brCurta(a.de) + ' a ' + brCurta(a.ate) : 'nada a pagar') + '</small></div>' +
+      '<div class="kpi"><b>' + rsd(p.lanc) + '</b><span>Lançado, falta pagar</span></div>' +
+      '<div class="kpi' + (p.pago ? ' pos' : '') + '"><b>' + rsd(p.pago) + '</b><span>Pago</span><small>' + (p.ultPago ? 'último em ' + br(p.ultPago) : '') + '</small></div></div>';
+    if (aberto) {
+      x += '<div class="tabela"><table><thead><tr><th>Período</th><th class="num">Diárias</th><th class="num">Valor</th><th>Situação</th><th></th></tr></thead><tbody>' +
+        (p.pagamentos.length ? p.pagamentos.map(function (g) {
+          var acoes = g.status !== 'Pago' && g.status !== 'Cancelado' ? '<button class="btn so-grava" onclick="diarPago(' + g.lanc + ',\'' + esc(p.nome) + '\')">Marcar como pago</button>' + (PM.apaga ? ' <button class="btn sec so-grava" onclick="diarCancelar(' + g.lanc + ')">Cancelar</button>' : '') : '';
+          return '<tr style="cursor:default"><td>' + br(g.de) + ' a ' + br(g.ate) + '</td><td class="num">' + numd(g.dias) + '</td><td class="num">' + rsd(g.valor) + '</td><td>' + stTag(g.status) +
+            (g.status === 'Pago' && g.pagoEm ? ' <span class="info">em ' + br(g.pagoEm) + '</span>' : g.venc ? ' <span class="info">venc. ' + br(g.venc) + '</span>' : '') + '</td><td>' + acoes + '</td></tr>';
+        }).join('') : '<tr style="cursor:default"><td colspan="5" class="info">Nenhum pagamento lançado por esta tela ainda.</td></tr>') + '</tbody></table></div>';
+      if (p.outros.length) x += '<p class="info">Outros lançamentos de mão de obra em nome de ' + esc(p.nome) + ' (feitos direto na aba Lançamentos, sem período — <b>não</b> descontados do valor em aberto): ' +
+        p.outros.map(function (o) { return br(o.data) + ' ' + rsd(o.valor) + (o.status ? ' (' + esc(o.status) + ')' : ''); }).join('; ') + '. Se já pagavam diárias, use "Lançar pagamento" → "Já foi pago" para o período e cancele o antigo.</p>';
+      if (PM.grava) x += '<p class="info"><a onclick="diarAte(' + p.linha + ')">' + (p.diaristaAte ? 'Alterar "diarista até" (' + br(p.diaristaAte) + ')' : 'Foi fichado (CLT)? Informar o último dia como diarista') + '</a></p>';
+    }
+    return x + '</section>';
+  }).join('');
+  if (PM.grava && r.outras.length) h += '<details class="diar-outras"><summary>Alguém foi fichado e sumiu desta lista?</summary><p class="info">Escolha a pessoa para continuar vendo as diárias que ela ainda tem a receber, até o último dia como diarista.</p>' +
+    '<div class="barra"><select id="dOutra" style="width:auto">' + r.outras.map(function (o) { return '<option value="' + o.linha + '">' + esc(o.nome) + (o.vinculo ? ' (' + esc(o.vinculo) + ')' : '') + '</option>'; }).join('') +
+    '</select><button class="btn sec" onclick="diarAte(Number(el(\'dOutra\').value))">Informar "diarista até"</button></div></details>';
+  el('area').innerHTML = h;
+}
+function diarPessoa(linha) { return DIAR.pessoas.filter(function (p) { return p.linha === linha; })[0] || DIAR.outras.filter(function (p) { return p.linha === linha; })[0]; }
+function lancarDiarias(linha) {
+  var p = diarPessoa(linha), a = p.aberto;
+  abrirGaveta('<header><h2>Lançar pagamento</h2><div class="info">' + esc(p.nome) + ' · grava na aba Lançamentos (Mão de obra)</div></header><div class="conteudo">' +
+    '<div class="duas">' + campo('De', '<input id="dDe" type="date" value="' + a.de + '" min="' + a.de + '" max="' + a.ate + '" onchange="diarConta(' + linha + ')">') +
+    campo('Até', '<input id="dAte" type="date" value="' + a.ate + '" min="' + a.de + '" max="' + a.ate + '" onchange="diarConta(' + linha + ')">') + '</div>' +
+    '<div id="dConta" class="diar-conta" aria-live="polite"></div>' +
+    campo('Situação', '<select id="dPago"><option value="">Lançar para pagar (vai para o financeiro)</option><option value="1">Já foi pago</option></select>', 'Se escolher "Já foi pago", a data abaixo vira a data do pagamento.') +
+    campo('Data (vencimento ou pagamento)', '<input id="dData" type="date" value="' + hoje() + '">') +
+    campo('Forma de pagamento', '<select id="dForma">' + ['PIX', 'Transferência', 'Dinheiro', 'Boleto', 'Cheque', 'Cartão'].map(function (f) { return '<option>' + f + '</option>'; }).join('') + '</select>', p.temPix ? 'A chave PIX da tela Pessoas vai junto no lançamento.' : 'Sem chave PIX na tela Pessoas.') +
+    '</div><footer><span style="flex:1"></span><button class="btn sec" onclick="fecharGaveta()">Cancelar</button><button class="btn so-grava" onclick="salvarDiarias(' + linha + ')">Lançar</button></footer>');
+  diarConta(linha);
+}
+function diarConta(linha) {
+  var p = diarPessoa(linha), de = el('dDe').value, ate = el('dAte').value;
+  var ds = p.aberto.dias.filter(function (d) { return d[0] >= de && d[0] <= ate; }), q = ds.reduce(function (s, d) { return s + d[1]; }, 0);
+  el('dConta').innerHTML = q ? '<b>' + numd(q) + ' diária' + (q === 1 ? '' : 's') + '</b> × ' + rsd(p.diaria) + ' = <b>' + rsd(q * p.diaria) + '</b><span class="info">' + ds.map(function (d) { return brCurta(d[0]).slice(0, 5) + (d[1] < 1 ? ' (½)' : ''); }).join(', ') + '</span>' : '<b>Nenhuma diária em aberto nesse período.</b>';
+}
+function salvarDiarias(linha) {
+  var de = el('dDe').value, ate = el('dAte').value; if (!de || !ate || de > ate) return aviso('Confira o período.');
+  chamar('sisDiaristaLancar', linha, de, ate, el('dData').value, el('dForma').value, !!el('dPago').value).then(function (r) { DIAR = r; fecharGaveta(); desenharDiaristas(); aviso('Pagamento lançado na aba Lançamentos.'); }).catch(function () {});
+}
+function diarPago(lanc, nome) {
+  abrirGaveta('<header><h2>Marcar como pago</h2><div class="info">' + esc(nome) + '</div></header><div class="conteudo">' + campo('Data do pagamento', '<input id="dPg" type="date" value="' + hoje() + '">') +
+    '</div><footer><span style="flex:1"></span><button class="btn sec" onclick="fecharGaveta()">Cancelar</button><button class="btn so-grava" onclick="diarPagoOk(' + lanc + ')">Marcar como pago</button></footer>');
+}
+function diarPagoOk(lanc) { chamar('sisDiaristaPago', lanc, el('dPg').value).then(function (r) { DIAR = r; fecharGaveta(); desenharDiaristas(); aviso('Marcado como pago.'); }).catch(function () {}); }
+function diarCancelar(lanc) {
+  abrirGaveta('<header><h2>Cancelar lançamento</h2></header><div class="conteudo"><p>O lançamento fica como "Cancelado" na aba Lançamentos e as diárias voltam para "em aberto".</p></div>' +
+    '<footer><span style="flex:1"></span><button class="btn sec" onclick="fecharGaveta()">Voltar</button><button class="btn perigo so-grava" onclick="chamar(\'sisDiaristaCancelar\',' + lanc + ').then(function(r){DIAR=r;fecharGaveta();desenharDiaristas();aviso(\'Lançamento cancelado.\')}).catch(function(){})">Cancelar lançamento</button></footer>');
+}
+function diarAte(linha) {
+  var p = diarPessoa(linha);
+  abrirGaveta('<header><h2>Diarista até</h2><div class="info">' + esc(p.nome) + '</div></header><div class="conteudo">' +
+    campo('Último dia como diarista', '<input id="dAteV" type="date" value="' + esc(p.diaristaAte || '') + '">', 'Ex.: admitido (fichado) em 17/11 → informe 16/11. Os dias depois disso não entram como diária. Mude também o vínculo na tela Pessoas.') +
+    '</div><footer>' + (p.diaristaAte ? '<button class="btn sec so-grava" onclick="diarAteOk(' + linha + ',\'\')">Tirar a data</button>' : '') + '<span style="flex:1"></span><button class="btn sec" onclick="fecharGaveta()">Cancelar</button>' +
+    '<button class="btn so-grava" onclick="diarAteOk(' + linha + ',el(\'dAteV\').value)">Salvar</button></footer>');
+}
+function diarAteOk(linha, v) { chamar('sisDiaristaAte', linha, v).then(function (r) { DIAR = r; fecharGaveta(); desenharDiaristas(); aviso('Salvo.'); }).catch(function () {}); }
 
 /* ---------------------------------------------------------------- presença: mês inteiro */
 var PMES = null, PMES_F = { vinc: '', q: '' };

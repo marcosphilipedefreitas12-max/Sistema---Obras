@@ -89,6 +89,30 @@ window.SIS_MOCK = (function () {
         { linha: 6, nome: 'Ajudante Teste', funcao: 'Servente', vinculo: 'Diarista', empresa: '', situacao: 'Ativo', v: dias.map(function (x, i) { return cod(i, function (j) { return j === 9 ? 'F' : j === 10 ? 'FJ' : 'P'; }); }), obs: dias.map(function (x, i) { return i === 10 ? 'Consulta' : ''; }) },
         { linha: 7, nome: 'Equipe Teste', funcao: 'Pedreiro', vinculo: 'Prestador / empreiteiro', empresa: 'Empreiteira Exemplo', situacao: 'Ativo', v: dias.map(function (x, i) { return cod(i, function (j) { return String(4 + j % 3); }); }), obs: dias.map(function () { return ''; }) }] };
     }
+    if (/^sisDiarista/.test(fn)) {
+      var DI = st.diar = st.diar || { ate: {}, pags: [] };
+      var diasT = ['2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06', '2026-11-10', '2026-11-11', '2026-11-12', '2026-11-13', '2026-11-16', '2026-11-17', '2026-11-18'];
+      var monta = function () {
+        var pes = [{ linha: 6, nome: 'Ajudante Teste', funcao: 'Servente', diaria: 150 }, { linha: 7, nome: 'Equipe Teste', funcao: 'Pedreiro', diaria: 250 }];
+        return { hoje: st.hoje, outras: [{ linha: 8, nome: 'Fichado Teste', vinculo: 'Fichado (CLT)' }], pessoas: pes.map(function (p) {
+          var ps = DI.pags.filter(function (g) { return g.linha === p.linha && g.status !== 'Cancelado'; }), lim = DI.ate[p.linha] || st.hoje;
+          var d = diasT.filter(function (x) { return x <= lim && !ps.some(function (g) { return x >= g.de && x <= g.ate; }); }).map(function (x, i) { return [x, i === 2 && p.linha === 6 ? 0.5 : 1]; });
+          var q = d.reduce(function (a, x) { return a + x[1]; }, 0);
+          return Object.assign({ vinculo: 'Diarista', pagamento: 'Quinzenal', etapa: 'Infraestrutura', temPix: p.linha === 6, situacao: 'Ativo', diaristaAte: DI.ate[p.linha] || '', semPresenca: false, outros: [],
+            aberto: { dias: d, qtd: q, valor: q * p.diaria, de: d.length ? d[0][0] : '', ate: d.length ? d[d.length - 1][0] : '' },
+            pagamentos: DI.pags.filter(function (g) { return g.linha === p.linha; }) }, p);
+        }) };
+      };
+      if (fn === 'sisDiaristaLancar') {
+        var pp = monta().pessoas.filter(function (x) { return x.linha === args[0]; })[0], ds = pp.aberto.dias.filter(function (x) { return x[0] >= args[1] && x[0] <= args[2]; }), qq = ds.reduce(function (a, x) { return a + x[1]; }, 0);
+        if (!qq) throw new Error('Não há diárias em aberto nesse período.');
+        DI.pags.unshift({ linha: args[0], lanc: 10 + DI.pags.length, de: ds[0][0], ate: ds[ds.length - 1][0], dias: qq, valor: qq * pp.diaria, status: args[5] ? 'Pago' : 'Lançado', venc: args[3], pagoEm: args[5] ? args[3] : '', forma: args[4] });
+      }
+      if (fn === 'sisDiaristaPago') DI.pags.forEach(function (g) { if (g.lanc === args[0]) { g.status = 'Pago'; g.pagoEm = args[1]; } });
+      if (fn === 'sisDiaristaCancelar') DI.pags.forEach(function (g) { if (g.lanc === args[0]) g.status = 'Cancelado'; });
+      if (fn === 'sisDiaristaAte') { if (args[1]) DI.ate[args[0]] = args[1]; else delete DI.ate[args[0]]; }
+      return monta();
+    }
     if (fn === 'sisPresencaMarcar') { PRES.P[args[0]] = args[2]; return true; }
     if (fn === 'sisSalvarDemanda') { if (!a.ID) { a.ID = 'D' + (n++); st.demandas.push(a); } else st.demandas = st.demandas.map(function (d) { return d.ID === a.ID ? a : d; }); }
     if (fn === 'sisSalvarFornecedor') { if (!a.ID) { a.ID = 'F' + (n++); st.fornecedores.push(a); } else st.fornecedores = st.fornecedores.map(function (d) { return d.ID === a.ID ? a : d; }); }

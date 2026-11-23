@@ -71,10 +71,12 @@ var SIS_MODULOS = [
     serve: 'Ciclo de cada laje: previsto × real, com farol de atraso.',
     quando: 'No início, na concretagem e no término de cada pavimento.',
     passos: ['Abra o pavimento e preencha a data real de início, da concretagem da laje e do término.', 'Ciclo real, farol e situação são automáticos.'] },
-  { id: 'diaristas', grupo: 'semana', aba: 'Pagamento Diaristas', tipo: 'tabela', hdr: 5, ini: 6, fim: 126, chave: 'A', ult: 'I', novo: false,
-    mostrar: ['A', 'B', 'C', 'D', 'E', 'F', 'G'],
-    serve: 'Quanto pagar a cada diarista no período, pela presença marcada. Tudo automático.',
-    quando: 'Na semana ou quinzena de pagamento. O período é escolhido na própria aba da planilha.' },
+  { id: 'diaristas', grupo: 'semana', aba: 'Pagamento Diaristas', tipo: 'diaristas',
+    serve: 'Quanto cada diarista tem a receber até hoje (pela Presença), o que já foi lançado para pagamento e o que já foi pago.',
+    quando: 'No dia de pagar (semana ou quinzena) e sempre que quiser conferir o que está em aberto.',
+    passos: ['O valor em aberto soma todos os dias trabalhados (P, ½, TR) ainda não pagos, até hoje.', 'Clique em "Lançar pagamento", confira o período e escolha "Já foi pago" ou "Lançar para pagar".',
+             'O pagamento vai também para a aba Lançamentos (Mão de obra), entrando no custo da obra.', 'Quando o financeiro pagar, abra o histórico e clique em "Marcar como pago".',
+             'Se o diarista foi fichado (CLT), informe "Diarista até" (o último dia como diarista): os dias depois disso não entram mais.'] },
   { id: 'monitoramento', grupo: 'semana', aba: 'Monitoramento', tipo: 'tabela', hdr: 4, ini: 5, fim: 304, chave: 'A', ult: 'M',
     mostrar: ['A', 'C', 'E', 'G', 'H', 'J', 'K'], ordem: 'desc',
     serve: 'Leituras dos marcos e fissurômetros nos vizinhos. Avisa quando o deslocamento passa do limite.',
@@ -957,4 +959,77 @@ function sisOrcOk_() { try { return PropertiesService.getScriptProperties().getP
 function sisOrcConfirmar(ok) {
   PropertiesService.getScriptProperties().setProperty('SIS_ORC_OK_' + sisSS_().getId(), ok ? '1' : '0');
   return sisOrcOk_();
+}
+
+
+/* ---------------------------------------------------------------- PAGAMENTO DE DIARISTAS */
+/* Os pagamentos ficam na própria aba Lançamentos (Mão de obra), com a marca [DIARIAS aaaa-mm-dd a aaaa-mm-dd]
+   nas Observações. "Diarista até" (quem virou fichado) fica nas propriedades do script, por obra. */
+function sisDiarAte_() { try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('SIS_DIAR_ATE_' + sisSS_().getId()) || '{}'); } catch (e) { return {}; } }
+function sisDiaristas() {
+  var ss = sisSS_(), hoje = sisIso_(new Date()), ate = sisDiarAte_(), num = function (x) { return typeof x === 'number' ? x : Number(String(x || '').replace(/[^\d,-]/g, '').replace(',', '.')) || 0; };
+  var pe = ss.getSheetByName('Pessoas').getRange(6, 1, 120, 16).getValues();
+  var pr = ss.getSheetByName('Presença'), nc = pr.getLastColumn(), datas = pr.getRange(5, 8, 1, nc - 7).getValues()[0].map(function (d) { return d instanceof Date ? sisIso_(d) : ''; });
+  var marc = pr.getRange(6, 8, 120, nc - 7).getValues(), prNome = pr.getRange(6, 1, 120, 1).getDisplayValues().map(function (x) { return String(x[0]).trim().toLowerCase(); });
+  var la = ss.getSheetByName('Lançamentos'), lv = la.getRange(5, 1, 499, 17).getValues(), pags = {};
+  var outrosL = {};
+  lv.forEach(function (r, i) {
+    var nome = String(r[3] || '').trim().toLowerCase(), m = String(r[11] || '').match(/\[DIARIAS (\d{4}-\d{2}-\d{2}) a (\d{4}-\d{2}-\d{2})\]/);
+    if (!m) { if (nome && String(r[5]) === 'Mão de obra' && r[0]) (outrosL[nome] = outrosL[nome] || []).push({ lanc: 5 + i, data: r[0] instanceof Date ? sisIso_(r[0]) : String(r[0]), desc: String(r[2] || ''), valor: num(r[7]), status: String(r[14] || '') }); return; }
+    (pags[nome] = pags[nome] || []).push({ lanc: 5 + i, de: m[1], ate: m[2], dias: num(r[6]), valor: num(r[7]),
+      status: String(r[14] || 'Lançado'), venc: r[8] instanceof Date ? sisIso_(r[8]) : '', pagoEm: r[15] instanceof Date ? sisIso_(r[15]) : '', forma: String(r[13] || '') });
+  });
+  var lista = [], outras = [];
+  pe.forEach(function (p, i) {
+    var nome = String(p[1] || '').trim(); if (!nome) return;
+    var linha = 6 + i, ehDiar = String(p[3]) === 'Diarista' || ate[linha];
+    if (!ehDiar) { outras.push({ linha: linha, nome: nome, vinculo: String(p[3] || '') }); return; }
+    var limite = ate[linha] && ate[linha] < hoje ? ate[linha] : hoje, saida = p[13] instanceof Date ? sisIso_(p[13]) : '';
+    if (saida && saida < limite) limite = saida;
+    var ip = prNome.indexOf(nome.toLowerCase());
+    var ps = (pags[nome.toLowerCase()] || []).filter(function (x) { return x.status !== 'Cancelado'; });
+    var dias = [];
+    datas.forEach(function (d, j) {
+      if (ip < 0 || !d || d > limite) return; var v = marc[ip][j]; if (v === '' || v === null) return;
+      var cod = SIS_PRES_COD.filter(function (x) { return x.c === String(v); })[0], w = cod && cod.conta ? cod.conta : 0; if (!w) return;
+      if (ps.some(function (x) { return d >= x.de && d <= x.ate; })) return;
+      dias.push([d, w]);
+    });
+    var diaria = num(p[6]), q = dias.reduce(function (a, x) { return a + x[1]; }, 0);
+    lista.push({ linha: linha, nome: nome, funcao: String(p[2] || ''), vinculo: String(p[3] || ''), pagamento: String(p[5] || ''), diaria: diaria, etapa: String(p[9] || ''),
+      temPix: !!String(p[11] || '').trim(), situacao: String(p[14] || ''), diaristaAte: ate[linha] || '',
+      aberto: { dias: dias, qtd: q, valor: q * diaria, de: dias.length ? dias[0][0] : '', ate: dias.length ? dias[dias.length - 1][0] : '' },
+      semPresenca: ip < 0, outros: outrosL[nome.toLowerCase()] || [],
+      pagamentos: (pags[nome.toLowerCase()] || []).sort(function (a, b) { return a.de < b.de ? 1 : -1; }) });
+  });
+  if (!sisPermissoes_().custos) lista.forEach(function (p) { p.diaria = 0; p.aberto.valor = 0; p.pagamentos.forEach(function (x) { x.valor = 0; }); p.outros.forEach(function (x) { x.valor = 0; }); });
+  return { hoje: hoje, pessoas: lista, outras: outras };
+}
+/** Lança (e opcionalmente já dá como pago) as diárias em aberto de uma pessoa entre de e ate. */
+function sisDiaristaLancar(linha, de, ate, data, forma, pago) {
+  {
+    var r = sisDiaristas(), p = r.pessoas.filter(function (x) { return x.linha === linha; })[0];
+    if (!p) throw new Error('Pessoa não encontrada.');
+    var dias = p.aberto.dias.filter(function (d) { return d[0] >= de && d[0] <= ate; }), q = dias.reduce(function (a, x) { return a + x[1]; }, 0);
+    if (!q) throw new Error('Não há diárias em aberto nesse período.');
+    if (!p.diaria) throw new Error('Falta o valor da diária de ' + p.nome + ' na tela Pessoas.');
+    var d1 = dias[0][0], d2 = dias[dias.length - 1][0], br = function (x) { return x.slice(8) + '/' + x.slice(5, 7); };
+    var pix = String(sisSS_().getSheetByName('Pessoas').getRange(linha, 12).getValue() || '');
+    var v = { 0: r.hoje, 1: p.etapa || '', 2: 'Diárias — ' + p.nome + ' (' + br(d1) + ' a ' + br(d2) + ', ' + q + ' dia(s))', 3: p.nome, 5: 'Mão de obra', 6: q, 7: q * p.diaria,
+      8: data || r.hoje, 11: '[DIARIAS ' + d1 + ' a ' + d2 + '] Lançado pelo sistema por ' + sisUsuario_(), 13: forma || 'PIX', 14: pago ? 'Pago' : 'Lançado' };
+    if (pago) v[15] = data || r.hoje; if (pix) v[16] = pix;
+    sisAbaSalvar('lancamentos', 0, v);
+    return sisDiaristas();
+  }
+}
+function sisDiaristaLanc_(lanc) {
+  var obs = String(sisSS_().getSheetByName('Lançamentos').getRange(lanc, 12).getValue());
+  if (!/\[DIARIAS /.test(obs)) throw new Error('Esse lançamento não é de diárias.');
+}
+function sisDiaristaPago(lanc, data) { sisDiaristaLanc_(lanc); sisAbaSalvar('lancamentos', lanc, { 14: 'Pago', 15: data || sisIso_(new Date()) }); return sisDiaristas(); }
+function sisDiaristaCancelar(lanc) { sisDiaristaLanc_(lanc); sisAbaSalvar('lancamentos', lanc, { 14: 'Cancelado' }); return sisDiaristas(); }
+function sisDiaristaAte(linha, iso) {
+  var a = sisDiarAte_(); if (iso) a[linha] = String(iso).slice(0, 10); else delete a[linha];
+  PropertiesService.getScriptProperties().setProperty('SIS_DIAR_ATE_' + sisSS_().getId(), JSON.stringify(a));
+  return sisDiaristas();
 }
