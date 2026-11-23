@@ -1071,7 +1071,7 @@ function sisFichados(mes) {
       admissao: adm, saida: saida, proporcional: !!(adm && adm > iniMes) || !!(saida && saida < fimMes), situacao: String(p[14] || ''), temPix: !!String(p[11] || '').trim(),
       cont: cont, datas: datas, obs: obs, semPresenca: !pr, pagamentos: pags[nome.toLowerCase()] || [] });
   });
-  return { mes: mes, hoje: sisIso_(new Date()), dias: pres.dias, tipos: SIS_CLT_TIPOS, codigos: SIS_PRES_COD, pessoas: lista };
+  return { mes: mes, hoje: sisIso_(new Date()), dias: pres.dias, tipos: SIS_CLT_TIPOS, codigos: SIS_PRES_COD, pessoas: lista, cfg: sisCltCfg_() };
 }
 /** Soma dias a um texto aaaa-mm-dd (conta pura, sem fuso). */
 function sisMaisDias_(iso, n) { var d = new Date(Date.UTC(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10)) + n)); return d.toISOString().slice(0, 10); }
@@ -1089,4 +1089,28 @@ function sisFichadoLancar(linha, mes, tipo, valor, data, forma, pago) {
   if (pago) w[15] = data || hoje; if (pix) w[16] = pix;
   sisAbaSalvar('lancamentos', 0, w);
   return sisFichados(mes);
+}
+
+/* Configuração da estimativa de folha (por obra): % do adiantamento e, por pessoa, se usa vale-transporte e nº de dependentes. */
+function sisCltCfg_() {
+  var c = {}; try { c = JSON.parse(PropertiesService.getScriptProperties().getProperty('SIS_CLT_CFG_' + sisSS_().getId()) || '{}'); } catch (e) { }
+  if (typeof c.adiant !== 'number') c.adiant = 40; c.p = c.p || {}; return c;
+}
+function sisFichadoConfig(linha, cfg) {
+  var c = sisCltCfg_();
+  if (linha === 0) { var a = Number(cfg.adiant); if (!(a >= 0 && a <= 100)) throw new Error('Percentual do adiantamento inválido.'); c.adiant = a; }
+  else c.p[linha] = { vt: !!cfg.vt, dep: Math.max(0, Math.min(20, Math.floor(Number(cfg.dep) || 0))) };
+  PropertiesService.getScriptProperties().setProperty('SIS_CLT_CFG_' + sisSS_().getId(), JSON.stringify(c));
+  return c;
+}
+/* Pensão alimentícia: guardada só para o usuário que salvou (UserProperties — o app roda como quem acessa), nunca na planilha. */
+function sisPensao(salvar) {
+  var up = PropertiesService.getUserProperties(), k = 'SIS_PENS_' + sisSS_().getId(), c = {};
+  try { c = JSON.parse(up.getProperty(k) || '{}'); } catch (e) { }
+  if (salvar) {
+    var pe = Number(String(salvar.pens || 0).replace(',', '.')) || 0; if (pe < 0 || pe > 100) throw new Error('Percentual inválido.');
+    if (pe) c[salvar.linha] = { pens: pe, base: ['liq', 'inss', 'bruto'].indexOf(salvar.base) >= 0 ? salvar.base : 'liq' }; else delete c[salvar.linha];
+    up.setProperty(k, JSON.stringify(c));
+  }
+  return c;
 }

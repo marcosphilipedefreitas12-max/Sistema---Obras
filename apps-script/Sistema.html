@@ -170,6 +170,14 @@
   .auto span:nth-child(odd) { color: var(--aco); } .auto span:nth-child(even) { text-align: right; font-weight: 500; }
   .duas { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
 
+  .fich-est { margin: 0 0 10px; border-left: 3px solid var(--linha2); padding: 2px 0 2px 10px; }
+  .fich-est summary { cursor: pointer; padding: 4px 0; }
+  .est-tab { border-collapse: collapse; width: 100%; max-width: 560px; margin: 6px 0; font-size: 13px; }
+  .est-tab td { padding: 4px 6px; border-bottom: 1px solid var(--linha2); } .est-tab td.num { text-align: right; white-space: nowrap; }
+  .est-tab tr.tot td { border-top: 2px solid var(--tinta); } .est-tab tr.sub td { color: var(--aco); }
+  .est-cfg { gap: 10px 16px; flex-wrap: wrap; }
+  .fich-pen { margin-top: 12px; border-top: 1px solid var(--linha2); padding-top: 8px; } .fich-pen summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+  .pen-lembrar { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; margin-top: 8px; } .pen-lembrar input { width: auto; min-height: 0; margin-top: 2px; } .est-cfg input[type=checkbox] { width: auto; min-height: 0; } .est-cfg label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
   .faixa.dinheiro b { font-size: 24px; }
   .fich-pres { margin: 2px 0 10px; } .fich-pres .ruim { color: var(--verm); }
   .fich-pags { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--linha2); }
@@ -1444,7 +1452,7 @@ function desenharFichados() {
   var r = FICH, t = { lanc: 0, pago: 0 }, nomeMes = new Date(r.mes + '-15T12:00:00').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
   r.pessoas.forEach(function (p) { p.pagamentos.forEach(function (g) { if (g.status === 'Pago') t.pago += g.valor; else if (g.status !== 'Cancelado') t.lanc += g.valor; }); });
   var h = abasDiar('clt') + '<div class="barra nao-imprime"><label class="info" for="fMes">Mês (competência)</label><input id="fMes" type="month" style="width:170px" value="' + esc(r.mes) + '" onchange="vFichados(this.value)">' +
-    '<span class="esp"></span><button class="btn sec" onclick="relFichados()">Relatório para o RH</button></div>';
+    '<span class="esp"></span>' + (PM.grava && PM.custos ? '<a class="info" style="cursor:pointer;text-decoration:underline" onclick="folhaAdiant()">Adiantamento: ' + numd(r.cfg.adiant) + '% do salário</a>' : '') + '<button class="btn sec" onclick="relFichados()">Relatório para o RH</button></div>';
   h += '<div class="faixa dinheiro"><div><b>' + r.pessoas.length + '</b><span>Fichado' + (r.pessoas.length === 1 ? '' : 's') + ' em ' + esc(nomeMes) + '</span></div><div><b>' + rsd(t.lanc) + '</b><span>Lançado, falta pagar</span></div>' +
     '<div><b>' + rsd(t.pago) + '</b><span>Pago no mês</span></div><div><b>' + rsd(t.lanc + t.pago) + '</b><span>Total do mês (holerites)</span></div></div>';
   if (!r.pessoas.length) h += '<div class="vazio"><b>Nenhum fichado nesse mês</b>Na tela Pessoas, use o vínculo "Fichado (CLT)" e a data de entrada (admissão).</div>';
@@ -1452,7 +1460,7 @@ function desenharFichados() {
     var pr = fichPres(p);
     var tags = (p.admissao && p.admissao.slice(0, 7) === r.mes ? '<span class="st azul">Admitido em ' + brCurta(p.admissao) + '</span> ' : '') + (p.saida ? '<span class="st">Saída ' + brCurta(p.saida) + '</span> ' : '') +
       (p.semPresenca ? '<span class="st verm">Não achei na Presença</span> ' : '');
-    var x = '<section class="diar"><div class="diar-cab"><div><h3>' + esc(p.nome) + '</h3><span class="info">' + esc(p.funcao) + (PM.custos && p.salario ? ' · salário ' + rsd(p.salario) : '') + '</span> ' + tags + '</div></div>' +
+    var x = '<section class="diar"><div class="diar-cab"><div><h3>' + esc(p.nome) + '</h3><span class="info">' + esc(p.funcao) + '</span> ' + tags + '</div>' + folhaBotao(p) + '</div>' +
       '<p class="fich-pres"><b>' + numd(pr.trab) + '</b> dia' + (pr.trab === 1 ? '' : 's') + ' trabalhado' + (pr.trab === 1 ? '' : 's') + pr.outros.map(function (o) {
         return ' · <span class="' + (o[0].falta ? 'ruim' : '') + '"><b>' + o[1] + '</b> ' + esc(o[0].nome.toLowerCase()) + '</span>'; }).join('') + '</p>';
     x += '<div class="fich-pags">' + Object.keys(r.tipos).map(function (tp) {
@@ -1468,11 +1476,103 @@ function desenharFichados() {
   }).join('');
   el('area').innerHTML = h;
 }
+/* ---- estimativa de folha (CLT). Só estimativa: o valor que vale é o do holerite do RH.
+   Tabelas 2026: INSS = Portaria Interministerial MPS/MF nº 13/2026; IRRF = tabela desde 05/2025 + redução da Lei 15.270/2025.
+   Todo ano: conferir e atualizar FOLHA (ano novo → faixas novas do INSS). */
+var FOLHA = { ano: 2026,
+  inss: [[1621.00, 0.075, 0], [2902.84, 0.09, 24.32], [4354.27, 0.12, 111.41], [8475.55, 0.14, 198.50]],
+  ir: [[2428.80, 0, 0], [2826.65, 0.075, 182.16], [3751.05, 0.15, 394.16], [4664.68, 0.225, 675.49], [Infinity, 0.275, 908.73]],
+  dep: 189.59, simplificado: 607.20, isento: 5000, redMax: 312.89, redAte: 7350, redA: 978.62, redB: 0.133145, vt: 0.06, fgts: 0.08 };
+function r2(v) { return Math.round(v * 100 + 1e-6) / 100; }
+function inssCalc(b) { var t = FOLHA.inss[FOLHA.inss.length - 1], f = FOLHA.inss.filter(function (x) { return b <= x[0]; })[0] || t; return r2(Math.min(b, t[0]) * f[1] - f[2]); }
+function irCalc(bruto, inss, dep, pens) {
+  var base = bruto - Math.max(inss + dep * FOLHA.dep + (pens || 0), FOLHA.simplificado), f = FOLHA.ir.filter(function (x) { return base <= x[0]; })[0], imp = Math.max(0, base * f[1] - f[2]);
+  var red = bruto <= FOLHA.isento ? Math.min(imp, FOLHA.redMax) : bruto <= FOLHA.redAte ? Math.max(0, FOLHA.redA - FOLHA.redB * bruto) : 0;
+  return r2(Math.max(0, imp - red));
+}
+function folhaEstimar(p, pensao) {
+  if (!p.salario) return null;
+  var mes = FICH.mes, ini = mes + '-01', fim = new Date(Date.UTC(+mes.slice(0, 4), +mes.slice(5, 7), 0)).toISOString().slice(0, 10), cfg = FICH.cfg.p[p.linha] || { vt: false, dep: 0 };
+  var de = p.admissao && p.admissao > ini ? p.admissao : ini, ate = p.saida && p.saida < fim ? p.saida : fim;
+  var dias = de === ini && ate === fim ? 30 : Math.min(30, Math.round((Date.parse(ate) - Date.parse(de)) / 864e5) + 1), dia = p.salario / 30;
+  var base = r2(dia * dias), faltas = (p.datas.F || []).concat(p.datas.S || []), semanas = {};
+  faltas.forEach(function (d) { var t = new Date(d + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() - t.getUTCDay()); semanas[t.toISOString().slice(0, 10)] = 1; });
+  var dsr = Object.keys(semanas).length, descFaltas = r2(dia * (faltas.length + dsr)), bruto = Math.max(0, r2(base - descFaltas));
+  var pv = pensao || {}, inss = inssCalc(bruto), pc = (pv.pens || 0) / 100, pens = 0, ir = irCalc(bruto, inss, cfg.dep, 0);
+  // Pensão alimentícia judicial: abate na base do IR e, se for sobre o líquido, depende do IR → conta repetida até estabilizar.
+  for (var k = 0; pc && k < 50; k++) {
+    var bp = pv.base === 'bruto' ? bruto : pv.base === 'inss' ? bruto - inss : bruto - inss - ir, np = r2(bp * pc);
+    ir = irCalc(bruto, inss, cfg.dep, np); if (Math.abs(np - pens) < 0.005) { pens = np; break; } pens = np;
+  }
+  // VT: 6% do salário, mas nunca mais que o vale do mês (lançado em "Vale-transporte / alimentação").
+  var vtLanc = r2((p.pagamentos || []).filter(function (g) { return g.tipo === 'BENEFICIOS' && g.status !== 'Cancelado'; }).reduce(function (a, g) { return a + g.valor; }, 0));
+  var vt6 = cfg.vt ? r2(base * FOLHA.vt) : 0, vt = vtLanc ? Math.min(vt6, vtLanc) : vt6, liquido = r2(bruto - inss - ir - vt - pens), adiant = r2(base * FICH.cfg.adiant / 100);
+  var avisos = [];
+  if ((p.cont.FE || 0) + (p.cont.AF || 0)) avisos.push('Tem férias ou afastamento no mês: a estimativa não cobre isso.');
+  if (FICH.mes > FICH.hoje.slice(0, 7) || FICH.mes === FICH.hoje.slice(0, 7)) avisos.push('Mês ainda em andamento: faltas contadas até hoje.');
+  if (+mes.slice(0, 4) !== FOLHA.ano) avisos.push('Tabelas de INSS/IR de ' + FOLHA.ano + ': podem estar desatualizadas para ' + mes.slice(0, 4) + '.');
+  return { dias: dias, base: base, faltas: faltas.length, dsr: dsr, descFaltas: descFaltas, bruto: bruto, inss: inss, ir: ir, vt: vt, pens: pens, vt6: vt6, vtLanc: vtLanc, liquido: liquido, adiant: Math.min(adiant, liquido), saldo: r2(liquido - Math.min(adiant, liquido)), fgts: r2(bruto * FOLHA.fgts), cfg: cfg, avisos: avisos };
+}
+function folhaBotao(p) { return PM.custos && p.salario ? '<button class="btn sec peq" onclick="fichaAbrir(' + p.linha + ')" title="Salário, descontos e líquido estimado">🔒 Ficha do mês</button>' : ''; }
+/* Ficha do mês: abre numa janela lateral (não fica à mostra na tela). A pensão alimentícia é consulta privada: só fica guardada na conta de quem salvou. */
+var PENSAO = null;
+function fichaAbrir(linha) {
+  var ir = function () {
+    var p = FICH.pessoas.filter(function (x) { return x.linha === linha; })[0], c = PENSAO[linha] || { pens: '', base: 'liq' }, cfg = FICH.cfg.p[linha] || { vt: false, dep: 0 };
+    var mesBR = new Date(FICH.mes + '-15T12:00:00').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    abrirGaveta('<header><h2>🔒 Ficha do mês</h2><div class="info">' + esc(p.nome) + ' · ' + esc(p.funcao) + ' · ' + esc(mesBR) + '</div></header><div class="conteudo">' +
+      '<div id="fichaTab" aria-live="polite"></div>' +
+      (PM.grava ? '<div class="barra est-cfg"><label><input type="checkbox" id="vtF"' + (cfg.vt ? ' checked' : '') + ' onchange="fichaConta(' + linha + ')"> Usa vale-transporte</label>' +
+        '<label>Dependentes no IR <input type="number" id="dpF" min="0" max="20" style="width:64px" value="' + cfg.dep + '" onchange="fichaCfg(' + linha + ')"></label></div>' : '') +
+      '<details class="fich-pen"' + (PENSAO[linha] ? ' open' : '') + '><summary>Pensão alimentícia</summary><div class="duas">' +
+      campo('Percentual', '<input id="peV" type="number" min="0" max="100" step="0.5" value="' + esc(c.pens) + '" oninput="fichaConta(' + linha + ')" onchange="fichaPen(' + linha + ')">') +
+      campo('Sobre', '<select id="pbV" onchange="fichaConta(' + linha + ');fichaPen(' + linha + ')">' + [['liq', 'salário − INSS − IR'], ['inss', 'salário − INSS'], ['bruto', 'salário bruto']].map(function (o) {
+        return '<option value="' + o[0] + '"' + (c.base === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>') + '</div>' +
+      '<p class="info">Veja na decisão judicial sobre qual valor o percentual é calculado ("rendimentos líquidos" costuma ser salário − INSS − IR).</p>' +
+      '<label class="pen-lembrar"><input type="checkbox" id="peLembrar"' + (PENSAO[linha] ? ' checked' : '') + ' onchange="fichaPen(' + linha + ')"> Lembrar a pensão (fica guardada só na sua conta Google; quem mais abrir a ficha não vê)</label></details>' +
+      '<p class="info" id="fichaAvisos"></p></div><footer><span style="flex:1"></span><button class="btn" onclick="fecharGaveta()">Fechar</button></footer>');
+    fichaConta(linha);
+  };
+  if (PENSAO) ir(); else chamar('sisPensao', null).then(function (c) { PENSAO = c; ir(); }).catch(function () {});
+}
+function fichaConta(linha) {
+  var p = FICH.pessoas.filter(function (x) { return x.linha === linha; })[0];
+  if (el('vtF')) FICH.cfg.p[linha] = { vt: el('vtF').checked, dep: Math.max(0, Math.floor(Number(el('dpF').value) || 0)) };
+  var pens = Number(String(el('peV').value).replace(',', '.')) || 0, e = folhaEstimar(p, { pens: pens, base: el('pbV').value }), sem = pens ? folhaEstimar(p) : e;
+  var lanc = p.pagamentos.filter(function (g) { return g.status !== 'Cancelado' && g.tipo !== 'BENEFICIOS'; }).reduce(function (a, g) { return a + g.valor; }, 0);
+  var lin = function (t, v, cls) { return '<tr class="' + (cls || '') + '"><td>' + t + '</td><td class="num">' + v + '</td></tr>'; };
+  el('fichaTab').innerHTML = '<table class="est-tab"><tbody>' + lin('Salário' + (e.dias < 30 ? ' proporcional (' + e.dias + ' dias de 30)' : ' mensal'), rsd(e.base)) +
+    (e.descFaltas ? lin('− Faltas/suspensão: ' + e.faltas + ' dia(s) + ' + e.dsr + ' descanso(s) semanal(is) perdido(s)', '− ' + rsd(e.descFaltas)) : '') +
+    lin('− INSS (tabela ' + FOLHA.ano + ')', '− ' + rsd(e.inss)) + lin('− Imposto de Renda' + (e.cfg.dep ? ' (' + e.cfg.dep + ' dependente' + (e.cfg.dep > 1 ? 's' : '') + ')' : '') + (e.pens ? ' — a pensão abate na base' : ''), e.ir ? '− ' + rsd(e.ir) : 'isento') +
+    (e.pens ? lin('− Pensão alimentícia (' + numd(pens) + '%)', '− ' + rsd(e.pens)) : '') + (e.vt ? lin('− Vale-transporte (' + (e.vtLanc && e.vt < e.vt6 ? 'limitado ao vale lançado no mês' : '6% do salário') + ')', '− ' + rsd(e.vt)) : '') +
+    lin('<b>= Líquido estimado</b>', '<b>' + rsd(e.liquido) + '</b>', 'tot') +
+    (pens ? lin('Líquido sem a pensão', rsd(sem.liquido), 'sub') : '') +
+    lin('Adiantamento (' + numd(FICH.cfg.adiant) + '% do salário)', rsd(Math.min(e.adiant, e.liquido)), 'sub') + lin('Saldo do salário (líquido − adiantamento)', rsd(r2(e.liquido - Math.min(e.adiant, e.liquido))), 'sub') +
+    lin('FGTS 8% (custo da empresa, não sai do salário)', rsd(e.fgts), 'sub') +
+    (lanc ? lin('Holerite já lançado no mês', rsd(lanc) + (Math.abs(lanc - e.liquido) >= 1 ? ' (diferença ' + rsd(lanc - e.liquido) + ')' : ''), 'sub') : '') + '</tbody></table>';
+  var vtAv = e.vt6 ? [e.vtLanc ? 'O desconto do vale-transporte vai até o valor lançado em "Vale-transporte / alimentação" no mês (' + rsd(e.vtLanc) + '; se ali também tiver vale-alimentação, confira).' : 'Sem vale lançado no mês: o desconto do vale-transporte ficou em 6% do salário, sem limite.'] : [];
+  el('fichaAvisos').textContent = e.avisos.concat(vtAv, ['Estimativa com as regras usuais de folha. Não entram hora extra, adicionais, 13º, férias e outros descontos. O valor que vale é o do holerite do RH.']).join(' ');
+}
+function fichaCfg(linha) {
+  fichaConta(linha);
+  chamar('sisFichadoConfig', linha, FICH.cfg.p[linha]).then(function (c) { FICH.cfg = c; }).catch(function () {});
+}
+function fichaPen(linha) {
+  var pens = Number(String(el('peV').value).replace(',', '.')) || 0, lembrar = el('peLembrar').checked;
+  if (lembrar && pens) chamar('sisPensao', { linha: linha, pens: pens, base: el('pbV').value }).then(function (c) { PENSAO = c; }).catch(function () {});
+  else if (PENSAO[linha]) chamar('sisPensao', { linha: linha, pens: 0 }).then(function (c) { PENSAO = c; }).catch(function () {});
+}
+function folhaAdiant() {
+  abrirGaveta('<header><h2>Adiantamento (vale)</h2><div class="info">Vale para todos os fichados desta obra</div></header><div class="conteudo">' +
+    campo('Percentual sobre o salário', '<input id="fAd" type="number" min="0" max="100" step="1" value="' + FICH.cfg.adiant + '">', 'O mais comum é 40%. Usado só para sugerir o valor do adiantamento e do saldo do salário.') +
+    '</div><footer><span style="flex:1"></span><button class="btn sec" onclick="fecharGaveta()">Cancelar</button><button class="btn so-grava" onclick="chamar(\'sisFichadoConfig\',0,{adiant:Number(el(\'fAd\').value)}).then(function(c){FICH.cfg=c;fecharGaveta();desenharFichados()}).catch(function(){})">Salvar</button></footer>');
+}
+var FICH_EST = {};
 function lancarFichado(linha, tipo) {
-  var p = FICH.pessoas.filter(function (x) { return x.linha === linha; })[0], mesBR = FICH.mes.slice(5) + '/' + FICH.mes.slice(0, 4);
+  var p = FICH.pessoas.filter(function (x) { return x.linha === linha; })[0], e = PM.custos ? folhaEstimar(p) : null, sug = e ? (tipo === 'ADIANTAMENTO' ? e.adiant : tipo === 'SALARIO' ? e.saldo : 0) : 0, mesBR = FICH.mes.slice(5) + '/' + FICH.mes.slice(0, 4);
   abrirGaveta('<header><h2>Lançar pagamento</h2><div class="info">' + esc(p.nome) + ' · competência ' + mesBR + ' · grava na aba Lançamentos</div></header><div class="conteudo">' +
     campo('Tipo', '<select id="fTipo">' + Object.keys(FICH.tipos).map(function (k) { return '<option value="' + k + '"' + (k === tipo ? ' selected' : '') + '>' + esc(FICH.tipos[k]) + '</option>'; }).join('') + '</select>') +
-    campo('Valor (R$)', '<input id="fValor" inputmode="decimal" placeholder="Ex.: 1.850,40">', 'O valor líquido que está no holerite do RH. O sistema não calcula desconto nem imposto.') +
+    campo('Valor (R$)', '<input id="fValor" inputmode="decimal" placeholder="Ex.: 1.850,40" value="' + (sug ? sug.toFixed(2).replace('.', ',') : '') + '">', sug ? 'Já veio preenchido com a estimativa. Troque pelo valor do holerite do RH, que é o que vale.' : 'O valor líquido que está no holerite do RH.') +
     campo('Situação', '<select id="fPago"><option value="">Lançar para pagar (vai para o financeiro)</option><option value="1">Já foi pago</option></select>', 'Se escolher "Já foi pago", a data abaixo vira a data do pagamento.') +
     campo('Data (vencimento ou pagamento)', '<input id="fData" type="date" value="' + hoje() + '">') +
     campo('Forma de pagamento', '<select id="fForma">' + ['PIX', 'Transferência', 'Dinheiro', 'Boleto', 'Cheque', 'Cartão'].map(function (f) { return '<option>' + f + '</option>'; }).join('') + '</select>') +
