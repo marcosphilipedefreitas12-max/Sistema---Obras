@@ -102,6 +102,28 @@ const fs = require('fs'), path = require('path');
   await p.screenshot({ path: path.join(out, 'demandas.png'), fullPage: true });
   await p.evaluate(() => ir('fornecedores')); await p.click('text=Importar todos'); await p.waitForTimeout(500);
   await p.screenshot({ path: path.join(out, 'fornecedores.png'), fullPage: true });
+  // menu novo
+  await p.evaluate(() => ir('inicio')); await p.waitForTimeout(300);
+  var nLinks = await p.locator('#lado a:visible, #lado .area-bt:visible').count();
+  if (nLinks > 20) erros.push('menu: ainda tem ' + nLinks + ' linhas');
+  await p.screenshot({ path: path.join(out, 'menu_novo.png') });
+  await p.click('#lado .area-bt:has-text("Financeiro")'); await p.waitForTimeout(200);
+  if (!(await p.locator('#lado .sub a:has-text("Cotações")').count())) erros.push('menu: área não abriu');
+  await p.click('#lado .sub a:has-text("Cotações")'); await p.waitForTimeout(400);
+  await p.click('.bt-fixar'); await p.waitForTimeout(300);
+  if (!(await p.locator('#lado .grupo:has(.gt:has-text("Seus atalhos")) a:has-text("Cotações")').count())) erros.push('menu: atalho não fixou');
+  await p.keyboard.press('Control+k'); await p.keyboard.type('medi'); await p.waitForTimeout(300);
+  if (!/Medições/.test(await p.innerText('#lado .res'))) erros.push('menu: busca não achou');
+  await p.keyboard.press('Enter'); await p.waitForTimeout(400);
+  if (await p.evaluate(() => ATUAL) !== 'medicoes') erros.push('menu: Enter na busca não abriu a tela: ' + await p.evaluate(() => ATUAL + ' | ' + (el('buscaMenu')||{}).value + ' | ' + (document.activeElement||{}).id + ' | ' + (document.querySelector('#lado .res a')||{}).textContent));
+  await p.click('.bt-esconder'); await p.waitForTimeout(300);
+  if (await p.locator('#lado').isVisible()) erros.push('menu: não escondeu');
+  await p.screenshot({ path: path.join(out, 'menu_escondido.png') });
+  await p.click('.bt-mostrar'); await p.waitForTimeout(300);
+  if (!(await p.locator('#lado').isVisible())) erros.push('menu: não voltou');
+  await p.keyboard.press('Control+b'); await p.waitForTimeout(200);
+  if (await p.locator('#lado').isVisible()) erros.push('menu: Ctrl+B não escondeu');
+  await p.keyboard.press('Control+b'); await p.waitForTimeout(200);
   // horas extras
   await p.evaluate(() => vPresenca(mod('presenca'), '2026-11-14')); await p.waitForTimeout(400);
   if (!/sábado \(compensado/.test(await p.innerText('#area'))) erros.push('HE: tipo do dia (sábado) não apareceu');
@@ -135,6 +157,8 @@ const fs = require('fs'), path = require('path');
   await m.evaluate(() => ir('diaristas')); await m.waitForTimeout(400); await m.screenshot({ path: path.join(out, 'celular_diaristas.png'), fullPage: true });
   await m.evaluate(() => vFichados()); await m.waitForTimeout(400); await m.screenshot({ path: path.join(out, 'celular_fichados.png'), fullPage: true });
   if (await m.evaluate(() => document.documentElement.scrollWidth > 392)) erros.push('diaristas: estoura a largura no celular');
+  if (!(await m.locator('#barraMob button').count())) erros.push('menu: sem barra inferior no celular');
+  await m.screenshot({ path: path.join(out, 'celular_barra.png') });
   await m.evaluate(() => menuMob()); await m.waitForTimeout(300); await m.screenshot({ path: path.join(out, 'celular_menu.png') });
   await b.close(); fs.unlinkSync(path.join(dir, '_pagina.html'));
   if (erros.length) { console.error('ERROS:', erros); process.exit(1); }

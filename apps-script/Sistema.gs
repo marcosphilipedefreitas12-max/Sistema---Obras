@@ -66,6 +66,7 @@ function sisCarregar() {
   }
   return {
     permissoes: pm,
+    atalhos: (function () { try { return JSON.parse(PropertiesService.getUserProperties().getProperty('SIS_ATALHOS') || 'null'); } catch (x) { return null; } })(),
     ia: (function () { try { var e = sisIaEstado_(); return { ligado: e.ligado }; } catch (x) { return { ligado: false }; } })(),
     avisoPlanilha: aviso,
     orcOk: (function () { try { return sisOrcOk_(); } catch (e) { return false; } })(),
@@ -388,7 +389,7 @@ function sisChamar(obraId, fn, args) {
   var permitidas = { sisCarregar: sisCarregar, sisSalvarDemanda: sisSalvarDemanda, sisSalvarFornecedor: sisSalvarFornecedor,
     sisSalvarInteracao: sisSalvarInteracao, sisImportarFornecedores: sisImportarFornecedores, sisAbaLer: sisAbaLer,
     sisAbaSalvar: sisAbaSalvar, sisAbaLimpar: sisAbaLimpar, sisPresenca: sisPresenca, sisPresencaMes: sisPresencaMes, sisPresencaMarcar: sisPresencaMarcar, sisPresencaHE: sisPresencaHE,
-    sisPerfis: sisPerfis, sisPerfisSalvar: sisPerfisSalvar, sisFotos: sisFotos, sisFotoEnviar: sisFotoEnviar, sisRelatorio: sisRelatorio, sisDiaristas: sisDiaristas, sisDiaristaLancar: sisDiaristaLancar, sisDiaristaPago: sisDiaristaPago, sisDiaristaCancelar: sisDiaristaCancelar, sisDiaristaAte: sisDiaristaAte, sisFichados: sisFichados, sisFichadoLancar: sisFichadoLancar, sisFichadoConfig: sisFichadoConfig, sisPensao: sisPensao, sisConsultaLer: sisConsultaLer, sisOrcConfirmar: sisOrcConfirmar, sisConsultaGravar: sisConsultaGravar, sisExecutivo: sisExecutivo, sisExecPrazo: sisExecPrazo, sisPlanReprogramar: sisPlanReprogramar, sisIaPerguntar: sisIaPerguntar, sisIaConfig: sisIaConfig, sisIaSalvarConfig: sisIaSalvarConfig,
+    sisPerfis: sisPerfis, sisPerfisSalvar: sisPerfisSalvar, sisFotos: sisFotos, sisFotoEnviar: sisFotoEnviar, sisRelatorio: sisRelatorio, sisDiaristas: sisDiaristas, sisDiaristaLancar: sisDiaristaLancar, sisDiaristaPago: sisDiaristaPago, sisDiaristaCancelar: sisDiaristaCancelar, sisDiaristaAte: sisDiaristaAte, sisFichados: sisFichados, sisFichadoLancar: sisFichadoLancar, sisFichadoConfig: sisFichadoConfig, sisPensao: sisPensao, sisAtalhos: sisAtalhos, sisConsultaLer: sisConsultaLer, sisOrcConfirmar: sisOrcConfirmar, sisConsultaGravar: sisConsultaGravar, sisExecutivo: sisExecutivo, sisExecPrazo: sisExecPrazo, sisPlanReprogramar: sisPlanReprogramar, sisIaPerguntar: sisIaPerguntar, sisIaConfig: sisIaConfig, sisIaSalvarConfig: sisIaSalvarConfig,
     sisObras: sisObras, sisObraCadastrar: sisObraCadastrar, sisObraNova: sisObraNova, sisObraRemover: sisObraRemover, sisModeloDefinir: sisModeloDefinir };
   if (!permitidas[fn]) throw new Error('Função não permitida: ' + fn);
   SIS_OBRA_ID = String(obraId || ''); SIS_SS = null; SIS_PERFIL = null; SIS_TZ = null;
@@ -520,7 +521,7 @@ function sisPermissoes_() {
   var p = sisPerfilAtual_();
   var podeModulo = function (m) {
     if (p === 'Administrador' || p === 'Engenheiro' || p === 'Diretoria') return true;
-    if (m.grupo === 'custo' || SIS_BLOQ_ENCARREGADO.indexOf(m.id) >= 0) return false;
+    if (m.custo || SIS_BLOQ_ENCARREGADO.indexOf(m.id) >= 0) return false;
     return true;
   };
   return { perfil: p, descricao: SIS_PERFIL_DESC[p], grava: p !== 'Consulta' && p !== 'Diretoria', apaga: p === 'Administrador' || p === 'Engenheiro',
@@ -572,4 +573,11 @@ function sisPerfisSalvar(lista) {
     sisFotosLiberar_();
     return sisPerfis();
   });
+}
+
+/** Atalhos do menu: guardados na conta de quem usa (vale para todas as obras). */
+function sisAtalhos(lista) {
+  var l = (lista || []).filter(function (x) { return /^[a-z0-9]{2,20}$/.test(String(x)); }).slice(0, 12);
+  PropertiesService.getUserProperties().setProperty('SIS_ATALHOS', JSON.stringify(l));
+  return l;
 }
