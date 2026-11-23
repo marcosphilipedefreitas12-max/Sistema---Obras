@@ -228,6 +228,26 @@
   .mes-grade .tot { background: var(--cab); min-width: 44px; } .mes-grade .tot.ruim { color: var(--verm); font-weight: 700; }
   .mes-grade tfoot td { border-top: 2px solid var(--linha); font-weight: 600; }
   .so-imprime { display: none; }
+  .ia-fab { position: fixed; right: 20px; bottom: 20px; z-index: 40; background: var(--grafite); color: #fff; border: 2px solid var(--sinal); border-radius: 22px; padding: 10px 16px; font: inherit; font-weight: 600; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
+  .ia-painel { position: fixed; top: 0; right: 0; bottom: 0; width: min(440px, 100%); background: var(--papel); border-left: 1px solid var(--linha); z-index: 60; transform: translateX(105%); transition: transform .2s; display: flex; flex-direction: column; }
+  .ia-painel.aberto { transform: none; }
+  .ia-painel header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 16px 18px 10px; border-bottom: 1px solid var(--linha); }
+  .ia-painel h2 { font-family: var(--titulo); font-size: 24px; margin: 0; }
+  .ia-cfg { padding: 6px 18px; font-size: 12.5px; } .ia-cfg a { color: var(--azul-t); cursor: pointer; text-decoration: underline; }
+  .ia-corpo { padding: 16px 18px; overflow-y: auto; }
+  .ia-msgs { flex: 1; overflow-y: auto; padding: 12px 18px; }
+  .ia-msg { margin: 0 0 10px; padding: 9px 12px; border-radius: 8px; max-width: 92%; font-size: 14px; line-height: 1.45; }
+  .ia-msg p { margin: 0 0 6px; } .ia-msg p:last-child { margin: 0; } .ia-msg ul { margin: 4px 0; padding-left: 18px; }
+  .ia-msg.user { background: var(--azul); color: #fff; margin-left: auto; }
+  .ia-msg.assistant { background: var(--cab); } .ia-msg.pensando { color: var(--aco); font-style: italic; }
+  .ia-sug { display: flex; flex-wrap: wrap; gap: 6px; } .ia-sug .btn { text-align: left; white-space: normal; }
+  .ia-prop { border: 1px solid var(--azul2); border-left: 4px solid var(--sinal); border-radius: 6px; padding: 10px 12px; margin: 0 0 12px; font-size: 13px; }
+  .ia-prop.feito { opacity: .7; border-left-color: var(--verde); } .ia-prop p { margin: 4px 0; }
+  .ia-prop table { width: 100%; border-collapse: collapse; margin: 6px 0; } .ia-prop th { text-align: left; font-weight: 600; padding: 3px 6px 3px 0; vertical-align: top; width: 40%; color: var(--aco); position: static; background: none; } .ia-prop td { padding: 3px 0; }
+  .ia-entrada { display: flex; gap: 8px; padding: 12px 18px; border-top: 1px solid var(--linha); } .ia-entrada textarea { flex: 1; resize: none; }
+  .ia-chk { display: flex; gap: 8px; align-items: center; margin: 8px 0; font-weight: 600; }
+  .ia-uso { font-size: 13px; background: var(--cab); padding: 8px 10px; border-radius: 4px; margin-top: 8px; }
+  @media print { .ia-fab, .ia-painel { display: none !important; } }
   .sem-nav .sem-tit { font-family: var(--titulo); font-size: 21px; font-weight: 600; padding: 0 6px; }
   .quadro-sem { background: var(--papel); border: 1px solid var(--linha); overflow-x: auto; }
   .q-cab, .q-lin { display: grid; grid-template-columns: minmax(220px, 1.6fr) repeat(var(--nd), minmax(64px, 1fr)); }
@@ -332,6 +352,8 @@
 </div>
 <div class="fundo-gaveta" onclick="fecharGaveta()"></div>
 <div class="gaveta" id="gaveta" role="dialog" aria-modal="true"></div>
+<button class="ia-fab" id="iaFab" onclick="abrirIA()" aria-label="Abrir o Assistente" style="display:none">✦ Assistente</button>
+<aside class="ia-painel" id="iaPainel" role="dialog" aria-label="Assistente"></aside>
 <div class="aviso" id="aviso" role="status"></div>
 <div class="carregando" id="carregando"></div>
 <div class="dica" id="dica" role="tooltip"></div>
@@ -409,7 +431,8 @@ function montarMenu() {
   var h = '<div class="marca"><b>Sistema de Obras</b><span>' + esc(D.obra) + '</span></div>' +
     '<div class="busca"><input id="buscaMenu" type="search" placeholder="Procurar tela…" aria-label="Procurar tela" value="' + esc(q) + '" oninput="montarMenu();manterFoco(\'#buscaMenu\')"></div>' +
     '<div class="grupo"><a class="' + (ATUAL === 'inicio' ? 'on' : '') + '" onclick="ir(\'inicio\')">Início</a>' +
-    (mod('diario') ? '<a class="' + (ATUAL === 'relatorios' ? 'on' : '') + '" onclick="ir(\'relatorios\')">Relatórios</a>' : '') + '</div>';
+    (mod('diario') ? '<a class="' + (ATUAL === 'relatorios' ? 'on' : '') + '" onclick="ir(\'relatorios\')">Relatórios</a>' : '') +
+    '<a onclick="abrirIA()">✦ Assistente' + (D.ia && D.ia.ligado ? '' : ' <small style="opacity:.6">(desligado)</small>') + '</a></div>';
   CFG.grupos.forEach(function (g) {
     var ms = CFG.modulos.filter(function (m) { return m.grupo === g.id && (!q || chave(m.titulo + ' ' + m.serve).indexOf(q) >= 0); });
     if (!ms.length) return;
@@ -682,6 +705,76 @@ function relPeriodo(r) {
   return h + assinaturas() + rodapeRel(r) + '</article>';
 }
 
+/* ---------------------------------------------------------------- assistente */
+var IA_HIST = [], IA_PROP = [], IA_CFG = null;
+function fecharIA() { el('iaPainel').classList.remove('aberto'); }
+function abrirIA() {
+  var p = el('iaPainel'); p.classList.add('aberto'); el('app').classList.remove('menu-aberto');
+  if (!(D.ia && D.ia.ligado)) return iaDesligado();
+  desenharIA(); setTimeout(function () { var t = el('iaTxt'); if (t) t.focus(); }, 150);
+}
+function iaTopo(sub) { return '<header><div><h2>✦ Assistente</h2><div class="info">' + esc(sub) + '</div></div><button class="btn sec peq" onclick="fecharIA()" aria-label="Fechar">✕</button></header>'; }
+function iaDesligado() {
+  var h = iaTopo('Desligado') + '<div class="ia-corpo"><div class="vazio" style="text-align:left"><b>O Assistente ainda está desligado</b>' +
+    'Quando for ligado, você poderá perguntar sobre a obra ("quem faltou essa semana?", "como está o avanço?"), pedir textos (resumo do RDO, e-mail para a fiscalização) e lançar por texto corrido — ele prepara e você confirma antes de gravar.' +
+    '<br><br>Ele usa o Claude pela API da Anthropic, com custo por uso (centavos por pergunta no modelo Haiku). Nada é cobrado enquanto estiver desligado.</div>' +
+    (PM.admin ? '<button class="btn" onclick="iaConfig()">Configurar o Assistente</button>' : '<p class="info">Só o administrador da obra pode ligar o Assistente.</p>') + '</div>';
+  el('iaPainel').innerHTML = h;
+}
+function iaConfig() {
+  el('iaPainel').innerHTML = iaTopo('Configuração') + '<div class="ia-corpo"><div class="vazio"><b>Carregando…</b></div></div>';
+  chamar('sisIaConfig').then(function (c) {
+    IA_CFG = c;
+    el('iaPainel').innerHTML = iaTopo('Configuração (só administrador)') + '<div class="ia-corpo">' +
+      '<ol class="info" style="padding-left:18px;margin-top:0"><li>Crie uma conta em <b>platform.claude.com</b> e cadastre a forma de pagamento.</li><li>Em <b>API Keys</b>, crie uma chave (começa com <code>sk-ant-</code>) e cole abaixo.</li><li>Marque "Ligado" e salve.</li></ol>' +
+      campo('Chave da API', '<input id="iaChave" type="password" autocomplete="off" placeholder="' + (c.temChave ? 'chave salva (termina em ' + esc(c.chaveFim) + ') — cole outra para trocar' : 'sk-ant-…') + '">', 'Fica guardada no Google, nas propriedades do script. Não vai para o GitHub nem aparece na tela.') +
+      campo('Modelo', '<select id="iaMod">' + c.modelos.map(function (m) { return '<option value="' + esc(m[0]) + '"' + (m[0] === c.modelo ? ' selected' : '') + '>' + esc(m[1]) + '</option>'; }).join('') + '</select>') +
+      campo('Limite de perguntas por mês (todas as obras)', '<input id="iaLim" type="number" min="0" value="' + c.limite + '">', 'Trava de segurança de gastos. Ao atingir, o Assistente para até o mês seguinte.') +
+      '<label class="ia-chk"><input type="checkbox" id="iaLig"' + (c.ligado ? ' checked' : '') + '> Ligado</label>' +
+      '<div class="ia-uso"><b>Uso deste mês:</b> ' + c.usoMes.perguntas + ' pergunta(s) · ' + Math.round((c.usoMes.entrada + c.usoMes.saida) / 1000) + ' mil tokens · ~US$ ' + c.usoMes.custoUS.toFixed(3) + ' (estimativa; o valor oficial está em platform.claude.com)</div>' +
+      '<div class="barra" style="margin-top:12px"><span class="esp"></span>' + (c.temChave ? '<button class="btn sec" onclick="iaSalvarCfg(true)">Apagar chave</button>' : '') + '<button class="btn" onclick="iaSalvarCfg(false)">Salvar</button></div></div>';
+  }).catch(function () {});
+}
+function iaSalvarCfg(apagar) {
+  var c = { chave: apagar ? '' : el('iaChave').value.trim(), apagarChave: !!apagar, modelo: el('iaMod').value, limite: Number(el('iaLim').value), ligado: !apagar && el('iaLig').checked };
+  chamar('sisIaSalvarConfig', c).then(function (r) { D.ia = { ligado: r.ligado }; el('iaFab').style.display = r.ligado ? '' : 'none'; montarMenu(); aviso(r.ligado ? 'Assistente ligado.' : 'Configuração salva. Assistente desligado.'); r.ligado ? desenharIA() : iaConfig(); }).catch(function () {});
+}
+var IA_SUG = ['Quem faltou esta semana?', 'Faça um resumo da semana passada para a diretoria', 'Quais demandas estão atrasadas?', 'Lança no diário de hoje: tempo bom, 3 pedreiros e 2 serventes, continuação da demolição do muro'];
+function desenharIA() {
+  var h = iaTopo(D.obra + ' · ' + (PM.perfil || '')) + (PM.admin ? '<div class="ia-cfg"><a onclick="iaConfig()">Configurar</a> · <a onclick="IA_HIST=[];IA_PROP=[];desenharIA()">Nova conversa</a></div>' : '<div class="ia-cfg"><a onclick="IA_HIST=[];IA_PROP=[];desenharIA()">Nova conversa</a></div>') +
+    '<div class="ia-msgs" id="iaMsgs" aria-live="polite">';
+  if (!IA_HIST.length) h += '<p class="info">Pergunte sobre a obra ou peça para lançar algo. Ele lê a planilha e, para gravar, mostra antes para você confirmar.</p>' +
+    '<div class="ia-sug">' + IA_SUG.map(function (x, i) { return '<button class="btn sec peq" onclick="el(\'iaTxt\').value=IA_SUG[' + i + '];enviarIA()">' + esc(x) + '</button>'; }).join('') + '</div>';
+  IA_HIST.forEach(function (m, i) {
+    h += '<div class="ia-msg ' + m.role + '">' + fmtIA(m.content) + '</div>';
+    (m.propostas || []).forEach(function (p, k) {
+      h += '<div class="ia-prop' + (p.feito ? ' feito' : '') + '"><b>' + esc(p.titulo) + (p.linha ? ' — alterar linha ' + p.linha : ' — novo registro') + '</b>' + (p.resumo ? '<p>' + esc(p.resumo) + '</p>' : '') +
+        '<table>' + p.campos.map(function (c) { return '<tr><th>' + esc(c.nome) + '</th><td>' + esc(c.valor) + '</td></tr>'; }).join('') + '</table>' +
+        (p.feito ? '<p class="info">' + esc(p.feito) + '</p>' : '<div class="barra so-grava"><button class="btn sec peq" onclick="descartarIA(' + i + ',' + k + ')">Descartar</button><button class="btn peq" onclick="confirmarIA(' + i + ',' + k + ')">Confirmar e gravar</button></div>') + '</div>';
+    });
+  });
+  h += '</div><div class="ia-entrada"><textarea id="iaTxt" rows="2" placeholder="Escreva sua pergunta…" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();enviarIA()}"></textarea><button class="btn" id="iaEnv" onclick="enviarIA()">Enviar</button></div>';
+  el('iaPainel').innerHTML = h; var ms = el('iaMsgs'); ms.scrollTop = ms.scrollHeight;
+}
+function fmtIA(t) { // markdown simples: negrito e listas
+  return esc(t).replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').split('\n').map(function (l) { return /^\s*[-•]\s+/.test(l) ? '<li>' + l.replace(/^\s*[-•]\s+/, '') + '</li>' : l ? '<p>' + l + '</p>' : ''; }).join('').replace(/(<li>.*?<\/li>)+/g, function (x) { return '<ul>' + x + '</ul>'; });
+}
+function enviarIA() {
+  var t = el('iaTxt').value.trim(); if (!t) return;
+  IA_HIST.push({ role: 'user', content: t }); desenharIA();
+  el('iaMsgs').insertAdjacentHTML('beforeend', '<div class="ia-msg assistant pensando">Pensando…</div>'); el('iaEnv').disabled = true;
+  var hist = IA_HIST.map(function (m) { return { role: m.role, content: m.content }; });
+  api('sisIaPerguntar', hist).then(function (r) { IA_HIST.push({ role: 'assistant', content: r.texto, propostas: r.propostas }); desenharIA(); },
+    function (e) { IA_HIST.push({ role: 'assistant', content: '⚠ ' + (e && e.message ? e.message : e) }); desenharIA(); });
+}
+function descartarIA(i, k) { IA_HIST[i].propostas[k].feito = 'Descartado.'; desenharIA(); }
+function confirmarIA(i, k) {
+  var p = IA_HIST[i].propostas[k];
+  var feito = function (msg) { p.feito = msg; desenharIA(); aviso(msg); };
+  if (p.tipo === 'demanda') return chamar('sisSalvarDemanda', Object.assign({ ID: '', Obra: D.obra, Solicitante: D.usuario }, p.dados)).then(function (r) { D = Object.assign(D, { demandas: r.demandas }); montarMenu(); feito('Demanda criada.'); }).catch(function () {});
+  chamar('sisAbaSalvar', p.tela, p.linha, p.valores).then(function (r) { CACHE[p.tela] = r; feito('Gravado na planilha (linha ' + r.salva + ').'); if (ATUAL === p.tela) desenharTabela(mod(p.tela)); }).catch(function () {});
+}
+
 /* ---------------------------------------------------------------- perfis de acesso */
 function vPerfis() {
   el('main').innerHTML = carimbo('Perfis de acesso', 'Defina o que cada pessoa pode ver e lançar nesta obra.', ['Aba da planilha', 'Sistema Perfis']) + '<div class="corpo"><div id="area"><div class="vazio"><b>Carregando…</b></div></div>' +
@@ -727,7 +820,7 @@ function desenharTabela(m) {
   var ls = q ? t.linhas.filter(function (l) { return chave(l.d.join(' ')).indexOf(q) >= 0; }) : t.linhas;
   var h = (m.dias >= 0 ? abasVista(m) : '') + '<div class="barra"><input type="search" id="buscaTab" aria-label="Buscar nesta lista" placeholder="Buscar nesta lista…" value="' + esc(BUSCA[m.id] || '') + '" oninput="BUSCA[\'' + m.id + '\']=this.value;desenharTabela(mod(\'' + m.id + '\'));manterFoco(\'#buscaTab\')">' +
     '<span class="info">' + ls.length + ' registro(s)</span><span class="esp"></span>' +
-    '<a class="btn sec" target="_blank" href="' + esc(m.link) + '">Ver na planilha</a><button class="btn sec" onclick="vTabela(mod(\'' + m.id + '\'),true)">Atualizar</button>' +
+    '<button class="btn sec" onclick="vTabela(mod(\'' + m.id + '\'),true)">Atualizar</button>' +
     (t.novo ? '<button class="btn so-grava" onclick="abrirLinha(\'' + m.id + '\',0)">+ Novo registro</button>' : '') + '</div>';
   if (!t.linhas.length) { el('area').innerHTML = h + '<div class="vazio"><b>Nada lançado ainda</b>' + (t.novo ? 'Clique em "+ Novo registro" para começar.' : 'Os dados aparecem aqui quando existirem na planilha.') + '</div>'; return; }
   if (!ls.length) { el('area').innerHTML = h + '<div class="vazio"><b>Nada encontrado para "' + esc(BUSCA[m.id]) + '"</b>Tente outra palavra.</div>'; return; }
@@ -1177,7 +1270,7 @@ function feito(iid) { var i = Object.assign({}, D.interacoes.filter(function (x)
 /* ---------------------------------------------------------------- gaveta */
 function abrirGaveta(h) { el('gaveta').innerHTML = h; document.body.classList.add('aberta'); var f = el('gaveta').querySelector('input,select,textarea'); if (f) setTimeout(function () { f.focus(); }, 230); }
 function fecharGaveta() { document.body.classList.remove('aberta'); }
-document.addEventListener('keydown', function (e) { if (e.key === 'Escape') fecharGaveta(); });
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { fecharGaveta(); fecharIA(); } });
 
 /* ---------------------------------------------------------------- obras */
 function urlObra(id) { if (window.google && google.script && google.script.history) google.script.history.replace(null, id ? { obra: id } : {}); }
@@ -1189,6 +1282,7 @@ function abrirObra(id) {
     D = r; CFG = r.config; PM = r.permissoes || PM;
     if (PM.modulos) CFG.modulos = CFG.modulos.filter(function (m) { return PM.modulos.indexOf(m.id) >= 0; });
     document.body.classList.toggle('somente-leitura', !PM.grava);
+    el('iaFab').style.display = r.ia && r.ia.ligado ? '' : 'none'; IA_HIST = [];
     montarMenu(); ir('inicio');
     if (r.avisoPlanilha) aviso(r.avisoPlanilha, 9000);
   }, function (e) {

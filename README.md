@@ -68,6 +68,12 @@ Menu → **Relatórios** (abaixo do Início). Sai pronto para imprimir ou salvar
 - **RDO — Relatório Diário de Obra** (nº = posição do dia no Diário): clima, dia produtivo, efetivo por função e pela folha, equipamentos, serviços executados, produção do dia, ocorrências, qualidade (inspeções e FVS), faltas e ausências com motivo, fotos do dia.
 - **Relatório do período** (esta semana / semana passada / este mês / datas livres): avanço físico, dias com diário, efetivo médio e máximo, homens-dia, gráfico de efetivo, serviços executados por dia, produção somada por serviço, ocorrências, qualidade, custos do período por etapa (só para quem vê custos), faltas por tipo, pendências e demandas em aberto e até 12 fotos.
 
+## Assistente (Claude) — desligado por padrão
+
+Botão "✦ Assistente" no menu (e botão flutuante quando ligado). Chat com o Claude pela API da Anthropic que **lê** a planilha da obra (ferramentas `ler_tela`, `relatorio_periodo`, `presenca_mes`) e **propõe** lançamentos e demandas (`propor_lancamento`, `propor_demanda`) — a pessoa confirma na tela e a gravação usa as funções normais, com as permissões do perfil. Custos em R$ não aparecem para quem não vê custos.
+
+Para ligar (Administrador): criar conta e chave em platform.claude.com, abrir o Assistente → Configurar, colar a chave (fica nas propriedades do script, nunca no GitHub), escolher o modelo (Haiku 5.5 econômico / Sonnet 5.5), o limite de perguntas por mês e marcar "Ligado". A tela mostra o uso do mês e o custo estimado. Sem chave ou desligado: nada é chamado nem cobrado.
+
 ## Perfis de acesso
 
 Em cada obra, o Administrador define em **Perfis de acesso** (menu → Administração) o perfil de cada e-mail; fica na aba `Sistema Perfis` da planilha.
