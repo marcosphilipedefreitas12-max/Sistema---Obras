@@ -98,6 +98,19 @@ window.SIS_MOCK = (function () {
     if (fn === 'sisPlanReprogramar') { var tp = tabela('planejamento'); var r0 = JSON.parse(JSON.stringify(tp)); r0.copiadas = 1; return r0; }
     if (fn === 'sisIaConfig' || fn === 'sisIaSalvarConfig') { if (fn === 'sisIaSalvarConfig') IA.ligado = !!a.ligado; return { ligado: IA.ligado, temChave: IA.ligado, chaveFim: 'abcd', modelo: 'claude-haiku-5-5', modelos: [['claude-haiku-5-5', 'Haiku'], ['claude-sonnet-5-5', 'Sonnet']], limite: 300, usoMes: { perguntas: 0, entrada: 0, saida: 0, custoUS: 0 } }; }
     if (fn === 'sisIaPerguntar') return { texto: 'Resposta de **teste**.\n- item 1', propostas: [{ tipo: 'demanda', titulo: 'Nova demanda', dados: { 'Título': 'Comprar cimento', Status: 'A fazer' }, campos: [{ nome: 'Título', valor: 'Comprar cimento' }], resumo: 'Comprar cimento' }] };
+    if (fn === 'sisExecPrazo') return a || '';
+    if (fn === 'sisExecutivo') {
+      var rl = SIS_MOCK('sisRelatorio', ['periodo', args[1], args[2]]);
+      return { obraId: 'A1', obra: 'OBRA EXEMPLO', de: args[1], ate: args[2], hoje: st.hoje, custos: true, perfil: 'Administrador', admin: true, prazoContratual: '2028-12-31',
+        'Engenheiro': 'Eng. Teste', 'Fase atual': 'Estrutura', 'Início da obra': '01/09/2026', 'Término previsto': '30/06/2028', 'Produtividade média — % da meta (30 dias)': '92%', 'FVS em aberto': '2', 'Inspeções de serviço reprovadas em aberto': '1', 'Compras atrasadas': '1', 'Lajes concluídas': '2', 'Total de lajes': '16', 'PPC médio 4 semanas': '75%',
+        avanco: { real: 0.042, previsto: 0.05 },
+        fin: { orcamento: 1000000, realizado: 60000, vencidas: 0, aVencer7: 3000, comprometido: 80000, contratado: 120000, medido: 40000, custoFichados: 10000, custoDiaristas: 5000, custoPrestadores: 20000, acimaOrcado: 1 },
+        curva: [['2026-11-02', 0.02, 0.02], ['2026-11-09', 0.03, 0.028], ['2026-11-16', 0.04, 0.035], ['2026-11-23', 0.05, null], ['2026-11-30', 0.06, null]],
+        crono: [{ etapa: 'Preliminares', ativ: 'Canteiro', resp: 'Eng. Teste', ini: '2026-09-01', fim: '2026-09-30', pct: 1, status: 'Concluído' }, { etapa: 'Fundação', ativ: 'Estacas', resp: 'Equipe A', ini: '2026-10-01', fim: '2026-11-10', pct: 0.6, status: 'Atrasado' }, { etapa: 'Estrutura', ativ: 'Lajes', resp: 'Equipe B', ini: '2026-12-01', fim: '2027-08-30', pct: 0, status: 'Não iniciado' }],
+        diario: rl.diario, producao: rl.producao, presenca: rl.presenca, pendencias: rl.pendencias, inspecoes: rl.inspecoes, fvs: rl.fvs, custosPeriodo: rl.custos,
+        custoMes: { '2026-10': { Fundação: 20000 }, '2026-11': { Fundação: 30000, Preliminares: 10000 } }, contasAbertas: [{ venc: '2026-11-20', desc: 'Concreto', valor: 4000 }],
+        etapasOrc: [['Fundação', 200000, 50000], ['Preliminares', 30000, 10000]], planSemana: 0, motivos: { 'Material não chegou': 1 }, demandasAtrasadas: [], obras: [{ id: 'A1', nome: 'OBRA EXEMPLO' }, { id: 'B2', nome: 'OBRA DOIS' }] };
+    }
     if (fn === 'sisFotos') return { fotos: [], pasta: '' };
     if (fn === 'sisFotoEnviar') return { pasta: 'https://drive.google.com/drive/folders/EXEMPLO', foto: { id: 'X' + (n++), nome: args[3], url: '#' } };
     if (fn === 'sisPerfis') return { lista: PERFIS, dono: 'usuario@exemplo.com', compartilhados: ['mestre@exemplo.com'], perfis: ['Administrador', 'Engenheiro', 'Encarregado', 'Consulta'], desc: { Administrador: 'Tudo.', Engenheiro: 'Tudo menos perfis.', Encarregado: 'Dia a dia, sem custos.', Consulta: 'Só vê.' } };

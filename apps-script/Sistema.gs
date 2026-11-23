@@ -387,7 +387,7 @@ function sisChamar(obraId, fn, args) {
   var permitidas = { sisCarregar: sisCarregar, sisSalvarDemanda: sisSalvarDemanda, sisSalvarFornecedor: sisSalvarFornecedor,
     sisSalvarInteracao: sisSalvarInteracao, sisImportarFornecedores: sisImportarFornecedores, sisAbaLer: sisAbaLer,
     sisAbaSalvar: sisAbaSalvar, sisAbaLimpar: sisAbaLimpar, sisPresenca: sisPresenca, sisPresencaMes: sisPresencaMes, sisPresencaMarcar: sisPresencaMarcar,
-    sisPerfis: sisPerfis, sisPerfisSalvar: sisPerfisSalvar, sisFotos: sisFotos, sisFotoEnviar: sisFotoEnviar, sisRelatorio: sisRelatorio, sisPlanReprogramar: sisPlanReprogramar, sisIaPerguntar: sisIaPerguntar, sisIaConfig: sisIaConfig, sisIaSalvarConfig: sisIaSalvarConfig,
+    sisPerfis: sisPerfis, sisPerfisSalvar: sisPerfisSalvar, sisFotos: sisFotos, sisFotoEnviar: sisFotoEnviar, sisRelatorio: sisRelatorio, sisExecutivo: sisExecutivo, sisExecPrazo: sisExecPrazo, sisPlanReprogramar: sisPlanReprogramar, sisIaPerguntar: sisIaPerguntar, sisIaConfig: sisIaConfig, sisIaSalvarConfig: sisIaSalvarConfig,
     sisObras: sisObras, sisObraCadastrar: sisObraCadastrar, sisObraNova: sisObraNova, sisObraRemover: sisObraRemover, sisModeloDefinir: sisModeloDefinir };
   if (!permitidas[fn]) throw new Error('Função não permitida: ' + fn);
   SIS_OBRA_ID = String(obraId || ''); SIS_SS = null; SIS_PERFIL = null; SIS_TZ = null;
@@ -483,10 +483,11 @@ function sisObraRemover(id) {
  * A proteção de verdade continua sendo o Compartilhar da planilha; os perfis decidem o que
  * cada pessoa vê e pode lançar dentro do sistema.
  */
-var SIS_PERFIS = ['Administrador', 'Engenheiro', 'Encarregado', 'Consulta'];
+var SIS_PERFIS = ['Administrador', 'Engenheiro', 'Diretoria', 'Encarregado', 'Consulta'];
 var SIS_PERFIL_DESC = {
   'Administrador': 'Tudo, inclusive definir os perfis da equipe.',
   'Engenheiro': 'Vê e lança em todas as telas, inclusive custos e fornecedores.',
+  'Diretoria': 'Vê tudo, inclusive custos e a Visão Executiva, mas não grava nada. Para CEO, diretoria e gestores.',
   'Encarregado': 'Lança o dia a dia (diário, presença, produção, planejamento, qualidade, demandas). Não vê custos, pagamentos, fornecedores nem dados das pessoas; não apaga registros.',
   'Consulta': 'Só vê as telas (sem custos detalhados). Não grava nada. Bom para diretoria e visitantes.'
 };
@@ -517,12 +518,12 @@ function sisPerfisLer_(ss) {
 function sisPermissoes_() {
   var p = sisPerfilAtual_();
   var podeModulo = function (m) {
-    if (p === 'Administrador' || p === 'Engenheiro') return true;
+    if (p === 'Administrador' || p === 'Engenheiro' || p === 'Diretoria') return true;
     if (m.grupo === 'custo' || SIS_BLOQ_ENCARREGADO.indexOf(m.id) >= 0) return false;
     return true;
   };
-  return { perfil: p, descricao: SIS_PERFIL_DESC[p], grava: p !== 'Consulta', apaga: p === 'Administrador' || p === 'Engenheiro',
-           custos: p === 'Administrador' || p === 'Engenheiro', admin: p === 'Administrador',
+  return { perfil: p, descricao: SIS_PERFIL_DESC[p], grava: p !== 'Consulta' && p !== 'Diretoria', apaga: p === 'Administrador' || p === 'Engenheiro',
+           custos: p === 'Administrador' || p === 'Engenheiro' || p === 'Diretoria', admin: p === 'Administrador',
            modulos: SIS_MODULOS.filter(podeModulo).map(function (m) { return m.id; }) };
 }
 
@@ -536,6 +537,7 @@ function sisPermitir_(fn, args) {
   if (/Fornecedor|Interacao/.test(fn) && pm.modulos.indexOf('fornecedores') < 0) nega();
   if (fn === 'sisSalvarDemanda' && pm.modulos.indexOf('demandas') < 0) nega();
   if (fn === 'sisRelatorio' && pm.modulos.indexOf('diario') < 0) nega();
+  if (fn === 'sisExecPrazo' && !pm.admin) nega();
   if (fn === 'sisPlanReprogramar' && pm.modulos.indexOf('planejamento') < 0) nega();
   if (/^sisPresenca/.test(fn) && pm.modulos.indexOf('presenca') < 0) nega();
   if (fn === 'sisPerfisSalvar' && !pm.admin) nega();
