@@ -33,7 +33,7 @@ var SIS_MODULOS = [
     passos: ['Escolha o dia (já abre em hoje).', 'Toque em P (presente), ½ (meio período) ou F (falta sem justificativa).',
              'Para outros casos use "Outro…": falta justificada, atestado, férias, folga, afastado, chuva/obra parada, treinamento, outra obra, suspensão.',
              'Em faltas e ausências, escreva o motivo (fica como nota na planilha).', 'Equipe de empreiteiro: digite quantas pessoas vieram.',
-             'P, ½ e treinamento contam como dia trabalhado (pagamento do diarista e efetivo do Diário). F e suspensão contam como falta.',
+             'P, ½ e treinamento contam como dia trabalhado (pagamento do diarista e efetivo do Diário). F e suspensão contam como falta.', 'Hora extra: quem trabalhou ganha o campo "HE"; digite as horas além da jornada (ex.: 17h às 20h = 3). Sábado (compensado na semana) e domingo/feriado são reconhecidos sozinhos.',
              '"Mês inteiro" mostra a folha do mês de todos, com totais por pessoa, efetivo por dia e o resumo por empreiteiro. Dá para imprimir ou salvar em PDF.',
              'Empreiteiros: cadastre cada trabalhador na tela Pessoas com vínculo "Prestador / empreiteiro" e o nome da empresa, e marque P como os demais. Se não souber os nomes, cadastre uma linha por equipe e digite quantas pessoas vieram no dia.'] },
   { id: 'producao', grupo: 'dia', aba: 'Produção', tipo: 'tabela', hdr: 5, ini: 6, fim: 1005, chave: 'B', ult: 'R',
@@ -347,8 +347,9 @@ function sisPresenca(iso) {
     lista.push({ linha: 6 + r, nome: p[0], funcao: p[1], vinculo: p[2], situacao: sit[r][0], valor: col ? String(marc[r][0] === 0 ? '' : marc[r][0] || '') : '',
       obs: col ? String(notas[r][0] || '').replace(/ — [^—]*$/, '') : '' });
   });
-  var primeira = datas[0] instanceof Date ? sisIso_(datas[0]) : '';
-  return { data: alvo, col: col, primeira: primeira, pessoas: lista, codigos: SIS_PRES_COD };
+  var primeira = datas[0] instanceof Date ? sisIso_(datas[0]) : '', he = sisHeLer_(alvo, alvo);
+  lista.forEach(function (p) { var h = he.filter(function (x) { return x.linha === p.linha; })[0]; p.he = h ? h.horas : ''; });
+  return { data: alvo, col: col, primeira: primeira, pessoas: lista, codigos: SIS_PRES_COD, heTipo: sisHeTipo_(alvo, sisFeriados_()), heRegras: sisCltCfg_().he };
 }
 
 /** Folha do mês inteiro (todas as pessoas), para conferência, empreiteiros e impressão. mes = 'yyyy-mm'. */
@@ -371,6 +372,8 @@ function sisPresencaMes(mes) {
     lista.push({ linha: 6 + r, nome: p[0], funcao: p[1], vinculo: p[2], empresa: cad[r][0], situacao: sit, v: v, obs: n });
   });
   var primeira = datas[0] instanceof Date ? sisIso_(datas[0]) : '';
+  var he = {}; if (dias.length) sisHeLer_(dias[0], dias[dias.length - 1]).forEach(function (x) { (he[x.linha] = he[x.linha] || {})[x.data] = x.horas; });
+  lista.forEach(function (p) { p.he = dias.map(function (d) { return (he[p.linha] || {})[d] || ''; }); });
   return { mes: mes, dias: dias, primeira: primeira, pessoas: lista, codigos: SIS_PRES_COD };
 }
 
@@ -981,7 +984,7 @@ function sisDiaristas() {
     (pags[nome] = pags[nome] || []).push({ lanc: 5 + i, de: m[1], ate: m[2], dias: num(r[6]), valor: num(r[7]),
       status: String(r[14] || 'Lançado'), venc: r[8] instanceof Date ? sisIso_(r[8]) : '', pagoEm: r[15] instanceof Date ? sisIso_(r[15]) : '', forma: String(r[13] || '') });
   });
-  var lista = [], outras = [];
+  var lista = [], outras = [], heTodas = sisHeLer_('2000-01-01', hoje), regras = sisCltCfg_().he;
   pe.forEach(function (p, i) {
     var nome = String(p[1] || '').trim(); if (!nome) return;
     var linha = 6 + i, ehDiar = String(p[3]) === 'Diarista' || ate[linha];
@@ -997,6 +1000,10 @@ function sisDiaristas() {
       if (ps.some(function (x) { return d >= x.de && d <= x.ate; })) return;
       dias.push([d, w]);
     });
+    heTodas.filter(function (x) { return x.linha === linha && x.data <= limite && !ps.some(function (g) { return x.data >= g.de && x.data <= g.ate; }); }).forEach(function (x) {
+      var w = sisHeDiarias_(x.horas, regras); if (w) dias.push([x.data, w, 'HE', x.horas]);
+    });
+    dias.sort(function (a, b) { return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0; });
     var diaria = num(p[6]), q = dias.reduce(function (a, x) { return a + x[1]; }, 0);
     lista.push({ linha: linha, nome: nome, funcao: String(p[2] || ''), vinculo: String(p[3] || ''), pagamento: String(p[5] || ''), diaria: diaria, etapa: String(p[9] || ''),
       temPix: !!String(p[11] || '').trim(), situacao: String(p[14] || ''), diaristaAte: ate[linha] || '',
@@ -1005,7 +1012,7 @@ function sisDiaristas() {
       pagamentos: (pags[nome.toLowerCase()] || []).sort(function (a, b) { return a.de < b.de ? 1 : -1; }) });
   });
   if (!sisPermissoes_().custos) lista.forEach(function (p) { p.diaria = 0; p.aberto.valor = 0; p.pagamentos.forEach(function (x) { x.valor = 0; }); p.outros.forEach(function (x) { x.valor = 0; }); });
-  return { hoje: hoje, pessoas: lista, outras: outras };
+  return { hoje: hoje, pessoas: lista, outras: outras, heRegras: regras };
 }
 /** Lança (e opcionalmente já dá como pago) as diárias em aberto de uma pessoa entre de e ate. */
 function sisDiaristaLancar(linha, de, ate, data, forma, pago) {
@@ -1055,6 +1062,7 @@ function sisFichados(mes) {
     (pags[nome] = pags[nome] || []).push({ lanc: 5 + i, tipo: m[2], valor: pm.custos ? num(r[7]) : 0, status: String(r[14] || 'Lançado'), venc: iso(r[8]), pagoEm: iso(r[15]), forma: String(r[13] || '') });
   });
   var fimMes = new Date(Date.UTC(Number(mes.slice(0, 4)), Number(mes.slice(5, 7)), 0)).toISOString().slice(0, 10), iniMes = mes + '-01', lista = [];
+  var fer = sisFeriados_(), heMes = sisHeLer_(iniMes, fimMes);
   pe.forEach(function (p, i) {
     var nome = String(p[1] || '').trim(), linha = 6 + i; if (!nome) return;
     var clt = /fichado|clt/i.test(String(p[3])), adm = ate[linha] ? sisMaisDias_(ate[linha], 1) : (clt ? iso(p[12]) : '');
@@ -1069,9 +1077,10 @@ function sisFichados(mes) {
     });
     lista.push({ linha: linha, nome: nome, funcao: String(p[2] || ''), vinculo: String(p[3] || ''), empresa: String(p[4] || ''), salario: pm.custos ? num(p[7]) : 0, etapa: String(p[9] || ''),
       admissao: adm, saida: saida, proporcional: !!(adm && adm > iniMes) || !!(saida && saida < fimMes), situacao: String(p[14] || ''), temPix: !!String(p[11] || '').trim(),
-      cont: cont, datas: datas, obs: obs, semPresenca: !pr, pagamentos: pags[nome.toLowerCase()] || [] });
+      cont: cont, datas: datas, obs: obs, semPresenca: !pr, pagamentos: pags[nome.toLowerCase()] || [],
+      he: heMes.filter(function (x) { return x.linha === linha && (!adm || x.data >= adm) && (!saida || x.data <= saida); }).map(function (x) { return { data: x.data, horas: x.horas, tipo: sisHeTipo_(x.data, fer) }; }) });
   });
-  return { mes: mes, hoje: sisIso_(new Date()), dias: pres.dias, tipos: SIS_CLT_TIPOS, codigos: SIS_PRES_COD, pessoas: lista, cfg: sisCltCfg_() };
+  return { mes: mes, hoje: sisIso_(new Date()), dias: pres.dias, tipos: SIS_CLT_TIPOS, codigos: SIS_PRES_COD, pessoas: lista, cfg: sisCltCfg_(), feriados: Object.keys(fer).filter(function (d) { return d >= iniMes && d <= fimMes; }) };
 }
 /** Soma dias a um texto aaaa-mm-dd (conta pura, sem fuso). */
 function sisMaisDias_(iso, n) { var d = new Date(Date.UTC(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10)) + n)); return d.toISOString().slice(0, 10); }
@@ -1094,11 +1103,17 @@ function sisFichadoLancar(linha, mes, tipo, valor, data, forma, pago) {
 /* Configuração da estimativa de folha (por obra): % do adiantamento e, por pessoa, se usa vale-transporte e nº de dependentes. */
 function sisCltCfg_() {
   var c = {}; try { c = JSON.parse(PropertiesService.getScriptProperties().getProperty('SIS_CLT_CFG_' + sisSS_().getId()) || '{}'); } catch (e) { }
-  if (typeof c.adiant !== 'number') c.adiant = 40; c.p = c.p || {}; return c;
+  if (typeof c.adiant !== 'number') c.adiant = 40; c.p = c.p || {};
+  var d = { util: 50, sab: 50, df: 100, divisor: 220, bloco: 3, parcial: 'inteiro' }; c.he = c.he || {};
+  Object.keys(d).forEach(function (k) { if (c.he[k] === undefined) c.he[k] = d[k]; });
+  return c;
 }
 function sisFichadoConfig(linha, cfg) {
   var c = sisCltCfg_();
-  if (linha === 0) { var a = Number(cfg.adiant); if (!(a >= 0 && a <= 100)) throw new Error('Percentual do adiantamento inválido.'); c.adiant = a; }
+  if (linha === -1) {
+    var n = function (k, mi, ma) { var v = Number(String(cfg[k]).replace(',', '.')); if (!(v >= mi && v <= ma)) throw new Error('Valor inválido em ' + k + '.'); return v; };
+    c.he = { util: n('util', 0, 300), sab: n('sab', 0, 300), df: n('df', 0, 300), divisor: n('divisor', 100, 300), bloco: n('bloco', 0.5, 12), parcial: ['inteiro', 'proporcional'].indexOf(cfg.parcial) >= 0 ? cfg.parcial : 'inteiro' };
+  } else if (linha === 0) { var a = Number(cfg.adiant); if (!(a >= 0 && a <= 100)) throw new Error('Percentual do adiantamento inválido.'); c.adiant = a; }
   else c.p[linha] = { vt: !!cfg.vt, dep: Math.max(0, Math.min(20, Math.floor(Number(cfg.dep) || 0))) };
   PropertiesService.getScriptProperties().setProperty('SIS_CLT_CFG_' + sisSS_().getId(), JSON.stringify(c));
   return c;
@@ -1113,4 +1128,52 @@ function sisPensao(salvar) {
     up.setProperty(k, JSON.stringify(c));
   }
   return c;
+}
+
+/* ---------------------------------------------------------------- HORAS EXTRAS */
+/* Aba "Horas Extras" (criada pelo sistema): uma linha por pessoa e dia. Lançada na tela Presença. */
+var SIS_HE_CAB = ['Data', 'Linha (Pessoas)', 'Nome', 'Horas extras', 'Tipo do dia', 'Lançado por', 'Quando'];
+function sisHeAba_(criar) {
+  var ss = sisSS_(), sh = ss.getSheetByName('Horas Extras');
+  if (!sh && criar) {
+    sh = ss.insertSheet('Horas Extras'); sh.getRange(1, 1, 1, SIS_HE_CAB.length).setValues([SIS_HE_CAB]).setFontWeight('bold'); sh.setFrozenRows(1);
+    sh.getRange('A:A').setNumberFormat('dd/mm/yyyy');
+  }
+  return sh;
+}
+function sisHeLer_(de, ate) {
+  var sh = sisHeAba_(false); if (!sh || sh.getLastRow() < 2) return [];
+  return sh.getRange(2, 1, sh.getLastRow() - 1, 4).getValues().map(function (r, i) {
+    return { row: 2 + i, data: r[0] instanceof Date ? sisIso_(r[0]) : '', linha: Number(r[1]) || 0, nome: String(r[2] || ''), horas: Number(r[3]) || 0 };
+  }).filter(function (x) { return x.data && x.linha && x.horas > 0 && x.data >= de && x.data <= ate; });
+}
+function sisFeriados_() {
+  var sh = sisSS_().getSheetByName('Feriados'), f = {}; if (!sh || sh.getLastRow() < 3) return f;
+  sh.getRange(3, 1, sh.getLastRow() - 2, 1).getValues().forEach(function (r) { if (r[0] instanceof Date) f[sisIso_(r[0])] = 1; });
+  return f;
+}
+/** UTIL = dia útil, SAB = sábado (compensado durante a semana), DF = domingo ou feriado. */
+function sisHeTipo_(iso, fer) {
+  var w = new Date(Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10))).getUTCDay();
+  return w === 0 || (fer && fer[iso]) ? 'DF' : w === 6 ? 'SAB' : 'UTIL';
+}
+/** Diarista: cada bloco de N horas extras (padrão 3 h) vale 1 diária a mais. */
+function sisHeDiarias_(h, r) {
+  var b = r.bloco || 3; return r.parcial === 'proporcional' ? Math.round(h / b * 100) / 100 : Math.floor(h / b + 1e-9);
+}
+function sisPresencaHE(iso, linha, horas) {
+  return sisComTrava_(function () {
+    iso = String(iso).slice(0, 10); if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) throw new Error('Data inválida.');
+    if (linha < 6 || linha > 125) throw new Error('Pessoa inválida.');
+    var h = Number(String(horas || 0).replace(',', '.')) || 0; if (h < 0 || h > 16) throw new Error('Horas extras inválidas (0 a 16).');
+    h = Math.round(h * 2) / 2;
+    var nome = String(sisSS_().getSheetByName('Pessoas').getRange(linha, 2).getValue() || '').trim(); if (!nome) throw new Error('Pessoa não encontrada.');
+    var ex = sisHeLer_(iso, iso).filter(function (x) { return x.linha === linha; }), sh = sisHeAba_(!!h);
+    var del = 0; ex.forEach(function (x, i) { if (i > 0 || !h) { sh.deleteRow(x.row - del); del++; } });
+    if (h) {
+      var linhaV = [sisDia_(+iso.slice(0, 4), +iso.slice(5, 7), +iso.slice(8, 10)), linha, nome, h, { UTIL: 'Dia útil', SAB: 'Sábado', DF: 'Domingo/feriado' }[sisHeTipo_(iso, sisFeriados_())], sisUsuario_(), new Date()];
+      if (ex.length) sh.getRange(ex[0].row, 1, 1, linhaV.length).setValues([linhaV]); else sh.appendRow(linhaV);
+    }
+    return h;
+  });
 }
