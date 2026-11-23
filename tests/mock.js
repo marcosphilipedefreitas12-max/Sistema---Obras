@@ -111,6 +111,7 @@ window.SIS_MOCK = (function () {
         custoMes: { '2026-10': { Fundação: 20000 }, '2026-11': { Fundação: 30000, Preliminares: 10000 } }, contasAbertas: [{ venc: '2026-11-20', desc: 'Concreto', valor: 4000 }],
         etapasOrc: [['Fundação', 200000, 50000], ['Preliminares', 30000, 10000]], planSemana: 0, motivos: { 'Material não chegou': 1 }, demandasAtrasadas: [], obras: [{ id: 'A1', nome: 'OBRA EXEMPLO' }, { id: 'B2', nome: 'OBRA DOIS' }] };
     }
+    if (fn === 'sisOrcConfirmar') return !!a;
     if (fn === 'sisConsultaLer' || fn === 'sisConsultaGravar') {
       if (fn === 'sisConsultaGravar') CONSV[args[1] + ',' + args[2]] = args[3];
       var L = function (r, c, v) { return CONSV[r + ',' + c] != null ? CONSV[r + ',' + c] : v; };

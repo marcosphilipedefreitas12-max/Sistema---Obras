@@ -235,6 +235,7 @@
   .mes-grade .tot { background: var(--cab); min-width: 44px; } .mes-grade .tot.ruim { color: var(--verm); font-weight: 700; }
   .mes-grade tfoot td { border-top: 2px solid var(--linha); font-weight: 600; }
   .so-imprime { display: none; }
+  .aviso-orc { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; background: var(--ambar-f); border: 1px solid var(--ambar); padding: 10px 14px; margin-bottom: 12px; font-size: 13.5px; } .aviso-orc .btn { margin-left: auto; }
   .cons table { border-collapse: collapse; font-size: 13px; width: 100%; } .cons td { padding: 5px 8px; border-bottom: 1px solid var(--linha2); white-space: pre-wrap; vertical-align: top; max-width: 420px; }
   .cons td.num { text-align: right; white-space: nowrap; } .cons td.calc { color: var(--aco); } .cons td.neg { font-weight: 600; }
   .cons td.cab { background: var(--azul); color: #fff; font-weight: 600; } .cons td.tom { background: var(--cab); }
@@ -619,8 +620,8 @@ function painel(pn) {
     '<div class="grande">' + pct(av.real || 0) + '</div>' + barraH('Previsto até hoje', av.previsto, pct(av.previsto || 0), 'var(--s0)', 1) + barraH('Real', av.real, pct(av.real || 0), 'var(--s1)', 1) + selo);
   if (pn.custo) {
     var c = pn.custo, g = c.orcamento ? c.realizado / c.orcamento : 0;
-    h += cartao('Orçamento × realizado', 'Quanto do orçamento já foi gasto',
-      '<div class="grande">' + pct(g) + '</div>' + barraH('Realizado de ' + rsc(c.orcamento), c.realizado, rsc(c.realizado), 'var(--s1)', c.orcamento || 1) +
+    h += cartao(c.orcamento ? 'Orçamento × realizado' : 'Gasto realizado', c.orcamento ? 'Quanto do orçamento já foi gasto' : 'Orçamento a definir — aguardando os valores reais',
+      (c.orcamento ? '<div class="grande">' + pct(g) + '</div>' + barraH('Realizado de ' + rsc(c.orcamento), c.realizado, rsc(c.realizado), 'var(--s1)', c.orcamento || 1) : '<div class="grande">' + rsc(c.realizado) + '</div>') +
       (c.realizado ? '<div style="margin-top:12px">' + rosca(c.partes, ['var(--s1)', 'var(--s2)', 'var(--s3)']) + '</div>' : '<div class="vazio-g">Nenhum gasto lançado ainda.</div>'));
   }
   if (pn.pagar) {
@@ -839,6 +840,7 @@ function exAnalise(k, A) {
   if (k.diasPrazo != null) t.push(k.diasPrazo >= 0 ? 'A previsão de término (' + r['Término previsto'] + ') está ' + k.diasPrazo + ' dia(s) dentro do prazo contratual.' : 'A previsão de término (' + r['Término previsto'] + ') ultrapassa o prazo contratual em ' + Math.abs(k.diasPrazo) + ' dia(s).');
   if (k.improd.length) t.push('Foram registrados ' + k.improd.length + ' dia(s) improdutivo(s) no período' + (k.chuva.length ? ', com chuva anotada no diário em ' + k.chuva.length + ' dia(s)' : '') + '. Avaliar o impacto no cronograma e a necessidade de reprogramação das atividades.');
   if (k.efetivo.length) t.push('Efetivo médio de ' + num(k.efMed) + ' pessoa(s) por dia no período, com máximo de ' + k.efMax + ' e ' + num(k.homensDia) + ' homens-dia.');
+  if (r.fin && !r.orcOk) t.push('Foram gastos ' + rs(r.fin.realizado) + ' até agora. O orçamento ainda está a definir, por isso não há comparação com o orçado.');
   if (r.fin && r.fin.orcamento) t.push('Foram gastos ' + rs(r.fin.realizado) + ' (' + pct(k.gastoPct) + ' do orçamento de ' + rs(r.fin.orcamento) + ')' + (r.fin.comprometido ? ', com mais ' + rs(r.fin.comprometido) + ' comprometidos em contratos ainda não medidos' : '') + '. ' + (k.gastoPct - k.real > 0.05 ? 'O custo está à frente do avanço físico: verificar adiantamentos e possíveis estouros.' : ''));
   if (r.fin && k.vencidas.length) t.push('Há ' + k.vencidas.length + ' conta(s) vencida(s) a regularizar.');
   var ms = Object.keys(r.motivos || {}).sort(function (a, b) { return r.motivos[b] - r.motivos[a]; });
@@ -909,8 +911,8 @@ function desenharExec() {
     '<section class="ex-grupo"><h3>Engenharia</h3><div class="kpis">' + kpi(pct(k.real), 'Avanço físico realizado') + kpi(pct(k.prev), 'Avanço físico planejado') +
       kpi((dv >= 0 ? '+' : '−') + num(Math.abs(dv)) + ' p.p.', 'Desvio planejado × realizado', dv < -1 ? 'neg' : dv > 1 ? 'pos' : '') + kpi(prod || '—', 'Produtividade (% da meta, 30 dias)') +
       kpi(k.concl, 'Serviços concluídos', 'pos') + kpi(k.andam, 'Serviços em andamento') + '</div></section>';
-  if (r.fin) h += '<section class="ex-grupo"><h3>Financeiro</h3><div class="kpis">' + kpi(rsc(r.fin.orcamento), 'Orçamento aprovado') + kpi(rsc(r.fin.realizado), 'Realizado acumulado', '', pct(k.gastoPct) + ' do orçamento') +
-      kpi(rsc(r.fin.comprometido), 'Comprometido', '', 'saldo a medir dos contratos') + kpi(rsc(k.saldo), 'Saldo orçamentário', k.saldo < 0 ? 'neg' : '') +
+  if (r.fin) h += '<section class="ex-grupo"><h3>Financeiro</h3><div class="kpis">' + kpi(r.orcOk ? rsc(r.fin.orcamento) : 'A definir', 'Orçamento aprovado', r.orcOk ? '' : 'at', r.orcOk ? '' : 'aguardando os valores reais') + kpi(rsc(r.fin.realizado), 'Realizado acumulado', '', r.orcOk ? pct(k.gastoPct) + ' do orçamento' : '') +
+      kpi(rsc(r.fin.comprometido), 'Comprometido', '', 'saldo a medir dos contratos') + kpi(r.orcOk ? rsc(k.saldo) : '—', 'Saldo orçamentário', r.orcOk && k.saldo < 0 ? 'neg' : '') +
       kpi(rsc(k.despPer), 'Despesas no período') + kpi(rsc(k.aVencer.reduce(function (a, c) { return a + c.valor; }, 0)), 'A vencer em 7 dias', k.aVencer.length ? 'at' : '') +
       kpi(rsc(k.vencidas.reduce(function (a, c) { return a + c.valor; }, 0)), 'Contas vencidas', k.vencidas.length ? 'neg' : 'pos') + '</div></section>';
   h += '<section class="ex-grupo"><h3>Cronograma</h3><div class="kpis">' + kpi(r['Início da obra'] || '—', 'Início da obra') +
@@ -958,7 +960,7 @@ function relExecutivo() {
   h += secao('Indicadores de desempenho', '<div class="rel-kv">' + [['Avanço realizado', pct(k.real)], ['Avanço planejado', pct(k.prev)], ['Desvio', num(k.desvio) + ' p.p.'], ['Atividades concluídas', k.concl], ['Em andamento', k.andam], ['Atrasadas', k.atras.length],
     ['Efetivo médio/dia', num(k.efMed)], ['Maior efetivo', k.efMax], ['Homens-dia', num(k.homensDia)], ['Dias improdutivos', k.improd.length]].map(function (x) { return '<div><small>' + esc(x[0]) + '</small><b>' + esc(x[1]) + '</b></div>'; }).join('') + '</div>');
   h += secao('Evolução física', '<div class="graf rel-graf">' + linhaCurva(r.curva) + '</div>');
-  if (r.fin) h += secao('Desempenho financeiro', '<div class="rel-kv">' + [['Orçamento', rs(r.fin.orcamento)], ['Realizado', rs(r.fin.realizado) + ' (' + pct(k.gastoPct) + ')'], ['Comprometido', rs(r.fin.comprometido)], ['Saldo', rs(k.saldo)], ['Despesas no período', rs(k.despPer)], ['Contas vencidas', rs(k.vencidas.reduce(function (a, c) { return a + c.valor; }, 0))]].map(function (x) { return '<div><small>' + esc(x[0]) + '</small><b>' + esc(x[1]) + '</b></div>'; }).join('') + '</div>');
+  if (r.fin) h += secao('Desempenho financeiro', '<div class="rel-kv">' + [['Orçamento', r.orcOk ? rs(r.fin.orcamento) : 'A definir'], ['Realizado', rs(r.fin.realizado) + (r.orcOk ? ' (' + pct(k.gastoPct) + ')' : '')], ['Comprometido', rs(r.fin.comprometido)], ['Saldo', r.orcOk ? rs(k.saldo) : '—'], ['Despesas no período', rs(k.despPer)], ['Contas vencidas', rs(k.vencidas.reduce(function (a, c) { return a + c.valor; }, 0))]].map(function (x) { return '<div><small>' + esc(x[0]) + '</small><b>' + esc(x[1]) + '</b></div>'; }).join('') + '</div>');
   h += secao('Cronograma', tabelaRel(['Etapa', 'Término planejado', '% concluído', 'Status', 'Desvio'], k.etapas.map(function (e) { return [e.etapa, br(e.fim), pct(e.pct), e.status, e.desvio ? e.desvio + ' dia(s)' : '—']; })));
   var ps = Object.keys(k.prodServ).map(function (n) { var o = k.prodServ[n]; return [n, num(o.q) + ' ' + (o.u || ''), num(o.h), o.m.length ? pct(o.m.reduce(function (a, b) { return a + b; }, 0) / o.m.length) : '—']; });
   if (ps.length) h += secao('Produtividade', tabelaRel(['Serviço', 'Executado', 'Homens-dia', '% da meta'], ps));
@@ -1083,6 +1085,11 @@ function desenharConsulta(m) {
   var h = '<div class="barra nao-imprime"><input type="search" id="buscaCons" placeholder="Buscar nesta tela…" value="' + esc(CONS_Q) + '" oninput="CONS_Q=this.value;desenharConsulta(mod(\'' + m.id + '\'));manterFoco(\'#buscaCons\')">' +
     '<span class="info">' + (PM.grava ? 'Toque num valor em preto para alterar. Os valores em cinza são calculados.' : 'Somente leitura.') + '</span><span class="esp"></span>' +
     '<button class="btn sec" onclick="window.print()">Imprimir</button><button class="btn sec" onclick="vConsulta(mod(\'' + m.id + '\'),true)">Atualizar</button></div>';
+  if (m.id === 'orcamento' && !D.orcOk) {
+    if (!PM.admin) { el('area').innerHTML = '<div class="vazio"><b>Orçamento ainda não definido</b>Os valores do empreendimento estão sendo revisados e aparecem aqui quando forem confirmados pelo administrador.</div>'; return; }
+    h += '<div class="aviso-orc"><b>Valores provisórios.</b> O orçamento não aparece no Início, na Visão Executiva nem nos relatórios até você confirmar. Corrija os valores abaixo (coluna "Valor manual" ou o Orçamento Analítico) e depois clique em confirmar.' +
+      '<button class="btn" onclick="confirmarOrc(true)">Os valores estão corretos — liberar orçamento</button></div>';
+  } else if (m.id === 'orcamento' && PM.admin) h += '<div class="info" style="margin-bottom:8px">Orçamento confirmado. <a style="cursor:pointer;text-decoration:underline" onclick="confirmarOrc(false)">Voltar a esconder (valores provisórios)</a></div>';
   h += '<div class="tabela cons"><table><tbody>';
   r.linhas.forEach(function (lin, i) {
     var vaz = lin.every(function (c) { return !String(c.v).trim(); }); if (vaz) return;
@@ -1105,6 +1112,10 @@ function desenharConsulta(m) {
     h += '</tr>';
   });
   el('area').innerHTML = h + '</tbody></table></div>';
+}
+function confirmarOrc(ok) {
+  if (ok && !confirm('Confirmar que os valores do orçamento são os reais? Eles passam a aparecer para quem vê custos.')) return;
+  chamar('sisOrcConfirmar', ok).then(function (v) { D.orcOk = v; EX = null; desenharConsulta(mod('orcamento')); aviso(v ? 'Orçamento liberado.' : 'Orçamento escondido até nova confirmação.'); }).catch(function () {});
 }
 function editarCel(id, lin, col, td) {
   if (td.querySelector('input,select')) return;

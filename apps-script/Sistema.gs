@@ -68,6 +68,7 @@ function sisCarregar() {
     permissoes: pm,
     ia: (function () { try { var e = sisIaEstado_(); return { ligado: e.ligado }; } catch (x) { return { ligado: false }; } })(),
     avisoPlanilha: aviso,
+    orcOk: (function () { try { return sisOrcOk_(); } catch (e) { return false; } })(),
     config: sisConfig_(),
     inicio: inicio,
     obra: obra || ss.getName(),
@@ -387,7 +388,7 @@ function sisChamar(obraId, fn, args) {
   var permitidas = { sisCarregar: sisCarregar, sisSalvarDemanda: sisSalvarDemanda, sisSalvarFornecedor: sisSalvarFornecedor,
     sisSalvarInteracao: sisSalvarInteracao, sisImportarFornecedores: sisImportarFornecedores, sisAbaLer: sisAbaLer,
     sisAbaSalvar: sisAbaSalvar, sisAbaLimpar: sisAbaLimpar, sisPresenca: sisPresenca, sisPresencaMes: sisPresencaMes, sisPresencaMarcar: sisPresencaMarcar,
-    sisPerfis: sisPerfis, sisPerfisSalvar: sisPerfisSalvar, sisFotos: sisFotos, sisFotoEnviar: sisFotoEnviar, sisRelatorio: sisRelatorio, sisConsultaLer: sisConsultaLer, sisConsultaGravar: sisConsultaGravar, sisExecutivo: sisExecutivo, sisExecPrazo: sisExecPrazo, sisPlanReprogramar: sisPlanReprogramar, sisIaPerguntar: sisIaPerguntar, sisIaConfig: sisIaConfig, sisIaSalvarConfig: sisIaSalvarConfig,
+    sisPerfis: sisPerfis, sisPerfisSalvar: sisPerfisSalvar, sisFotos: sisFotos, sisFotoEnviar: sisFotoEnviar, sisRelatorio: sisRelatorio, sisConsultaLer: sisConsultaLer, sisOrcConfirmar: sisOrcConfirmar, sisConsultaGravar: sisConsultaGravar, sisExecutivo: sisExecutivo, sisExecPrazo: sisExecPrazo, sisPlanReprogramar: sisPlanReprogramar, sisIaPerguntar: sisIaPerguntar, sisIaConfig: sisIaConfig, sisIaSalvarConfig: sisIaSalvarConfig,
     sisObras: sisObras, sisObraCadastrar: sisObraCadastrar, sisObraNova: sisObraNova, sisObraRemover: sisObraRemover, sisModeloDefinir: sisModeloDefinir };
   if (!permitidas[fn]) throw new Error('Função não permitida: ' + fn);
   SIS_OBRA_ID = String(obraId || ''); SIS_SS = null; SIS_PERFIL = null; SIS_TZ = null;
@@ -538,6 +539,7 @@ function sisPermitir_(fn, args) {
   if (fn === 'sisSalvarDemanda' && pm.modulos.indexOf('demandas') < 0) nega();
   if (fn === 'sisRelatorio' && pm.modulos.indexOf('diario') < 0) nega();
   if (fn === 'sisExecPrazo' && !pm.admin) nega();
+  if (fn === 'sisOrcConfirmar' && !pm.admin) nega();
   if (fn === 'sisPlanReprogramar' && pm.modulos.indexOf('planejamento') < 0) nega();
   if (/^sisPresenca/.test(fn) && pm.modulos.indexOf('presenca') < 0) nega();
   if (fn === 'sisPerfisSalvar' && !pm.admin) nega();

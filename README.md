@@ -60,6 +60,7 @@ O menu segue a rotina da obra: **Todo dia** (Diário, Presença, Produção, Lan
 - **Demandas** — quadro A fazer → Em andamento → Aguardando terceiros → Concluída, com responsável, prazo e histórico automático.
 - **Fornecedores** — cadastro, avaliação, contatos e próximos passos, e o histórico da obra (cotações, contratos, medições, lançamentos, compras) puxado pelo nome.
 - **Consultas** (Levantamento, Prazo e Mão de Obra, Quantitativos, Orçamento, Gestão à Vista, Fluxo de Caixa, Mapa, Contas a Pagar, Painel, Dados do Projeto, Feriados, Checklist, Ficha) — mostradas **dentro do sistema** com os valores já calculados. Quem pode gravar altera ali mesmo os valores digitados (números, datas e listas sem fórmula); as células calculadas ficam em cinza. O link "Abrir a planilha" aparece só para o Administrador.
+- **Orçamento provisório** — enquanto o Administrador não clicar em "Os valores estão corretos — liberar orçamento" (tela Orçamento), o sistema mostra "a definir" no lugar de orçamento, saldo e orçado por etapa (Início, Visão Executiva, relatórios, Assistente). Fica em Script Property `SIS_ORC_OK_<idPlanilha>`.
 
 ## Visão Executiva
 

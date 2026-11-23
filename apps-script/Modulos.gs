@@ -468,7 +468,7 @@ function sisInicio_() {
     var n = rs.getLastRow(), rg = rs.getRange(1, 1, n, 2), dv = rg.getDisplayValues(), vv = rg.getValues();
     for (var k = 0; k < n; k++) { R[dv[k][0]] = vv[k][1]; RD[dv[k][0]] = dv[k][1]; }
     ['Avanço físico real', 'Avanço físico previsto', 'Orçamento (R$)', 'Realizado (R$)', 'Efetivo no último dia', 'Lajes concluídas',
-     'A vencer em 7 dias (R$)', 'Unidades liberadas para entrega'].forEach(function (w) { if (w in RD) out.numeros.push({ campo: w, valor: RD[w] }); });
+     'A vencer em 7 dias (R$)', 'Unidades liberadas para entrega'].forEach(function (w) { if (w in RD && !(w === 'Orçamento (R$)' && !sisOrcOk_())) out.numeros.push({ campo: w, valor: RD[w] }); });
   }
   try { out.painel = sisPainel_(ss, R, RD); } catch (e) { out.painel = null; }
   return out;
@@ -480,7 +480,7 @@ function sisPainel_(ss, R, RD) {
   var p = {
     avanco: { real: num(R['Avanço físico real']), previsto: num(R['Avanço físico previsto']) },
     termino: RD['Término previsto'] || '', inicio: RD['Início da obra'] || '', atrasadas: num(R['Atividades atrasadas']),
-    custo: { orcamento: num(R['Orçamento (R$)']), realizado: num(R['Realizado (R$)']),
+    custo: { orcamento: sisOrcOk_() ? num(R['Orçamento (R$)']) : 0, realizado: num(R['Realizado (R$)']),
              partes: [['Mão de obra e serviços', num(R['Mão de obra e serviços (R$)'])], ['Material', num(R['Material (R$)'])], ['Equipamento', num(R['Equipamento (R$)'])]] },
     pagar: [['Mês atual', num(R['A pagar — mês atual (R$)'])], ['Próximo mês', num(R['A pagar — próximo mês (R$)'])], ['Daqui a 2 meses', num(R['A pagar — daqui a 2 meses (R$)'])]],
     vencidas: num(R['Contas vencidas (R$)']),
@@ -509,7 +509,7 @@ function sisPainel_(ss, R, RD) {
         if (!et[e]) { et[e] = [0, 0]; ordem.push(e); }
         et[e][0] += num(r[cO]); et[e][1] += num(r[cG]);
       });
-      p.etapas = ordem.map(function (e) { return [e, et[e][0], et[e][1]]; }).filter(function (x) { return x[1] || x[2]; });
+      p.etapas = sisOrcOk_() ? ordem.map(function (e) { return [e, et[e][0], et[e][1]]; }).filter(function (x) { return x[1] || x[2]; }) : [];
     }
   }
   return p;
@@ -658,7 +658,7 @@ function sisRelatorio(tipo, de, ate) {
     var la = sisPeriodo_(ss, 'Lançamentos', 4, 5, 503, 15, de, ate), ce = la.cab.indexOf('Etapa'), cv = la.cab.indexOf('Valor (R$)'), porEtapa = {}, tot = 0;
     var nb = function (x) { return Number(String(x || '').replace(/[^\d,-]/g, '').replace(',', '.')) || 0; };
     la.linhas.forEach(function (l) { var v = nb(l[cv]); tot += v; var e = l[ce] || 'Sem etapa'; porEtapa[e] = (porEtapa[e] || 0) + v; });
-    out.custos = { total: tot, porEtapa: porEtapa, qtd: la.linhas.length, orcamento: RD['Orçamento (R$)'] || '', realizado: RD['Realizado (R$)'] || '',
+    out.custos = { total: tot, porEtapa: porEtapa, qtd: la.linhas.length, orcamento: sisOrcOk_() ? (RD['Orçamento (R$)'] || '') : 'a definir', realizado: RD['Realizado (R$)'] || '',
       vencidas: RD['Contas vencidas (R$)'] || '', aVencer7: RD['A vencer em 7 dias (R$)'] || '' };
   }
   out.pendencias = (sisInicio_().pend || []).filter(function (p) { return Number(String(p.qtd).replace(/[^\d]/g, '')) > 0; });
@@ -799,7 +799,7 @@ function sisIaPerguntar(historico) {
   if (!est.ligado) throw new Error('O Assistente está desligado. O administrador pode ligá-lo na tela do Assistente.');
   if (est.usoMes.perguntas >= est.limite) throw new Error('O limite de ' + est.limite + ' perguntas deste mês foi atingido. O administrador pode aumentar na configuração do Assistente.');
   var ss = sisSS_(), rs = ss.getSheetByName('Resumo'), resumo = [];
-  if (rs) rs.getRange(1, 1, rs.getLastRow(), 2).getDisplayValues().forEach(function (x) { if (x[0] && x[1] && x[0] !== 'Campo' && (pm.custos || !/R\$/.test(x[0]))) resumo.push(x[0] + ': ' + x[1]); });
+  if (rs) rs.getRange(1, 1, rs.getLastRow(), 2).getDisplayValues().forEach(function (x) { if (x[0] && x[1] && x[0] !== 'Campo' && (pm.custos || !/R\$/.test(x[0])) && !(/^Orçamento/.test(x[0]) && !sisOrcOk_())) resumo.push(x[0] + ': ' + x[1]); });
   var sistema = 'Você é o assistente do Sistema de Obras, falando em português do Brasil, de forma simples e direta, com um engenheiro ou a equipe de uma obra de construção civil em Belo Horizonte. ' +
     'Hoje é ' + sisIso_(new Date()) + '. Quem pergunta: ' + sisUsuario_() + ' (perfil ' + pm.perfil + '). ' +
     'Use SEMPRE as ferramentas para buscar dados antes de responder sobre números, pessoas, datas ou custos; nunca invente. Se não achar, diga que não achou. ' +
@@ -844,7 +844,8 @@ function sisExecutivo(obraId, de, ate) {
    'Término da estrutura — previsto', 'Término da estrutura — ritmo real', 'PPC última semana', 'PPC médio 4 semanas', 'Produtividade média — % da meta (30 dias)', 'FVS em aberto',
    'Inspeções de serviço reprovadas em aberto', 'Compras atrasadas', 'Unidades liberadas para entrega', 'Total de unidades', 'Unidades entregues ao cliente', 'Área construída (m²)'].forEach(function (k) { out[k] = RD[k] || ''; });
   out.avanco = { real: num(R['Avanço físico real']), previsto: num(R['Avanço físico previsto']) };
-  if (pm.custos) out.fin = { orcamento: num(R['Orçamento (R$)']), realizado: num(R['Realizado (R$)']), vencidas: num(R['Contas vencidas (R$)']), aVencer7: num(R['A vencer em 7 dias (R$)']),
+  out.orcOk = sisOrcOk_();
+  if (pm.custos) out.fin = { orcamento: out.orcOk ? num(R['Orçamento (R$)']) : 0, realizado: num(R['Realizado (R$)']), vencidas: num(R['Contas vencidas (R$)']), aVencer7: num(R['A vencer em 7 dias (R$)']),
     pagarMes: num(R['A pagar — mês atual (R$)']), pagarProx: num(R['A pagar — próximo mês (R$)']), mo: num(R['Mão de obra e serviços (R$)']), material: num(R['Material (R$)']), equip: num(R['Equipamento (R$)']),
     custoFichados: num(R['Custo fichados — estimado (R$)']), custoDiaristas: num(R['Custo diaristas (R$)']), custoPrestadores: num(R['Custo prestadores / empreiteiros (R$)']),
     acimaOrcado: num(R['Itens do orçamento com gasto acima do orçado']), previstoAcum: num(R['Previsto acumulado até o mês atual (R$)']) };
@@ -877,7 +878,8 @@ function sisExecutivo(obraId, de, ate) {
     var oa = ss.getSheetByName('Orçamento Analítico'); out.etapasOrc = [];
     if (oa) { var c2 = oa.getRange(9, 1, 1, 20).getDisplayValues()[0], cE = c2.indexOf('Etapa'), cO = c2.indexOf('Custo direto (R$)'), cG = c2.indexOf('Gasto (R$)'), et = {}, ordem = [];
       if (cE >= 0 && cO >= 0 && cG >= 0) oa.getRange(10, 1, 500, 20).getValues().forEach(function (r) { var e = String(r[cE] || '').trim(); if (!e) return; if (!et[e]) { et[e] = [0, 0]; ordem.push(e); } et[e][0] += num(r[cO]); et[e][1] += num(r[cG]); });
-      out.etapasOrc = ordem.map(function (e) { return [e, et[e][0], et[e][1]]; }).filter(function (x) { return x[1] || x[2]; }); }
+      out.etapasOrc = out.orcOk ? ordem.map(function (e) { return [e, et[e][0], et[e][1]]; }).filter(function (x) { return x[1] || x[2]; }) : []; }
+    if (!out.orcOk) out.fin.acimaOrcado = 0;
   }
   // planejamento da semana atual e motivos de não cumprimento no período
   var pl = ss.getSheetByName('Planejamento Semanal'), seg = sisIso_(new Date(Date.now() - ((new Date().getDay() + 6) % 7) * 864e5)), semN = 0, motivos = {};
@@ -945,4 +947,14 @@ function sisConsultaGravar(id, linha, col, texto) {
     SpreadsheetApp.flush();
     return sisConsultaLer(id);
   });
+}
+
+
+/* ---------------------------------------------------------------- orçamento confirmado? */
+/* Enquanto o Administrador não confirmar que os valores do orçamento são os reais, o sistema
+   não mostra orçamento, saldo nem orçado por etapa (mostra "a definir"). */
+function sisOrcOk_() { try { return PropertiesService.getScriptProperties().getProperty('SIS_ORC_OK_' + sisSS_().getId()) === '1'; } catch (e) { return false; } }
+function sisOrcConfirmar(ok) {
+  PropertiesService.getScriptProperties().setProperty('SIS_ORC_OK_' + sisSS_().getId(), ok ? '1' : '0');
+  return sisOrcOk_();
 }
