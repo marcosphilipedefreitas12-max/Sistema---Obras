@@ -69,7 +69,9 @@ window.SIS_MOCK = (function () {
     if (fn === 'sisAbaLimpar') { var t2 = tabela(a); t2.linhas = t2.linhas.filter(function (x) { return x.linha !== args[1]; }); return JSON.parse(JSON.stringify(t2)); }
     if (fn === 'sisPresenca') return { data: a || st.hoje, col: 8, primeira: '2026-09-01', pessoas: [
       { linha: 6, nome: 'Ajudante Teste', funcao: 'Servente', vinculo: 'Diarista', situacao: 'Ativo', valor: PRES.P[6] || '' },
-      { linha: 7, nome: 'Pedreiro Teste', funcao: 'Pedreiro', vinculo: 'Prestador / empreiteiro', situacao: 'Ativo', valor: PRES.P[7] || '' }], codigos: SIS_PRES_COD };
+      { linha: 7, nome: 'Pedreiro Teste', funcao: 'Pedreiro', vinculo: 'Prestador / empreiteiro', situacao: 'Ativo', valor: PRES.P[7] || '' }].map(function (p) { p.he = ((st.he || {})[(a || st.hoje) + '|' + p.linha]) || ''; return p; }),
+      codigos: SIS_PRES_COD, heTipo: [0, 6].indexOf(new Date((a || st.hoje) + 'T12:00:00').getDay()) >= 0 ? (new Date((a || st.hoje) + 'T12:00:00').getDay() ? 'SAB' : 'DF') : 'UTIL', heRegras: HE_R() };
+    if (fn === 'sisPresencaHE') { st.he = st.he || {}; var hh = Number(String(args[2] || 0).replace(',', '.')) || 0; if (hh) st.he[args[0] + '|' + args[1]] = hh; else delete st.he[args[0] + '|' + args[1]]; return hh; }
     if (fn === 'sisRelatorio') {
       var cabD = ['Data', 'Clima manhã', 'Clima tarde', 'Pedreiros', 'Serventes', 'Carpinteiro', 'Armadores', 'Bombeiro', 'Eletric.', 'Terceiros', 'Total efetivo', 'Equipamentos em obra', 'Serviços executados (onde e o quê)', 'Ocorrências / visitas / acidentes', 'Dia produtivo?'];
       var lin = function (d, n) { return [d, 'Bom', 'Bom', '3', '4', '', '', '', '', '', String(n), 'Betoneira', 'Alvenaria do 2º pavimento', n > 7 ? 'Visita do cliente' : '', 'Sim']; };
@@ -87,8 +89,9 @@ window.SIS_MOCK = (function () {
       var cod = function (i, base) { var w = new Date(dias[i] + 'T12:00:00').getDay(); return w === 0 || w === 6 ? '' : base(i); };
       return { mes: '2026-11', dias: dias, primeira: '2026-10-26', codigos: SIS_PRES_COD, pessoas: [
         { linha: 6, nome: 'Ajudante Teste', funcao: 'Servente', vinculo: 'Diarista', empresa: '', situacao: 'Ativo', v: dias.map(function (x, i) { return cod(i, function (j) { return j === 9 ? 'F' : j === 10 ? 'FJ' : 'P'; }); }), obs: dias.map(function (x, i) { return i === 10 ? 'Consulta' : ''; }) },
-        { linha: 7, nome: 'Equipe Teste', funcao: 'Pedreiro', vinculo: 'Prestador / empreiteiro', empresa: 'Empreiteira Exemplo', situacao: 'Ativo', v: dias.map(function (x, i) { return cod(i, function (j) { return String(4 + j % 3); }); }), obs: dias.map(function () { return ''; }) }] };
+        { linha: 7, nome: 'Equipe Teste', funcao: 'Pedreiro', vinculo: 'Prestador / empreiteiro', empresa: 'Empreiteira Exemplo', situacao: 'Ativo', v: dias.map(function (x, i) { return cod(i, function (j) { return String(4 + j % 3); }); }), obs: dias.map(function () { return ''; }) }].map(function (p) { p.he = dias.map(function (d) { return ((st.he || {})[d + '|' + p.linha]) || ''; }); return p; }) };
     }
+    function HE_R() { st.fich = st.fich || { pags: [] }; st.fich.cfg = st.fich.cfg || { adiant: 40, p: {} }; st.fich.cfg.he = st.fich.cfg.he || { util: 50, sab: 50, df: 100, divisor: 220, bloco: 3, parcial: 'inteiro' }; return st.fich.cfg.he; }
     if (fn === 'sisPensao') { st.pens = st.pens || {}; var sv = args[0]; if (sv) { if (Number(sv.pens)) st.pens[sv.linha] = { pens: Number(sv.pens), base: sv.base }; else delete st.pens[sv.linha]; } return JSON.parse(JSON.stringify(st.pens)); }
     if (/^sisFichado/.test(fn) || (/^sisDiarista(Pago|Cancelar)$/.test(fn) && st.fich && st.fich.pags.some(function (g) { return g.lanc === args[0]; }))) {
       var FI = st.fich = st.fich || { pags: [] };
@@ -96,12 +99,15 @@ window.SIS_MOCK = (function () {
       if (fn === 'sisDiaristaPago') FI.pags.forEach(function (g) { if (g.lanc === args[0]) { g.status = 'Pago'; g.pagoEm = args[1]; } });
       if (fn === 'sisDiaristaCancelar') FI.pags.forEach(function (g) { if (g.lanc === args[0]) g.status = 'Cancelado'; });
       FI.cfg = FI.cfg || { adiant: 40, p: {} };
+      HE_R();
+      if (fn === 'sisFichadoConfig' && args[0] === -1) { var hv = args[1]; FI.cfg.he = { util: +hv.util, sab: +hv.sab, df: +hv.df, divisor: +hv.divisor, bloco: +hv.bloco, parcial: hv.parcial }; return FI.cfg; }
       if (fn === 'sisFichadoConfig') { if (args[0] === 0) FI.cfg.adiant = args[1].adiant; else FI.cfg.p[args[0]] = { vt: !!args[1].vt, dep: Number(args[1].dep) || 0 }; return FI.cfg; }
       var mesF = fn === 'sisFichados' ? args[0] : (FI.mes || '2026-11'); FI.mes = mesF;
       if (fn !== 'sisFichados' && fn !== 'sisFichadoLancar') return SIS_MOCK('sisDiaristas', []);
-      return { mes: mesF, hoje: st.hoje, dias: [], cfg: FI.cfg, codigos: SIS_PRES_COD, tipos: { ADIANTAMENTO: 'Adiantamento (vale)', SALARIO: 'Salário do mês', BENEFICIOS: 'Vale-transporte / alimentação' }, pessoas: [
-        { linha: 8, nome: 'Fichado Teste', funcao: 'Mestre de obras', vinculo: 'Fichado (CLT)', salario: 4200, admissao: '2026-08-03', saida: '', cont: { P: 14, '½': 1, F: 1, A: 2 }, datas: { F: ['2026-11-09'], A: ['2026-11-12', '2026-11-13'] }, obs: ['12/11 A: Atestado de 2 dias'], semPresenca: false },
-        { linha: 9, nome: 'Novo Fichado', funcao: 'Engenheiro', vinculo: 'Fichado (CLT)', salario: 6000, admissao: '2026-11-17', saida: '', cont: { P: 2 }, datas: {}, obs: [], semPresenca: false }
+      return { mes: mesF, hoje: st.hoje, dias: [], cfg: FI.cfg, feriados: ['2026-11-02', '2026-11-15', '2026-11-20'], codigos: SIS_PRES_COD, tipos: { ADIANTAMENTO: 'Adiantamento (vale)', SALARIO: 'Salário do mês', BENEFICIOS: 'Vale-transporte / alimentação' }, pessoas: [
+        { linha: 8, nome: 'Fichado Teste', funcao: 'Mestre de obras', vinculo: 'Fichado (CLT)', salario: 4200, admissao: '2026-08-03', saida: '', cont: { P: 14, '½': 1, F: 1, A: 2 }, datas: { F: ['2026-11-09'], A: ['2026-11-12', '2026-11-13'] }, obs: ['12/11 A: Atestado de 2 dias'], semPresenca: false, he: Object.keys(st.he || {}).filter(function (k) { return /\|8$/.test(k) && k.slice(0, 7) === mesF; }).map(function (k) {
+          var d = k.slice(0, 10), w = new Date(d + 'T12:00:00').getDay(); return { data: d, horas: st.he[k], tipo: w === 0 || ['2026-11-02', '2026-11-15', '2026-11-20'].indexOf(d) >= 0 ? 'DF' : w === 6 ? 'SAB' : 'UTIL' }; }) },
+        { linha: 9, nome: 'Novo Fichado', funcao: 'Engenheiro', vinculo: 'Fichado (CLT)', salario: 6000, admissao: '2026-11-17', saida: '', cont: { P: 2 }, datas: {}, obs: [], semPresenca: false, he: [] }
       ].map(function (p) { p.pagamentos = FI.pags.filter(function (g) { return g.linha === p.linha && g.mes === mesF; }); return p; }) };
     }
     if (/^sisDiarista/.test(fn)) {
@@ -109,9 +115,11 @@ window.SIS_MOCK = (function () {
       var diasT = ['2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06', '2026-11-10', '2026-11-11', '2026-11-12', '2026-11-13', '2026-11-16', '2026-11-17', '2026-11-18'];
       var monta = function () {
         var pes = [{ linha: 6, nome: 'Ajudante Teste', funcao: 'Servente', diaria: 150 }, { linha: 7, nome: 'Equipe Teste', funcao: 'Pedreiro', diaria: 250 }];
-        return { hoje: st.hoje, outras: [{ linha: 8, nome: 'Fichado Teste', vinculo: 'Fichado (CLT)' }], pessoas: pes.map(function (p) {
+        return { hoje: st.hoje, heRegras: HE_R(), outras: [{ linha: 8, nome: 'Fichado Teste', vinculo: 'Fichado (CLT)' }], pessoas: pes.map(function (p) {
           var ps = DI.pags.filter(function (g) { return g.linha === p.linha && g.status !== 'Cancelado'; }), lim = DI.ate[p.linha] || st.hoje;
           var d = diasT.filter(function (x) { return x <= lim && !ps.some(function (g) { return x >= g.de && x <= g.ate; }); }).map(function (x, i) { return [x, i === 2 && p.linha === 6 ? 0.5 : 1]; });
+          Object.keys(st.he || {}).filter(function (k) { return k.split('|')[1] === String(p.linha) && k.slice(0, 10) <= lim; }).forEach(function (k) { var w = Math.floor(st.he[k] / HE_R().bloco); if (w) d.push([k.slice(0, 10), w, 'HE', st.he[k]]); });
+          d.sort(function (x, y) { return x[0] < y[0] ? -1 : 1; });
           var q = d.reduce(function (a, x) { return a + x[1]; }, 0);
           return Object.assign({ vinculo: 'Diarista', pagamento: 'Quinzenal', etapa: 'Infraestrutura', temPix: p.linha === 6, situacao: 'Ativo', diaristaAte: DI.ate[p.linha] || '', semPresenca: false, outros: [],
             aberto: { dias: d, qtd: q, valor: q * p.diaria, de: d.length ? d[0][0] : '', ate: d.length ? d[d.length - 1][0] : '' },
