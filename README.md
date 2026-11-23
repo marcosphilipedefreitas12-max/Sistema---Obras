@@ -12,6 +12,12 @@ Sistema de gerenciamento das obras: todas as partes da planilha da obra (diário
 
 **Nenhum dado da obra fica neste repositório.** Quem não tem acesso à planilha não consegue ver nada no sistema.
 
+## Atualização automática
+
+Projeto separado `atualizador/` (Atualizador.gs + appsscript.json), só do dono. A cada hora baixa `apps-script/Sistema.gs`, `Modulos.gs` e `Sistema.html` do ramo `main`; se mudaram, troca esses arquivos no projeto do sistema (mantém Script_Obra e o manifesto; remove a cópia antiga com outro nome, ex.: "Código"), cria uma versão nova e atualiza a implantação existente — o link não muda. Avisa por e-mail quando atualiza ou quando falha (o sistema continua na versão anterior).
+
+Instalar uma vez: ligar a **API do Google Apps Script** em https://script.google.com/home/usersettings; criar um projeto novo em script.google.com, colar os dois arquivos, preencher `SCRIPT_ID` (projeto do sistema → Configurações → ID do script) e `DEPLOYMENT_ID` (o código AKfycb… da implantação) e executar `instalar`. Depois disso, juntar um pedido (merge) no GitHub já basta para o sistema se atualizar em até 1 hora (ou execute `atualizarAgora`).
+
 ## Várias obras
 
 Um único link serve para todas as obras. Cada obra é uma planilha (cópia do Modelo) e a lista de obras fica guardada no próprio script. Como o sistema roda com a conta de quem acessa, **cada pessoa só vê as obras cujas planilhas foram compartilhadas com ela** (Compartilhar → Editor). A diretoria, com acesso a todas, vê todas.
