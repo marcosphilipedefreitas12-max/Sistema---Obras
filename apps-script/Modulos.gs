@@ -1099,7 +1099,10 @@ function sisCltCfg_() {
 function sisFichadoConfig(linha, cfg) {
   var c = sisCltCfg_();
   if (linha === 0) { var a = Number(cfg.adiant); if (!(a >= 0 && a <= 100)) throw new Error('Percentual do adiantamento inválido.'); c.adiant = a; }
-  else c.p[linha] = { vt: !!cfg.vt, dep: Math.max(0, Math.min(20, Math.floor(Number(cfg.dep) || 0))) };
+  else {
+    var pe = Number(String(cfg.pens || 0).replace(',', '.')) || 0; if (pe < 0 || pe > 100) throw new Error('Percentual da pensão inválido.');
+    c.p[linha] = { vt: !!cfg.vt, dep: Math.max(0, Math.min(20, Math.floor(Number(cfg.dep) || 0))), pens: pe, pensBase: ['liq', 'inss', 'bruto'].indexOf(cfg.pensBase) >= 0 ? cfg.pensBase : 'liq' };
+  }
   PropertiesService.getScriptProperties().setProperty('SIS_CLT_CFG_' + sisSS_().getId(), JSON.stringify(c));
   return c;
 }
