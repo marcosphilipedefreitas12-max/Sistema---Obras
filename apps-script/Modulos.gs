@@ -74,7 +74,7 @@ var SIS_MODULOS = [
   { id: 'diaristas', grupo: 'semana', aba: 'Pagamento Diaristas', tipo: 'diaristas', titulo: 'Pagamentos da equipe',
     serve: 'Diaristas: quanto cada um tem a receber até hoje (pela Presença). Fichados: pagamentos do mês pelo holerite. Em ambos, o que foi lançado e o que já foi pago.',
     quando: 'No dia de pagar (semana ou quinzena) e sempre que quiser conferir o que está em aberto.',
-    passos: ['O valor em aberto soma todos os dias trabalhados (P, ½, TR) ainda não pagos, até hoje.', 'Clique em "Lançar pagamento", confira o período e escolha "Já foi pago" ou "Lançar para pagar".',
+    passos: ['O valor em aberto soma os dias P, ½, TR e chuva (CH: o diarista fica na obra aguardando) ainda não pagos, até hoje. Falta, mesmo com atestado, não é paga.', 'Clique em "Lançar pagamento", confira o período e escolha "Já foi pago" ou "Lançar para pagar".',
              'O pagamento vai também para a aba Lançamentos (Mão de obra), entrando no custo da obra.', 'Quando o financeiro pagar, abra o histórico e clique em "Marcar como pago".',
              'Se o diarista foi fichado (CLT), informe "Diarista até" (o último dia como diarista): os dias depois disso não entram mais.',
              'Aba "Fichados (CLT)": escolha o mês e lance adiantamento, salário e vale-transporte/alimentação com o valor do holerite do RH; depois marque como pago.',
@@ -384,7 +384,7 @@ var SIS_PRES_COD = [
   { c: 'FE', nome: 'Férias', just: true },
   { c: 'FG', nome: 'Folga / compensação de horas', just: true },
   { c: 'AF', nome: 'Afastado (INSS / acidente)', just: true },
-  { c: 'CH', nome: 'Chuva ou obra parada (dispensado)', just: true },
+  { c: 'CH', nome: 'Chuva / obra parada (na obra, aguardando)', just: true, diaria: 1 },  // diarista recebe o dia
   { c: 'TR', nome: 'Treinamento / integração', conta: 1 },
   { c: 'OB', nome: 'Trabalhando em outra obra', just: true },
   { c: 'S', nome: 'Suspensão', falta: true }
@@ -993,7 +993,7 @@ function sisDiaristas() {
     var dias = [];
     datas.forEach(function (d, j) {
       if (ip < 0 || !d || d > limite) return; var v = marc[ip][j]; if (v === '' || v === null) return;
-      var cod = SIS_PRES_COD.filter(function (x) { return x.c === String(v); })[0], w = cod && cod.conta ? cod.conta : 0; if (!w) return;
+      var cod = SIS_PRES_COD.filter(function (x) { return x.c === String(v); })[0], w = cod ? (cod.conta || cod.diaria || 0) : 0; if (!w) return;  // falta (mesmo com atestado) não é paga ao diarista
       if (ps.some(function (x) { return d >= x.de && d <= x.ate; })) return;
       dias.push([d, w]);
     });
