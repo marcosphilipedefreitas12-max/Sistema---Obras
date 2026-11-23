@@ -48,7 +48,6 @@
   .lado a:hover { background: var(--grafite2); }
   .lado a.on { border-left-color: var(--sinal); background: var(--grafite2); color: #fff; font-weight: 500; }
   .lado a .ct { margin-left: auto; font-size: 11px; background: var(--verm); color: #fff; border-radius: 9px; padding: 0 6px; }
-  .lado a.consulta { color: #a8b2b9; }
   .lado .rodape { margin-top: auto; padding: 14px 18px; font-size: 12px; color: #87929a; border-top: 1px solid var(--grafite3); }
   .lado .rodape a { padding: 0; border: 0; display: inline; color: #c9d0d5; text-decoration: underline; }
 
@@ -236,6 +235,14 @@
   .mes-grade .tot { background: var(--cab); min-width: 44px; } .mes-grade .tot.ruim { color: var(--verm); font-weight: 700; }
   .mes-grade tfoot td { border-top: 2px solid var(--linha); font-weight: 600; }
   .so-imprime { display: none; }
+  .cons table { border-collapse: collapse; font-size: 13px; width: 100%; } .cons td { padding: 5px 8px; border-bottom: 1px solid var(--linha2); white-space: pre-wrap; vertical-align: top; max-width: 420px; }
+  .cons td.num { text-align: right; white-space: nowrap; } .cons td.calc { color: var(--aco); } .cons td.neg { font-weight: 600; }
+  .cons td.cab { background: var(--azul); color: #fff; font-weight: 600; } .cons td.tom { background: var(--cab); }
+  .cons td.edit { cursor: pointer; color: var(--tinta); box-shadow: inset 0 -1px 0 var(--azul2); } .cons td.edit:empty { box-shadow: inset 0 -1px 0 var(--linha); }
+  .cons td.nota { white-space: normal; max-width: none; color: var(--aco); font-size: 12.5px; background: var(--cab); } .cons td.secao-c { font-family: var(--titulo); font-size: 18px; font-weight: 600; padding-top: 14px; max-width: none; } .cons td.edit:hover { background: var(--azul-f); }
+  .cons td.edit:focus-visible { outline: 3px solid var(--sinal); outline-offset: -3px; }
+  .cons td input, .cons td select { min-width: 110px; padding: 4px 6px; } .cel-ac { display: inline-flex; gap: 4px; margin-left: 4px; }
+  .cons tr:hover td { background: inherit; }
   .app > div, main { min-width: 0; } #exArea { min-width: 0; }
   #exArea .graficos { grid-auto-flow: dense; } .graf.cheio { grid-column: 1 / -1; }
   .ex-filtros { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end; background: var(--papel); border: 1px solid var(--linha); padding: 12px 14px; margin-bottom: 16px; position: sticky; top: 0; z-index: 5; }
@@ -489,7 +496,7 @@ function montarMenu() {
   });
   if (PM.admin && (!q || 'perfis de acesso'.indexOf(q) >= 0)) h += '<div class="grupo"><div>Administração</div><a class="' + (ATUAL === 'perfis' ? 'on' : '') + '" onclick="ir(\'perfis\')">Perfis de acesso</a></div>';
   h += '<div class="rodape">Conectado como ' + esc(D.usuario) + (PM.perfil ? '<br><span class="perfil-tag" title="' + esc(PM.descricao || '') + '">Perfil: ' + esc(PM.perfil) + '</span>' : '') +
-    '<br><a href="' + esc(CFG.url) + '" target="_blank">Abrir a planilha</a> · <a onclick="vObras()" style="cursor:pointer">Trocar de obra</a>' +
+    '<br>' + (PM.admin ? '<a href="' + esc(CFG.url) + '" target="_blank">Abrir a planilha</a> · ' : '') + '<a onclick="vObras()" style="cursor:pointer">Trocar de obra</a>' +
     '</div>';
   el('lado').innerHTML = h;
 }
@@ -1061,9 +1068,60 @@ function salvarPerfis() {
 }
 
 /* ---------------------------------------------------------------- consulta */
-function vConsulta(m) {
-  el('main').innerHTML = carimbo(m.titulo, m.serve, ['Tipo', 'Consulta na planilha']) + '<div class="vazio"><b>Esta parte é para consultar e imprimir na própria planilha</b>' +
-    esc(m.quando ? 'Quando usar: ' + m.quando : '') + '<br><br><a class="btn" target="_blank" href="' + esc(m.link) + '">Abrir "' + esc(m.titulo) + '" na planilha</a></div>';
+var CONS = {}, CONS_Q = '';
+function vConsulta(m, forcar) {
+  el('main').innerHTML = carimbo(m.titulo, m.serve, ['Origem', m.aba]) + '<div id="area"><div class="vazio"><b>Carregando…</b></div></div>';
+  if (CONS[m.id] && !forcar) return desenharConsulta(m);
+  chamar('sisConsultaLer', m.id).then(function (r) { CONS[m.id] = r; if (ATUAL === m.id) desenharConsulta(m); }).catch(function () {});
+}
+function desenharConsulta(m) {
+  var r = CONS[m.id], q = chave(CONS_Q), mesc = {};
+  var numLike = function (v) { v = String(v).trim(); return /^-?(R\$\s?)?[\d.]+(,\d+)?%?$/.test(v) || /^\d{2}\/\d{2}\/\d{2,4}$/.test(v); };
+  var entrada = []; // colunas com valores digitados (números/datas sem fórmula): só nelas dá para editar, inclusive células vazias
+  r.linhas.forEach(function (lin, i) { if (i < 2) return; lin.forEach(function (c, j) { if (!c.f && c.e !== 2 && numLike(c.v)) entrada[j] = (entrada[j] || 0) + 1; }); });
+  r.mesc.forEach(function (x) { mesc[x[0] + ',' + x[1]] = x[2]; });
+  var h = '<div class="barra nao-imprime"><input type="search" id="buscaCons" placeholder="Buscar nesta tela…" value="' + esc(CONS_Q) + '" oninput="CONS_Q=this.value;desenharConsulta(mod(\'' + m.id + '\'));manterFoco(\'#buscaCons\')">' +
+    '<span class="info">' + (PM.grava ? 'Toque num valor em preto para alterar. Os valores em cinza são calculados.' : 'Somente leitura.') + '</span><span class="esp"></span>' +
+    '<button class="btn sec" onclick="window.print()">Imprimir</button><button class="btn sec" onclick="vConsulta(mod(\'' + m.id + '\'),true)">Atualizar</button></div>';
+  h += '<div class="tabela cons"><table><tbody>';
+  r.linhas.forEach(function (lin, i) {
+    var vaz = lin.every(function (c) { return !String(c.v).trim(); }); if (vaz) return;
+    if (q && i > 3 && chave(lin.map(function (c) { return c.v; }).join(' ')).indexOf(q) < 0 && !lin.some(function (c) { return c.e === 2; })) return;
+    var nv = lin.filter(function (c) { return String(c.v).trim(); });
+    if (nv.length === 1 && !nv[0].e && (i < 3 || String(nv[0].v).length > 45) && lin.indexOf(nv[0]) < 2) { // título / explicação: linha inteira
+      if (i === 0) return; // o título já está no cabeçalho da tela
+      h += '<tr><td colspan="' + lin.length + '" class="' + (String(nv[0].v).length > 45 ? 'nota' : 'secao-c') + '">' + esc(nv[0].v) + '</td></tr>'; return;
+    }
+    if (nv.length === 1 && !nv[0].e && String(nv[0].v) === String(nv[0].v).toUpperCase() && /[A-ZÇÃ]{4}/.test(nv[0].v)) { h += '<tr><td colspan="' + lin.length + '" class="secao-c">' + esc(nv[0].v) + '</td></tr>'; return; }
+    h += '<tr>';
+    for (var j = 0; j < lin.length; j++) {
+      var c = lin[j], span = mesc[(i + 1) + ',' + (j + 1)] || 1, num = /^-?(R\$\s?)?[\d.]+(,\d+)?%?$/.test(String(c.v).trim());
+      var cheia = lin.some(function (x) { return String(x.v).trim(); });
+      var pode = PM.grava && !c.f && i >= 2 && c.e !== 2 && (c.op || numLike(c.v) || (!String(c.v).trim() && entrada[j] && cheia));
+      var cls = [c.f ? 'calc' : '', c.b ? 'neg' : '', c.e === 2 ? 'cab' : c.e === 1 ? 'tom' : '', num ? 'num' : '', pode ? 'edit' : ''].join(' ');
+      h += '<td' + (span > 1 ? ' colspan="' + span + '"' : '') + ' class="' + cls + '"' + (pode ? ' tabindex="0" onclick="editarCel(\'' + m.id + '\',' + (i + 1) + ',' + (j + 1) + ',this)" onkeydown="if(event.key===\'Enter\')this.click()"' : '') + '>' + esc(c.v) + '</td>';
+      j += span - 1;
+    }
+    h += '</tr>';
+  });
+  el('area').innerHTML = h + '</tbody></table></div>';
+}
+function editarCel(id, lin, col, td) {
+  if (td.querySelector('input,select')) return;
+  var c = CONS[id].linhas[lin - 1][col - 1], ant = c.v;
+  var ctl = c.op ? '<select>' + opts(c.op, c.v, '') + '</select>' : '<input value="' + esc(c.v) + '">';
+  td.innerHTML = ctl + '<span class="cel-ac"><button class="btn peq" title="Salvar">✓</button><button class="btn sec peq" title="Cancelar">✕</button></span>';
+  var e = td.querySelector('input,select'), bts = td.querySelectorAll('button');
+  var sair = function () { td.innerHTML = esc(ant); };
+  var salvar = function () {
+    var v = e.value; if (String(v) === String(ant)) return sair();
+    td.innerHTML = '<span class="info">salvando…</span>';
+    chamar('sisConsultaGravar', id, lin, col, v).then(function (r) { CONS[id] = r; desenharConsulta(mod(id)); aviso('Salvo. Os valores calculados já foram atualizados.'); }).catch(sair);
+  };
+  bts[0].onclick = function (ev) { ev.stopPropagation(); salvar(); }; bts[1].onclick = function (ev) { ev.stopPropagation(); sair(); };
+  e.onclick = function (ev) { ev.stopPropagation(); };
+  e.onkeydown = function (ev) { ev.stopPropagation(); if (ev.key === 'Enter') salvar(); if (ev.key === 'Escape') sair(); };
+  e.focus(); if (e.select) e.select();
 }
 
 /* ---------------------------------------------------------------- tabelas */
@@ -1558,7 +1616,7 @@ function vObras(forcar) {
       '<button class="btn" onclick="formNovaObra()">+ Nova obra a partir do modelo</button></div>';
     h += r.obras.length ? '<div class="obras">' + r.obras.map(function (o) {
       return '<div class="obra"><button class="abre" onclick="abrirObra(\'' + esc(o.id) + '\')"><b>' + esc(o.nome) + '</b><span>' + (o.resp ? 'Responsáveis: ' + esc(o.resp) : 'Abrir o sistema desta obra') + '</span></button>' +
-        '<div class="acoes"><a href="' + esc(o.url) + '" target="_blank">Planilha</a><a onclick="tirarObra(\'' + esc(o.id) + '\',\'' + esc(o.nome).replace(/'/g, '') + '\')">Tirar da lista</a></div></div>';
+        '<div class="acoes"><a onclick="tirarObra(\'' + esc(o.id) + '\',\'' + esc(o.nome).replace(/'/g, '') + '\')">Tirar da lista</a></div></div>';
     }).join('') + '</div>' : '<div class="vazio"><b>Nenhuma obra liberada para você ainda</b>Peça ao responsável para compartilhar a planilha da obra com o seu e-mail (como Editor), ou cadastre uma obra.</div>';
     h += '</div><details class="guia"' + (window.innerWidth > 820 ? ' open' : '') + '><summary><h2>Como funciona</h2></summary><ol>' +
       '<li>Cada obra é uma planilha, copiada do Modelo.</li>' +

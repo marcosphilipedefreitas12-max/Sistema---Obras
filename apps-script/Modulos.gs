@@ -208,7 +208,7 @@ function sisConfig_() {
 
 function sisModulo_(id) {
   var m = SIS_MODULOS.filter(function (x) { return x.id === id; })[0];
-  if (!m || m.tipo !== 'tabela') throw new Error('Módulo não encontrado: ' + id);
+  if (!m || (m.tipo !== 'tabela' && m.tipo !== 'consulta')) throw new Error('Módulo não encontrado: ' + id);
   return m;
 }
 
@@ -227,7 +227,7 @@ function sisColLetra_(n) {
 
 /** Colunas (nome, ajuda, automática?, tipo, opções) e as linhas preenchidas de uma aba. */
 function sisAbaLer(id) {
-  var m = sisModulo_(id);
+  var m = sisModulo_(id); if (m.tipo !== 'tabela') throw new Error('Tela inválida.');
   var sh = sisSS_().getSheetByName(m.aba);
   var nc = sisColNum_(m.ult), nl = m.fim - m.ini + 1;
   var cab = sh.getRange(m.hdr, 1, 1, nc);
@@ -280,7 +280,7 @@ function sisAbaLer(id) {
 /** Grava só nas colunas SEM fórmula. linha = 0 → primeira linha vazia do intervalo. */
 function sisAbaSalvar(id, linha, valores) {
   return sisComTrava_(function () {
-    var m = sisModulo_(id);
+    var m = sisModulo_(id); if (m.tipo !== 'tabela') throw new Error('Tela inválida.');
     var sh = sisSS_().getSheetByName(m.aba);
     var nc = sisColNum_(m.ult), kc = sisColNum_(m.chave);
     if (!linha) {
@@ -316,7 +316,7 @@ function sisAbaSalvar(id, linha, valores) {
 /** Apaga só o que foi digitado na linha (fórmulas ficam). */
 function sisAbaLimpar(id, linha) {
   return sisComTrava_(function () {
-    var m = sisModulo_(id);
+    var m = sisModulo_(id); if (m.tipo !== 'tabela') throw new Error('Tela inválida.');
     if (m.novo === false) throw new Error('Nesta tela as linhas não podem ser apagadas.');
     if (linha < m.ini || linha > m.fim) throw new Error('Linha fora da área de dados.');
     var sh = sisSS_().getSheetByName(m.aba);
@@ -898,4 +898,51 @@ function sisExecPrazo(iso) {
   var ss = sisSS_(), k = 'SIS_PRAZO_' + ss.getId(), p = PropertiesService.getScriptProperties();
   if (iso) p.setProperty(k, String(iso).slice(0, 10)); else p.deleteProperty(k);
   return p.getProperty(k) || '';
+}
+
+/* ---------------------------------------------------------------- abas de consulta dentro do sistema */
+/** Lê uma aba "de consulta" inteira (valores já calculados) para mostrar no sistema, sem abrir a planilha. */
+function sisConsultaLer(id) {
+  var m = sisModulo_(id); if (m.tipo !== 'consulta') throw new Error('Tela inválida.');
+  var sh = sisSS_().getSheetByName(m.aba); if (!sh) throw new Error('A aba "' + m.aba + '" não existe nesta planilha.');
+  var lr = Math.min(Math.max(sh.getLastRow(), 1), 400), lc = Math.min(Math.max(sh.getLastColumn(), 1), 70);
+  var rg = sh.getRange(1, 1, lr, lc), d = rg.getDisplayValues(), f = rg.getFormulas(), w = rg.getFontWeights(), bg = rg.getBackgrounds(), dv = rg.getDataValidations();
+  var usadas = []; for (var c = 0; c < lc; c++) for (var r = 0; r < lr; r++) if (String(d[r][c]).trim() !== '') { usadas[c] = true; break; }
+  var ult = usadas.length; // corta colunas vazias do fim
+  var escuro = function (h) { if (!h || h === '#ffffff') return 0; var x = parseInt(h.slice(1), 16), l = 0.299 * (x >> 16) + 0.587 * (x >> 8 & 255) + 0.114 * (x & 255); return l < 110 ? 2 : l < 235 ? 1 : 0; };
+  var linhas = [];
+  for (var i = 0; i < lr; i++) {
+    var cel = [];
+    for (var j = 0; j < ult; j++) {
+      var v = String(d[i][j]); if (/⌂ MENU/.test(v)) v = '';
+      var o = { v: v };
+      if (f[i][j]) o.f = 1; if (w[i][j] === 'bold') o.b = 1; var e = escuro(bg[i][j]); if (e) o.e = e;
+      var rule = dv[i][j];
+      if (rule && !f[i][j]) { try { var t = rule.getCriteriaType(), a = rule.getCriteriaValues();
+        if (t == SpreadsheetApp.DataValidationCriteria.VALUE_IN_LIST) o.op = a[0];
+        else if (t == SpreadsheetApp.DataValidationCriteria.VALUE_IN_RANGE) o.op = a[0].getDisplayValues().map(function (x) { return x[0]; }).filter(String).slice(0, 200); } catch (x) {} }
+      cel.push(o);
+    }
+    linhas.push(cel);
+  }
+  var mesc = []; try { sh.getRange(1, 1, lr, ult || 1).getMergedRanges().forEach(function (mr) { if (mr.getNumColumns() > 1) mesc.push([mr.getRow(), mr.getColumn(), mr.getNumColumns()]); }); } catch (x) {}
+  return { id: id, aba: m.aba, linhas: linhas, mesc: mesc, ncol: ult };
+}
+
+/** Altera UMA célula (sem fórmula) de uma aba de consulta e devolve a aba recalculada. */
+function sisConsultaGravar(id, linha, col, texto) {
+  return sisComTrava_(function () {
+    var m = sisModulo_(id); if (m.tipo !== 'consulta') throw new Error('Tela inválida.');
+    var sh = sisSS_().getSheetByName(m.aba), cel = sh.getRange(linha, col);
+    if (linha < 3) throw new Error('Essa parte é o título da aba.');
+    if (cel.getFormula()) throw new Error('Esse valor é calculado pela planilha e não pode ser alterado.');
+    var v = String(texto == null ? '' : texto).trim(), fmt = String(cel.getNumberFormat() || ''), dm;
+    if ((dm = v.match(/^(\d{4})-(\d{2})-(\d{2})$/)) || (dm = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)))
+      v = dm[1].length === 4 ? sisDia_(Number(dm[1]), Number(dm[2]), Number(dm[3])) : sisDia_(Number(dm[3]), Number(dm[2]), Number(dm[1]));
+    else if (v !== '' && /^-?(R\$\s?)?[\d.]*,?\d+%?$/.test(v) && !/^0\d/.test(v) && !/@/.test(fmt))
+      v = /%$/.test(v) ? Number(v.replace(/[^\d,-]/g, '').replace(',', '.')) / 100 : Number(v.replace(/R\$\s?/, '').replace(/\./g, '').replace(',', '.'));
+    cel.setValue(v);
+    SpreadsheetApp.flush();
+    return sisConsultaLer(id);
+  });
 }
