@@ -11,7 +11,7 @@ const fs = require('fs'), path = require('path');
   const b = await chromium.launch(); const erros = [];
   const abrir = async (w, h) => {
     const p = await b.newPage({ viewport: { width: w, height: h } });
-    p.on('pageerror', e => erros.push(e.message)); p.on('console', m => { if (m.type() === 'error' && !/fonts\.g/.test(m.text())) erros.push(m.text()); });
+    p.on('pageerror', e => erros.push(e.message + ' @ ' + String(e.stack).split('\n').slice(1,3).join(' '))); p.on('console', m => { if (m.type() === 'error' && !/fonts\.g/.test(m.text())) erros.push(m.text()); });
     await p.goto('file://' + path.join(dir, '_pagina.html')); await p.waitForTimeout(600); return p;
   };
   const p = await abrir(1366, 860);
@@ -25,8 +25,19 @@ const fs = require('fs'), path = require('path');
   // todas as telas do menu abrem sem erro
   for (const id of await p.evaluate(() => CFG.modulos.map(m => m.id))) { await p.evaluate(i => ir(i), id); await p.waitForTimeout(250); }
   await p.evaluate(() => ir('diario')); await p.waitForTimeout(400);
-  await p.click('text=+ Novo registro'); await p.fill('#gaveta input[type=date]', '2026-11-18'); await p.fill('#gaveta textarea, #gaveta input[id=c3]', 'Teste');
-  await p.screenshot({ path: path.join(out, 'diario_novo.png') });
+  if ((await p.locator('#area tbody tr').count()) !== 3) erros.push('diário: linhas erradas');
+  await p.fill('#fdDe', '2026-11-01'); await p.dispatchEvent('#fdDe', 'change'); await p.waitForTimeout(200);
+  if ((await p.locator('#area tbody tr').count()) !== 2) erros.push('diário: filtro de data não filtrou');
+  if (!(await p.locator('text=Passar esses textos para Ocorrências').count())) erros.push('diário: sem aviso de registros antigos');
+  await p.screenshot({ path: path.join(out, 'diario_filtro.png') });
+  await p.click('text=+ Novo registro'); await p.waitForTimeout(300); await p.fill('#gaveta input[type=date]', '2026-11-18');
+  await p.check('.serv-it:has-text("Contenção das divisas") input'); await p.check('.serv-it:has-text("Demolição e limpeza") input');
+  if (await p.inputValue('#c12') !== 'Contenção das divisas; Demolição e limpeza do terreno' && await p.inputValue('#c12') !== 'Demolição e limpeza do terreno; Contenção das divisas') erros.push('diário: serviços marcados errado: ' + await p.inputValue('#c12'));
+  await p.fill('#c13', 'Demolição do muro de divisa, trecho de 6 m');
+  await p.fill('.serv-busca', 'estrut'); await p.waitForTimeout(100);
+  if (await p.locator('.serv-it:visible').count() !== 1) erros.push('diário: busca de atividade não filtrou');
+  await p.fill('.serv-busca', '');
+  await p.screenshot({ path: path.join(out, 'diario_novo.png'), fullPage: true });
   await p.setInputFiles('#fotoArq', { name: 'foto.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==', 'base64') });
   await p.waitForTimeout(800); if (await p.locator('.fotos .foto').count() !== 1) erros.push('foto não apareceu');
   await p.click('#gaveta >> text=Salvar na planilha'); await p.waitForTimeout(500);
