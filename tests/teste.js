@@ -159,6 +159,25 @@ const fs = require('fs'), path = require('path');
   await p.keyboard.press('Control+b'); await p.waitForTimeout(200);
   if (await p.locator('#lado').isVisible()) erros.push('menu: Ctrl+B não escondeu');
   await p.keyboard.press('Control+b'); await p.waitForTimeout(200);
+  // ligações entre abas
+  await p.evaluate(() => ir('inspecoes')); await p.waitForTimeout(400); await p.click('text=+ Novo registro'); await p.waitForTimeout(400);
+  if (!(await p.locator('#lLocal option[value="301"]').count())) erros.push('ligações: Local sem lista de unidades');
+  await p.screenshot({ path: path.join(out, 'ligacao_local.png') }); await p.evaluate(() => fecharGaveta());
+  await p.evaluate(() => ir('diario')); await p.waitForTimeout(400); await p.click('#area tbody tr >> nth=0'); await p.waitForTimeout(400);
+  await p.click('#lote summary'); await p.selectOption('#ltS', '4'); await p.check('.lote-pav:has-text("Pav. 03") .lote-todo input'); await p.waitForTimeout(100);
+  if (!/2 unidade/.test(await p.innerText('#ltConta'))) erros.push('ligações: marcar pavimento inteiro não marcou');
+  await p.screenshot({ path: path.join(out, 'ligacao_diario.png') });
+  await p.click('#gaveta footer .btn.so-grava'); await p.waitForTimeout(600);
+  var lt = await p.evaluate(() => SIS_MOCK('verLote', []));
+  if (!lt || lt[1] !== 4 || lt[2].join(',') !== '301,302' || lt[3] !== 'Iniciado') erros.push('ligações: avanço pelo diário errado: ' + JSON.stringify(lt));
+  await p.evaluate(() => ir('cotacoes')); await p.waitForTimeout(400); await p.click('#area tbody tr >> nth=0'); await p.waitForTimeout(300);
+  await p.click('#gaveta >> text=Gerar compra'); await p.waitForTimeout(300); await p.screenshot({ path: path.join(out, 'ligacao_compra.png') });
+  await p.click('#gaveta footer .btn.so-grava'); await p.waitForTimeout(600);
+  await p.evaluate(() => ir('compras')); await p.waitForTimeout(400); await p.click('#area tbody tr >> nth=0'); await p.waitForTimeout(500);
+  await p.click('#gaveta >> text=Lançar em Lançamentos'); await p.waitForTimeout(300); await p.click('#gaveta footer .btn.so-grava'); await p.waitForTimeout(500);
+  await p.click('#area tbody tr >> nth=0'); await p.waitForTimeout(600);
+  if (!/Já lançada/.test(await p.innerText('#gaveta footer'))) erros.push('ligações: compra lançada não aparece como lançada');
+  await p.evaluate(() => fecharGaveta());
   // mapa das unidades
   await p.evaluate(() => ir('unidades')); await p.waitForTimeout(500);
   if ((await p.locator('.u-card').count()) !== 10) erros.push('unidades: cards errados');

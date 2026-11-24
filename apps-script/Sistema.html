@@ -276,6 +276,12 @@
   .rap-itens { display: flex; flex-wrap: wrap; gap: 5px; } .rap-itens em { font-style: normal; font-size: 11.5px; border: 1px solid var(--linha); border-radius: 10px; padding: 1px 8px; color: var(--aco); }
   .rap-vai { margin-top: auto; display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: var(--azul-t); } .rap-vai .ico { width: 15px; height: 15px; }
   .rap-pe { font-size: 12px; color: var(--aco); margin: 12px 0 0; }
+  .lote { border: 1px solid var(--linha); padding: 8px 10px; margin: 6px 0 12px; } .lote summary { cursor: pointer; font-weight: 500; }
+  .lote-uns { max-height: 240px; overflow-y: auto; border-top: 1px solid var(--linha2); margin-top: 6px; }
+  .lote-pav { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--linha2); }
+  .lote-todo { font-weight: 500; font-size: 12.5px; min-width: 74px; display: inline-flex; gap: 5px; align-items: center; }
+  .lote-u { display: inline-flex; gap: 3px; align-items: center; font-size: 12.5px; border: 1px solid var(--linha); border-radius: 4px; padding: 2px 6px; cursor: pointer; }
+  .lote input[type=checkbox] { width: auto; min-height: 0; margin: 0; } .lote-u:has(input:checked) { background: var(--azul-f); border-color: var(--azul2); }
   .faixa.dinheiro b { font-size: 24px; }
   .fich-pres { margin: 2px 0 10px; } .fich-pres .ruim { color: var(--verm); }
   .fich-pags { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--linha2); }
@@ -1470,6 +1476,7 @@ function filtrarServ(q) {
 }
 function abrirLinha(id, linha, pre) {
   if (mod(id).servicos >= 0 && !ATIV) return carregarAtividades(function () { abrirLinha(id, linha, pre); });
+  if ((mod(id).servicos >= 0 || mod(id).local >= 0) && !UNIDS) return carregarUnids(function () { abrirLinha(id, linha, pre); });
   var m = mod(id), t = CACHE[id], l = linha ? t.linhas.filter(function (x) { return x.linha === linha; })[0] : { linha: 0, d: [], v: pre || {} };
   var digit = t.cols.filter(function (c) { return !c.auto; }), auto = t.cols.filter(function (c) { return c.auto; });
   if (m.dias >= 0) { // dias da semana logo depois da atividade
@@ -1482,6 +1489,7 @@ function abrirLinha(id, linha, pre) {
     var v = valorCampo(c, l.v[c.i]), idc = 'c' + c.i, ctl, obrig = t.cols[t.chave] === c;
     if (m.dias === c.i) return campoDias(c, v);
     if (m.servicos === c.i) return campoServicos(c, v);
+    if (m.local === c.i) return campoLocal(c, v);
     if (m.descricao === c.i) return '<div class="campo"><label for="' + idc + '">' + esc(c.nome) + '</label><textarea id="' + idc + '" rows="4" placeholder="Ex.: Demolição do muro de divisa lado esquerdo, trecho de 6 m. Chuva às 14h parou o serviço.">' + esc(v) + '</textarea><div class="aj">Descreva o que foi executado (onde e o quê) e as ocorrências do dia: visitas, acidentes, falta de material, chuva.</div></div>';
     if (m.fotos === c.i) return '<input type="hidden" id="' + idc + '" value="' + esc(v) + '">' + blocoFotos(id, linha); // coluna de fotos vira o bloco de fotos
     if (c.tipo === 'data') ctl = '<input id="' + idc + '" type="date" value="' + esc(String(v).slice(0, 10)) + '">';
@@ -1491,12 +1499,20 @@ function abrirLinha(id, linha, pre) {
     else ctl = '<input id="' + idc + '" value="' + esc(v) + '"' + (c.tipo === 'numero' ? ' inputmode="decimal"' : '') + '>';
     return '<div class="campo"><label for="' + idc + '">' + esc(c.nome) + (obrig ? ' (obrigatório)' : '') + '</label>' + ctl + (c.ajuda ? '<div class="aj">' + esc(c.ajuda) + '</div>' : '') + '</div>';
   }).join('');
+  if (m.servicos >= 0 && UNIDS && UNIDS.unidades.length) h += blocoLote();
   if (auto.length && linha) h += '<div class="secao">Calculado pela planilha<small>Atualiza sozinho depois de salvar.</small></div><div class="auto">' +
     auto.map(function (c) { return '<span>' + esc(c.nome) + '</span><span>' + (esc(l.d[t.cols.indexOf(c)]) || '—') + '</span>'; }).join('') + '</div>';
   h += '</div><footer>' + (linha && t.novo && PM.apaga ? '<button class="btn perigo" onclick="limparLinha(\'' + id + '\',' + linha + ')">Apagar registro</button>' : '') +
+    (id === 'cotacoes' && linha && PM.grava ? (String(l.v[38]) === 'Fechado' && String(l.v[35] || '').trim() && !String(l.v[39] || '').trim() ? '<button class="btn sec" onclick="gerarCompra(' + linha + ')">Gerar compra</button>' :
+      String(l.v[39] || '').trim() ? '<span class="info">Pedido: ' + esc(l.v[39]) + '</span>' : '<span class="info" title="Status Fechado e fornecedor escolhido">Gerar compra: feche a cotação e escolha o fornecedor</span>') : '') +
+    (id === 'compras' && linha && PM.grava && mod('lancamentos') ? '<span id="btLancCompra"><span class="info">Conferindo lançamento…</span></span>' : '') +
     '<span style="flex:1"></span><button class="btn sec" onclick="fecharGaveta()">Cancelar</button><button class="btn so-grava" onclick="salvarLinha(\'' + id + '\',' + (linha || 0) + ')">Salvar na planilha</button></footer>';
   abrirGaveta(h);
   if (m.fotos >= 0 && linha) carregarFotos(id, linha);
+  if (id === 'compras' && linha && el('btLancCompra')) api('sisComprasLancadas').then(function (o) {
+    var n = String(l.v[0] || '').trim() || ('L' + linha), b = el('btLancCompra'); if (!b) return;
+    b.innerHTML = o[n] ? '<span class="info">Já lançada (linha ' + o[n] + ' de Lançamentos)</span>' : '<button class="btn sec" onclick="lancarCompra(' + linha + ')">Lançar em Lançamentos</button>';
+  }).catch(function () { if (el('btLancCompra')) el('btLancCompra').innerHTML = ''; });
 }
 
 /* ---------------------------------------------------------------- fotos */
@@ -1566,10 +1582,18 @@ function salvarLinha(id, linha) {
     var velho = valorCampo(c, l.v[c.i]); if (c.tipo === 'data') velho = String(velho).slice(0, 10);
     if (String(e.value) !== String(velho)) { mud[c.i] = e.value; n++; }
   });
+  var lote = mod(id).servicos >= 0 ? loteEscolhido() : null;
+  if (lote && !lote.uns.length) lote = null;
+  if (lote && lote.erro) { aviso(lote.erro, 5000); return; }
+  if (!n && lote) { var dt = valorCampo(t.cols[t.chave], l.v[t.cols[t.chave].i]); return salvarLote(lote, String(dt).slice(0, 10), function () { fecharGaveta(); }); }
   if (!n) { fecharGaveta(); aviso('Nada foi alterado.'); return; }
   var k = t.cols[t.chave];
   if (!linha && k && !String(mud[k.i] || '').trim()) { aviso('Preencha "' + k.nome + '": é o campo que identifica o registro.', 5000); return; }
-  chamar('sisAbaSalvar', id, linha, mud).then(function (r) { CACHE[id] = r; fecharGaveta(); desenharTabela(mod(id)); aviso('Salvo na planilha (linha ' + r.salva + ').'); });
+  var dataReg = String(el('c' + k.i) ? el('c' + k.i).value : '').slice(0, 10);
+  chamar('sisAbaSalvar', id, linha, mud).then(function (r) {
+    CACHE[id] = r; fecharGaveta(); desenharTabela(mod(id)); aviso('Salvo na planilha (linha ' + r.salva + ').');
+    if (lote) salvarLote(lote, dataReg);
+  });
 }
 function limparLinha(id, linha) {
   if (!confirm('Apagar o que foi digitado nesta linha? As fórmulas da planilha continuam.')) return;
@@ -1972,6 +1996,61 @@ function diarAte(linha) {
 }
 function diarAteOk(linha, v) { chamar('sisDiaristaAte', linha, v).then(function (r) { DIAR = r; fecharGaveta(); desenharDiaristas(); aviso('Salvo.'); }).catch(function () {}); }
 
+/* ---------------------------------------------------------------- ligações: unidades no Local, avanço pelo Diário, cotação → compra → lançamento */
+var UNIDS = null;
+function carregarUnids(depois) {
+  api('sisUnidadesNomes').then(function (r) { UNIDS = r; depois(); }).catch(function () { UNIDS = { unidades: [], servicos: [] }; depois(); });
+}
+function campoLocal(c, v) {
+  var pavs = UNIDS.unidades.map(function (u) { return u.pav; }).filter(function (x, i, a) { return x && a.indexOf(x) === i; }).sort(function (a, b) { return Number(b) - Number(a); });
+  var ops = UNIDS.unidades.map(function (u) { return '<option value="' + esc(u.un) + '">Pav. ' + esc(u.pav) + ' · ' + esc(u.tipo) + '</option>'; }).join('') +
+    pavs.map(function (p) { return '<option value="Pav. ' + esc(p) + ' (área comum)">'; }).join('') +
+    ['Térreo (área comum)', 'Fachada', 'Cobertura', 'Garagem / subsolo', 'Área externa'].map(function (x) { return '<option value="' + x + '">'; }).join('');
+  return '<div class="campo"><label for="c' + c.i + '">' + esc(c.nome) + '</label><input id="c' + c.i + '" list="lLocal" value="' + esc(v) + '" placeholder="Ex.: 401, Loja 02 ou Pav. 04 (área comum)" autocomplete="off"><datalist id="lLocal">' + ops + '</datalist>' +
+    '<div class="aj">Escolha a unidade na lista (aparece na ficha da unidade, no mapa) ou escreva a área comum.</div></div>';
+}
+function blocoLote() {
+  var pavs = {}; UNIDS.unidades.forEach(function (u) { (pavs[u.pav] = pavs[u.pav] || []).push(u); });
+  var ks = Object.keys(pavs).sort(function (a, b) { return Number(b) - Number(a); });
+  return '<details class="lote" id="lote"><summary>Avanço nas unidades <span class="info">(opcional — vai para o mapa das unidades)</span></summary>' +
+    '<div class="duas">' + campo('Serviço da unidade', '<select id="ltS"><option value="">Escolha…</option>' + UNIDS.servicos.map(function (x) { return '<option value="' + x.i + '">' + esc(x.rotulo) + '</option>'; }).join('') + '</select>') +
+    campo('O que aconteceu', '<select id="ltE" onchange="el(\'ltPc\').style.display=this.value===\'Andamento\'?\'\':\'none\'"><option>Iniciado</option><option>Andamento</option><option value="Concluído">Concluído (grava a data de pronto)</option></select>') + '</div>' +
+    '<div id="ltPc" style="display:none">' + campo('% executado', '<input id="ltP" type="number" min="0" max="100" step="5" style="width:110px">') + '</div>' +
+    '<div class="lote-uns" role="group" aria-label="Unidades">' + ks.map(function (p) {
+      return '<div class="lote-pav"><label class="lote-todo"><input type="checkbox" onchange="[].forEach.call(this.closest(\'.lote-pav\').querySelectorAll(\'.lu\'),function(x,i){x.checked=this.checked}.bind(this));loteConta()"> Pav. ' + esc(p) + '</label>' +
+        pavs[p].sort(function (a, b) { return a.un < b.un ? -1 : 1; }).map(function (u) { return '<label class="lote-u"><input type="checkbox" class="lu" value="' + esc(u.un) + '" onchange="loteConta()">' + esc(u.un) + '</label>'; }).join('') + '</div>';
+    }).join('') + '</div><p class="info" id="ltConta">Nenhuma unidade marcada.</p></details>';
+}
+function loteConta() { var n = document.querySelectorAll('.lote .lu:checked').length; if (el('ltConta')) el('ltConta').textContent = n ? n + ' unidade(s) marcada(s).' : 'Nenhuma unidade marcada.'; }
+function loteEscolhido() {
+  if (!el('lote')) return null;
+  var uns = [].map.call(document.querySelectorAll('.lote .lu:checked'), function (x) { return x.value; });
+  if (!uns.length) return { uns: [] };
+  if (!el('ltS').value) return { uns: uns, erro: 'Escolha o serviço do avanço nas unidades (ou desmarque as unidades).' };
+  var p = el('ltP').value; if (el('ltE').value === 'Andamento' && (p === '' || Number(p) < 0 || Number(p) > 100)) return { uns: uns, erro: 'Informe o % executado (0 a 100).' };
+  return { uns: uns, col: Number(el('ltS').value), ev: el('ltE').value, pct: el('ltE').value === 'Andamento' ? Number(p) : '' };
+}
+function salvarLote(lote, data, depois) {
+  if (!data) { aviso('O avanço nas unidades precisa da data do registro.', 5000); return; }
+  chamar('sisUnidadesLote', data, lote.col, lote.uns, lote.ev, lote.pct, 'Pelo Diário de Obra de ' + br(data)).then(function (n) {
+    UN = null; aviso('Diário salvo e avanço registrado em ' + n + ' unidade(s).', 5000); if (depois) depois();
+  }).catch(function () {});
+}
+function gerarCompra(linha) {
+  var l = CACHE.cotacoes.linhas.filter(function (x) { return x.linha === linha; })[0];
+  abrirGaveta('<header><h2>Gerar compra</h2><div class="info">' + esc(l.v[0] || '') + ' · ' + esc(l.v[4] || '') + '</div></header><div class="conteudo">' +
+    '<dl class="u-cad"><div><dt>Fornecedor escolhido</dt><dd>' + esc(l.v[35]) + '</dd></div>' + (PM.custos ? '<div><dt>Valor fechado</dt><dd>' + esc(String(l.d[CACHE.cotacoes.cols.map(function (c) { return c.i; }).indexOf(36)] || '')) + '</dd></div>' : '') +
+    '<div><dt>Quantidade</dt><dd>' + esc(String(l.v[6] || '—')) + ' ' + esc(l.v[5] || '') + '</dd></div><div><dt>Etapa</dt><dd>' + esc(l.v[2] || '—') + '</dd></div></dl>' +
+    '<p>Cria uma linha nova em <b>Compras</b> com esses dados (data do pedido = hoje) e escreve o nº da compra em "Nº contrato / pedido" desta cotação.</p><p class="info">Depois, abra a compra para completar entrega prevista e observações.</p></div>' +
+    '<footer><span style="flex:1"></span><button class="btn sec" onclick="fecharGaveta()">Cancelar</button><button class="btn so-grava" onclick="chamar(\'sisCotacaoCompra\',' + linha + ').then(function(r){fecharGaveta();CACHE.cotacoes=null;CACHE.compras=null;aviso(\'Compra nº \'+r.compra+\' criada em Compras.\',5000);vTabela(mod(\'cotacoes\'),true)}).catch(function(){})">Gerar compra</button></footer>');
+}
+function lancarCompra(linha) {
+  var l = CACHE.compras.linhas.filter(function (x) { return x.linha === linha; })[0];
+  abrirGaveta('<header><h2>Lançar compra</h2><div class="info">Compra nº ' + esc(String(l.v[0] || '')) + ' · ' + esc(l.v[1] || '') + '</div></header><div class="conteudo">' +
+    '<p>Cria uma linha em <b>Lançamentos</b> (categoria Material, situação Lançado) com material, fornecedor, etapa, quantidade e valor desta compra. Não lança duas vezes.</p>' +
+    campo('Vencimento / previsão de pagamento', '<input id="lcV" type="date">', 'Pode deixar em branco e preencher depois em Lançamentos.') +
+    '</div><footer><span style="flex:1"></span><button class="btn sec" onclick="fecharGaveta()">Cancelar</button><button class="btn so-grava" onclick="chamar(\'sisCompraLancar\',' + linha + ',el(\'lcV\').value).then(function(r){fecharGaveta();CACHE.lancamentos=null;aviso(\'Lançada na linha \'+r.linha+\' de Lançamentos.\',5000)}).catch(function(){})">Lançar</button></footer>');
+}
 /* ---------------------------------------------------------------- MAPA DE CONTROLE DAS UNIDADES */
 var UN = null, UNF = { busca: '', pav: '', tipo: '', st: '', serv: '', resp: '', de: '', ate: '' }, UN_VISTA = 'mapa';
 var UN_ST = {
@@ -2429,7 +2508,7 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { fe
 /* ---------------------------------------------------------------- obras */
 function urlObra(id) { if (window.google && google.script && google.script.history) google.script.history.replace(null, id ? { obra: id } : {}); }
 function abrirObra(id) {
-  OBRA = id; D = null; CFG = null; CACHE = {}; ATIV = null; PERIODO = {}; BUSCA = {}; LIMITE = {}; ATUAL = 'inicio'; urlObra(id);
+  OBRA = id; D = null; CFG = null; CACHE = {}; ATIV = null; UNIDS = null; PERIODO = {}; BUSCA = {}; LIMITE = {}; ATUAL = 'inicio'; urlObra(id);
   el('app').classList.remove('sem-lado');
   el('lado').innerHTML = ''; el('main').innerHTML = '<div class="vazio"><b>Abrindo a planilha da obra…</b>Isso leva alguns segundos.</div>';
   chamar('sisCarregar').then(function (r) {
