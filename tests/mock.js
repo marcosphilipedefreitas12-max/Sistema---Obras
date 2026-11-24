@@ -133,6 +133,8 @@ window.SIS_MOCK = (function () {
     if (fn === 'sisCompraLancar') { if (st.lancada) throw new Error('Esta compra já foi lançada (linha 40 de Lançamentos).'); st.lancada = true; return { linha: 40 }; }
     if (fn === 'sisAtividades') return [{ etapa: 'Preliminares', atividade: 'Canteiro: tapume e barracão' }, { etapa: 'Infraestrutura', atividade: 'Demolição e limpeza do terreno' }, { etapa: 'Infraestrutura', atividade: 'Contenção das divisas' }, { etapa: 'Estrutura', atividade: 'Estrutura Pav 01 — Térreo' }];
     if (fn === 'sisDiarioPadronizar') return 1;
+    if (fn === 'sisDiarioClassificar') { st.cls = args[0]; return args[0].length; }
+    if (fn === 'verCls') return st.cls;
     if (fn === 'sisAtalhos') { st.atalhos = args[0]; return args[0]; }
     if (fn === 'sisPensao') { st.pens = st.pens || {}; var sv = args[0]; if (sv) { if (Number(sv.pens)) st.pens[sv.linha] = { pens: Number(sv.pens), base: sv.base }; else delete st.pens[sv.linha]; } return JSON.parse(JSON.stringify(st.pens)); }
     if (/^sisFichado/.test(fn) || (/^sisDiarista(Pago|Cancelar|Previsao)$/.test(fn) && st.fich && st.fich.pags.some(function (g) { return g.lanc === args[0]; }))) {

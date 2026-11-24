@@ -282,6 +282,9 @@
   .lote-todo { font-weight: 500; font-size: 12.5px; min-width: 74px; display: inline-flex; gap: 5px; align-items: center; }
   .lote-u { display: inline-flex; gap: 3px; align-items: center; font-size: 12.5px; border: 1px solid var(--linha); border-radius: 4px; padding: 2px 6px; cursor: pointer; }
   .lote input[type=checkbox] { width: auto; min-height: 0; margin: 0; } .lote-u:has(input:checked) { background: var(--azul-f); border-color: var(--azul2); }
+  .cls-it { border-top: 1px solid var(--linha2); padding: 8px 0; display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 4px 10px; align-items: start; }
+  .cls-it p { margin: 0; font-size: 13px; color: var(--aco); } .cls-it select { grid-column: 2; } .cls-ok { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; } .cls-ok input { width: auto; min-height: 0; }
+  @media (max-width: 600px) { .cls-it { grid-template-columns: 1fr; } .cls-it select { grid-column: 1; } }
   .faixa.dinheiro b { font-size: 24px; }
   .fich-pres { margin: 2px 0 10px; } .fich-pres .ruim { color: var(--verm); }
   .fich-pags { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--linha2); }
@@ -597,7 +600,7 @@ function dias(iso) { if (!iso) return null; return Math.round((new Date(String(i
 function br(iso) { if (!iso) return ''; var p = String(iso).slice(0, 10).split('-'); return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : iso; }
 function brCurta(iso) { var b = br(iso); return b.length === 10 ? b.slice(0, 6) + b.slice(8) : b; }
 function rs(v) { return v == null || v === '' ? '—' : 'R$ ' + Number(v).toLocaleString('pt-BR', { maximumFractionDigits: 0 }); }
-function chave(s) { return String(s || '').trim().toLowerCase().replace(/\s+/g, ' '); }
+function chave(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim(); }  // busca sem acento, ponto ou maiúscula
 function opts(lista, sel, vazio) { return (vazio != null ? '<option value="">' + esc(vazio) + '</option>' : '') + lista.map(function (o) { return '<option' + (String(o) === String(sel) ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join(''); }
 function mod(id) { return CFG.modulos.filter(function (m) { return m.id === id; })[0]; }
 function manterFoco(sel) { setTimeout(function () { var x = document.querySelector(sel); if (x) { x.focus(); x.setSelectionRange(x.value.length, x.value.length); } }); }
@@ -1410,6 +1413,33 @@ function carregarAtividades(depois) {
   if (ATIV) return depois && depois();
   api('sisAtividades').then(function (l) { ATIV = { lista: l, nomes: {} }; l.forEach(function (a) { ATIV.nomes[a.atividade] = 1; }); if (depois) depois(); }).catch(function () { ATIV = { lista: [], nomes: {} }; if (depois) depois(); });
 }
+var SERVF = {}, CLASSIF = [];
+/* Sugere a atividade do Cronograma mais parecida com um texto livre (palavras em comum, sem acento e sem plural). */
+function sugerirAtividade(txt) {
+  // palavras raras valem mais (uma palavra que só aparece numa atividade, como "demolição", decide; "entrega", que aparece em várias, quase não pesa)
+  var stop = ' de da do das dos na no nas nos com para pela pelo que uma um e a o em ao os as foi sera ser hoje obra dia engenheiro apoio conforme etapas '.split(' ');
+  var pal = function (x) { return chave(x).split(' ').filter(function (w) { return w.length >= 4 && stop.indexOf(w) < 0; }).map(function (w) { return w.replace(/s$/, '').slice(0, 7); }); };
+  if (!ATIV.df) { ATIV.df = {}; ATIV.lista.forEach(function (a) { pal(a.etapa + ' ' + a.atividade).filter(function (w, i, l) { return l.indexOf(w) === i; }).forEach(function (w) { ATIV.df[w] = (ATIV.df[w] || 0) + 1; }); }); }
+  var p = pal(txt).filter(function (w, i, l) { return l.indexOf(w) === i; }), melhor = null, nota = 0;
+  ATIV.lista.forEach(function (a) { var q = pal(a.etapa + ' ' + a.atividade), n = p.reduce(function (s0, w) { return s0 + (q.indexOf(w) >= 0 ? 1 / ATIV.df[w] : 0); }, 0); if (n > nota) { nota = n; melhor = a.atividade; } });
+  return nota >= 1 ? melhor : 'Outro (ver Ocorrências)';
+}
+function diarioClassificar() {
+  var t = CACHE.diario, m = mod('diario'), ops = ATIV.lista.map(function (a) { return a.atividade; }).concat(['Outro (ver Ocorrências)']);
+  abrirGaveta('<header><h2>Classificar registros antigos</h2><div class="info">' + CLASSIF.length + ' registro(s) com "Serviços executados" escrito à mão</div></header><div class="conteudo">' +
+    '<p class="info" style="margin-top:0">Para cada dia, confira o serviço sugerido (o mais parecido da lista do Cronograma). Ao aplicar, o texto antigo vai para <b>Ocorrências</b> ("Executado: …") e "Serviços executados" fica com o serviço escolhido. Nada é apagado.</p>' +
+    CLASSIF.slice().sort(function (a, b) { return String(a.v[t.cols[t.chave].i]) < String(b.v[t.cols[t.chave].i]) ? -1 : 1; }).map(function (l) {
+      var txt = String(l.v[m.servicos] || ''), sug = sugerirAtividade(txt);
+      return '<div class="cls-it"><label class="cls-ok"><input type="checkbox" checked data-l="' + l.linha + '"> <b>' + esc(br(String(l.v[t.cols[t.chave].i]).slice(0, 10))) + '</b></label><p>' + esc(txt) + '</p>' +
+        '<select data-s="' + l.linha + '" aria-label="Serviço para ' + esc(txt) + '">' + ops.map(function (o) { return '<option' + (o === sug ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') + '</select></div>';
+    }).join('') + '</div><footer><span style="flex:1"></span><button class="btn sec" onclick="fecharGaveta()">Cancelar</button><button class="btn so-grava" onclick="diarioClassificarOk()">Aplicar</button></footer>');
+  el('gaveta').classList.add('larga');
+}
+function diarioClassificarOk() {
+  var itens = [].filter.call(document.querySelectorAll('.cls-ok input:checked'), function () { return true; }).map(function (c) { var ln = c.getAttribute('data-l'); return { linha: Number(ln), servicos: document.querySelector('select[data-s="' + ln + '"]').value }; });
+  if (!itens.length) return aviso('Marque ao menos um registro.');
+  chamar('sisDiarioClassificar', itens).then(function (n) { fecharGaveta(); aviso(n + ' registro(s) classificado(s).', 5000); vTabela(mod('diario'), true); }).catch(function () {});
+}
 function diarioPadronizar(n) {
   abrirGaveta('<header><h2>Padronizar registros antigos</h2></header><div class="conteudo"><p>' + n + ' registro(s) têm "Serviços executados" escrito à mão. O texto vai para <b>Ocorrências</b>, começando com "Executado: …" (o que já estava em Ocorrências fica depois, com "Ocorrência: …"), e "Serviços executados" fica vazio para você marcar pela lista do Cronograma.</p><p class="info">Nada é apagado: o texto só muda de coluna.</p></div>' +
     '<footer><span style="flex:1"></span><button class="btn sec" onclick="fecharGaveta()">Cancelar</button><button class="btn" onclick="api(\'sisDiarioPadronizar\').then(function(k){fecharGaveta();aviso(k+\' registro(s) ajustado(s).\');vTabela(mod(\'diario\'),true)}).catch(function(e){aviso(\'Não ajustou: \'+(e.message||e),6000)})">Passar para Ocorrências</button></footer>');
@@ -1422,13 +1452,22 @@ function desenharTabela(m) {
   var ls = q ? t.linhas.filter(function (l) { return chave(l.d.join(' ')).indexOf(q) >= 0; }) : t.linhas;
   // Filtro de período quando a coluna-chave é data (Diário, Produção, Lançamentos…)
   var temData = t.cols[t.chave] && t.cols[t.chave].tipo === 'data', fd = PERIODO[m.id] || {};
+  var fs = m.servicos >= 0 ? (SERVF[m.id] || '') : '';
+  if (fs) ls = ls.filter(function (l) { return String(l.v[m.servicos] || '').split(/\s*;\s*/).indexOf(fs) >= 0; });
   if (temData && (fd.de || fd.ate)) ls = ls.filter(function (l) { var d = String(l.v[t.cols[t.chave].i] || '').slice(0, 10); return d && (!fd.de || d >= fd.de) && (!fd.ate || d <= fd.ate); });
   var filtroData = temData ? '<div class="filtro-data" role="group" aria-label="Período"><label>De <input type="date" id="fdDe" value="' + esc(fd.de || '') + '" onchange="periodoTab(\'' + m.id + '\')"></label>' +
     '<label>até <input type="date" id="fdAte" value="' + esc(fd.ate || '') + '" onchange="periodoTab(\'' + m.id + '\')"></label>' +
     '<select aria-label="Período rápido" onchange="periodoRapido(\'' + m.id + '\',this.value)"><option value="">Período…</option><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="mes">Este mês</option><option value="mesant">Mês passado</option><option value="tudo">Tudo</option></select>' +
     (fd.de || fd.ate ? '<button class="btn sec peq" onclick="PERIODO[\'' + m.id + '\']={};desenharTabela(mod(\'' + m.id + '\'))">Limpar</button>' : '') + '</div>' : '';
-  var antigos = m.servicos >= 0 && PM.admin && ATIV ? t.linhas.filter(function (l) { var x = String(l.v[m.servicos] || '').trim(); return x && !x.split(/\s*;\s*/).every(function (y) { return ATIV.nomes[y] || /^Outro/.test(y); }); }).length : 0;
-  var h = (m.mapa ? '<div class="barra nao-imprime"><button class="btn sec" onclick="UN_VISTA=\'mapa\';vUnidades(mod(\'' + m.id + '\'))">← Voltar ao mapa</button><span class="info">Tabela da aba ' + esc(m.aba) + '</span></div>' : '') + (m.dias >= 0 ? abasVista(m) : '') + filtroData + (antigos ? '<div class="aviso-orc nao-imprime">' + antigos + ' registro(s) antigo(s) têm "Serviços executados" em texto livre. <button class="btn sec peq" onclick="diarioPadronizar(' + antigos + ')">Passar esses textos para Ocorrências</button></div>' : '') +
+  var antigosL = m.servicos >= 0 && ATIV ? t.linhas.filter(function (l) { var x = String(l.v[m.servicos] || '').trim(); return x && !x.split(/\s*;\s*/).every(function (y) { return ATIV.nomes[y] || /^Outro/.test(y); }); }) : [], antigos = PM.admin ? antigosL.length : 0;
+  if (m.servicos >= 0 && ATIV) {
+    var usados = {}; t.linhas.forEach(function (l) { String(l.v[m.servicos] || '').split(/\s*;\s*/).forEach(function (y) { if (ATIV.nomes[y] || /^Outro/.test(y)) usados[y] = (usados[y] || 0) + 1; }); });
+    var ks = Object.keys(usados);
+    if (ks.length) filtroData += '<div class="filtro-data"><label>Serviço <select onchange="SERVF[\'' + m.id + '\']=this.value;desenharTabela(mod(\'' + m.id + '\'))"><option value="">Todos</option>' +
+      ATIV.lista.map(function (a) { return a.atividade; }).concat(['Outro (ver Ocorrências)']).filter(function (y) { return usados[y]; }).map(function (y) { return '<option value="' + esc(y) + '"' + (fs === y ? ' selected' : '') + '>' + esc(y) + ' (' + usados[y] + ')</option>'; }).join('') + '</select></label></div>';
+  }
+  CLASSIF = antigosL;
+  var h = (m.mapa ? '<div class="barra nao-imprime"><button class="btn sec" onclick="UN_VISTA=\'mapa\';vUnidades(mod(\'' + m.id + '\'))">← Voltar ao mapa</button><span class="info">Tabela da aba ' + esc(m.aba) + '</span></div>' : '') + (m.dias >= 0 ? abasVista(m) : '') + filtroData + (antigos ? '<div class="aviso-orc nao-imprime">' + antigos + ' registro(s) antigo(s) têm "Serviços executados" em texto livre. <button class="btn sec peq" onclick="diarioClassificar()">Classificar pela lista do Cronograma</button></div>' : '') +
     '<div class="barra"><input type="search" id="buscaTab" aria-label="Buscar nesta lista" placeholder="Buscar nesta lista…" value="' + esc(BUSCA[m.id] || '') + '" oninput="BUSCA[\'' + m.id + '\']=this.value;desenharTabela(mod(\'' + m.id + '\'));manterFoco(\'#buscaTab\')">' +
     '<span class="info">' + ls.length + ' registro(s)</span><span class="esp"></span>' +
     '<button class="btn sec" onclick="vTabela(mod(\'' + m.id + '\'),true)">Atualizar</button>' +
