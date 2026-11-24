@@ -263,6 +263,19 @@
   .u-tl li::before { content: ''; position: absolute; left: -20px; top: 9px; width: 9px; height: 9px; border-radius: 50%; background: var(--azul2); } .u-tl time { display: block; font-size: 11.5px; color: var(--aco); } .u-tl p { margin: 2px 0; }
   @media (max-width: 820px) { .u-pav { grid-template-columns: 44px minmax(0, 1fr); } .u-linha { grid-template-columns: repeat(var(--ncol, 10), 66px); } .u-card { min-height: 64px; } .u-card small { display: none; } .u-card b { font-size: 17px; } .u-serv { grid-template-columns: minmax(0, 1fr) auto; } .u-serv-bt { grid-column: 1 / 3; } }
   @media print { .u-card, .u-dot, .u-chip, .u-kpi { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .u-mapa { overflow: visible; } }
+  .rap-fundo { position: fixed; inset: 0; background: rgba(15, 20, 24, .55); z-index: 60; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .rap { background: var(--papel); color: var(--tinta); width: min(760px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; border-top: 4px solid var(--sinal); padding: 20px 22px; }
+  .rap-cab { display: flex; justify-content: space-between; gap: 12px; } .rap-cab h2 { font-family: var(--titulo); font-size: 26px; margin: 0; } .rap-cab p { margin: 2px 0 14px; color: var(--aco); font-size: 13.5px; }
+  .rap-x { background: none; border: 0; font-size: 28px; line-height: 1; color: var(--aco); cursor: pointer; padding: 0 4px; height: 32px; }
+  .rap-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+  .rap-card { text-align: left; font: inherit; color: var(--tinta); background: var(--papel); border: 1px solid var(--linha); border-left: 5px solid var(--rc); padding: 16px; cursor: pointer; display: flex; flex-direction: column; gap: 8px; min-height: 210px; }
+  .rap-card:hover { background: var(--hover); } .rap-card:focus-visible { outline: 3px solid var(--sinal); outline-offset: 2px; }
+  .rap-eq { --rc: var(--azul); } .rap-desp { --rc: var(--verde); }
+  .rap-ico { width: 44px; height: 44px; border-radius: 10px; background: var(--rc); color: #fff; display: flex; align-items: center; justify-content: center; } .rap-ico .ico { width: 24px; height: 24px; }
+  .rap-card b { font-family: var(--titulo); font-size: 21px; } .rap-txt { font-size: 13px; color: var(--aco); }
+  .rap-itens { display: flex; flex-wrap: wrap; gap: 5px; } .rap-itens em { font-style: normal; font-size: 11.5px; border: 1px solid var(--linha); border-radius: 10px; padding: 1px 8px; color: var(--aco); }
+  .rap-vai { margin-top: auto; display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: var(--azul-t); } .rap-vai .ico { width: 15px; height: 15px; }
+  .rap-pe { font-size: 12px; color: var(--aco); margin: 12px 0 0; }
   .faixa.dinheiro b { font-size: 24px; }
   .fich-pres { margin: 2px 0 10px; } .fich-pres .ruim { color: var(--verm); }
   .fich-pags { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--linha2); }
@@ -618,11 +631,18 @@ var ICO = {
 };
 function ico(n, cls) { return '<svg class="ico ' + (cls || '') + '" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + (ICO[n] || '') + '</svg>'; }
 var MENU_GR = (function () { try { return JSON.parse(localStorage.getItem('sisMenuGr') || '{}'); } catch (e) { return {}; } })();
+/* "Lançamento rápido": um atalho só no lugar de Pagamentos da equipe + Lançamentos (as duas telas continuam no Financeiro). */
+var RAPIDO_DE = ['diaristas', 'lancamentos', 'rapido'];
+function rapidoOpcoes() { return ['diaristas', 'lancamentos'].filter(function (id) { return mod(id); }); }
 function atalhosLista() {
-  var l = D.atalhos || ['diario', 'presenca', 'diaristas', 'lancamentos'];
-  return l.filter(function (id) { return mod(id); });
+  var l = (D.atalhos || ['diario', 'presenca', 'rapido']).slice(), k = -1;
+  l.forEach(function (id, i) { if (k < 0 && RAPIDO_DE.indexOf(id) >= 0) k = i; });
+  l = l.filter(function (id) { return RAPIDO_DE.indexOf(id) < 0; });
+  if (k >= 0 && rapidoOpcoes().length) l.splice(Math.min(k, l.length), 0, 'rapido');
+  return l.filter(function (id) { return id === 'rapido' || mod(id); });
 }
 function fixarAtalho(id) {
+  if (RAPIDO_DE.indexOf(id) >= 0) id = 'rapido';
   var l = atalhosLista().slice(), k = l.indexOf(id);
   if (k >= 0) l.splice(k, 1); else { if (l.length >= 8) return aviso('Máximo de 8 atalhos. Tire um antes.'); l.push(id); }
   D.atalhos = l; montarMenu(); var b = document.querySelector('.bt-fixar'); if (b) b.outerHTML = botaoFixar(id);
@@ -630,7 +650,7 @@ function fixarAtalho(id) {
 }
 function botaoFixar(id) {
   if (!mod(id)) return '';
-  var on = atalhosLista().indexOf(id) >= 0;
+  var on = atalhosLista().indexOf(RAPIDO_DE.indexOf(id) >= 0 ? 'rapido' : id) >= 0;
   return '<button class="bt-fixar nao-imprime' + (on ? ' on' : '') + '" onclick="fixarAtalho(\'' + id + '\')" aria-pressed="' + on + '" title="' + (on ? 'Tirar dos atalhos do menu' : 'Fixar nos atalhos do menu') + '">' + ico('estrela') + (on ? 'Nos atalhos' : 'Fixar nos atalhos') + '</button>';
 }
 function abrirGrupo(id) { MENU_GR[id] = !grupoAberto(id); try { localStorage.setItem('sisMenuGr', JSON.stringify(MENU_GR)); } catch (e) { } montarMenu(); }
@@ -653,7 +673,8 @@ function montarMenu() {
     var nota = function (m) { var t = chave(m.titulo); return t.indexOf(q) === 0 ? 0 : t.indexOf(q) > 0 ? 1 : 2; };
     ms.sort(function (a, b) { return nota(a) - nota(b); });
     var fixos = [['inicio', 'Início'], ['executivo', 'Visão Executiva'], ['relatorios', 'Relatórios']].filter(function (x) { return chave(x[1]).indexOf(q) >= 0; });
-    h += '<div class="grupo res">' + fixos.map(function (x) { return item(x[0], x[1]); }).join('') + ms.map(function (m) {
+    var rapidoAchou = rapidoOpcoes().length && chave('Lançamento rápido pagamento despesa').indexOf(q) >= 0;
+    h += '<div class="grupo res">' + (rapidoAchou ? '<a onclick="abrirRapido()">' + ico('raio') + '<span class="tx">Lançamento rápido</span></a>' : '') + fixos.map(function (x) { return item(x[0], x[1]); }).join('') + ms.map(function (m) {
       var g = CFG.grupos.filter(function (x) { return x.id === m.grupo; })[0];
       return item(m.id, m.titulo, g && g.icone, ct(m.id) + '<small class="area">' + esc(g ? g.nome : '') + '</small>', m.serve);
     }).join('') + (!ms.length && !fixos.length ? '<p class="nada">Nenhuma tela com esse nome.</p>' : '') + '</div>';
@@ -661,7 +682,7 @@ function montarMenu() {
     h += '<div class="grupo">' + item('inicio', 'Início', 'inicio') + item('executivo', 'Visão Executiva', 'grafico') + (mod('diario') ? item('relatorios', 'Relatórios', 'relatorio') : '') +
       '<a onclick="abrirIA()">' + ico('ia') + '<span class="tx">Assistente</span>' + (D.ia && D.ia.ligado ? '' : '<small class="area">desligado</small>') + '</a></div>';
     var at = atalhosLista();
-    h += '<div class="grupo"><div class="gt">Seus atalhos</div>' + (at.length ? at.map(function (id) { var m = mod(id); return item(id, m.titulo, 'estrela', ct(id), m.serve); }).join('') :
+    h += '<div class="grupo"><div class="gt">Seus atalhos</div>' + (at.length ? at.map(function (id) { if (id === 'rapido') return '<a onclick="abrirRapido()" title="Pagamento de equipe ou despesas e lançamentos">' + ico('raio') + '<span class="tx">Lançamento rápido</span></a>'; var m = mod(id); return item(id, m.titulo, 'estrela', ct(id), m.serve); }).join('') :
       '<p class="nada">Abra uma tela e toque em "Fixar nos atalhos".</p>') + '</div><div class="grupo"><div class="gt">Áreas</div>';
     CFG.grupos.forEach(function (g) {
       var ms = CFG.modulos.filter(function (m) { return m.grupo === g.id; }); if (!ms.length) return;
@@ -683,6 +704,29 @@ function montarMenu() {
   el('menuCorpo').innerHTML = h;
   barraMob();
 }
+ICO.raio = '<path d="M13 3L5 13.5h6L10 21l8-10.5h-6z"/>';
+function abrirRapido() {
+  var op = rapidoOpcoes(); if (!op.length) return aviso('Seu perfil não tem acesso aos lançamentos.');
+  el('app').classList.remove('menu-aberto');
+  var card = function (id, icone, tit, txt, itens, cls) {
+    if (op.indexOf(id) < 0) return '';
+    return '<button class="rap-card ' + cls + '" onclick="rapidoIr(\'' + id + '\')"><span class="rap-ico">' + ico(icone) + '</span><b>' + tit + '</b><span class="rap-txt">' + txt + '</span>' +
+      '<span class="rap-itens">' + itens.map(function (x) { return '<em>' + x + '</em>'; }).join('') + '</span><span class="rap-vai">' + (id === 'diaristas' ? 'Abrir Pagamentos da equipe' : 'Abrir novo lançamento') + ' ' + ico('seta') + '</span></button>';
+  };
+  var h = '<div class="rap-fundo" onclick="if(event.target===this)fecharRapido()"><div class="rap" role="dialog" aria-modal="true" aria-labelledby="rapTit">' +
+    '<div class="rap-cab"><div><h2 id="rapTit">Lançamento rápido</h2><p>O que você vai lançar? Cada opção grava na sua área do Financeiro.</p></div><button class="rap-x" onclick="fecharRapido()" aria-label="Fechar">×</button></div>' +
+    '<div class="rap-cards">' + card('diaristas', 'pessoas', 'Pagamento de equipe', 'Diárias pela Presença, salários e holerites, horas extras e benefícios.', ['Diaristas', 'CLT', 'Horas extras', 'Benefícios'], 'rap-eq') +
+    card('lancamentos', 'dinheiro', 'Despesas e lançamentos', 'Notas fiscais, boletos, materiais, fornecedores, serviços terceirizados e equipamentos.', ['NF / boleto', 'Material', 'Serviço', 'Equipamento'], 'rap-desp') + '</div>' +
+    '<p class="rap-pe">Vai para: Financeiro → ' + op.map(function (id) { return id === 'diaristas' ? 'Pagamentos da equipe' : 'Lançamentos'; }).join(' ou ') + '.</p></div></div>';
+  var d = el('rapido'); if (!d) { d = document.createElement('div'); d.id = 'rapido'; document.body.appendChild(d); }
+  d.innerHTML = h; setTimeout(function () { var b = d.querySelector('.rap-card'); if (b) b.focus(); }, 30);
+}
+function fecharRapido() { var d = el('rapido'); if (d) d.innerHTML = ''; }
+function rapidoIr(id) {
+  fecharRapido(); ir(id);
+  if (id === 'lancamentos') { var n = 0, abre = function () { if (CACHE.lancamentos && ATUAL === 'lancamentos') abrirLinha('lancamentos', 0); else if (n++ < 60) setTimeout(abre, 200); }; abre(); }
+}
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape') fecharRapido(); });
 /* Esconder o menu (computador): a tela fica inteira para o conteúdo; o botão "Menu" no canto traz de volta. */
 function esconderMenu(sim, temporario) {
   el('app').classList.toggle('menu-oculto', !!sim);
