@@ -1869,20 +1869,20 @@ function desenharPresenca() {
   h += '<p class="info pres-he-nota">Hora extra neste dia: ' + esc(tipoHE) + '. Diarista: cada ' + numd(r.heRegras.bloco) + ' h extras = +1 diária.</p>';
   h += '<div class="faixa pres-resumo"><div><b>' + (n.trab + n.numero) + '</b><span>Trabalhando</span></div><div><b>' + n.falta + '</b><span>Faltas</span></div>' +
     '<div><b>' + n.just + '</b><span>Ausências justificadas</span></div><div><b' + (n.vazio ? ' style="color:var(--verm)"' : '') + '>' + n.vazio + '</b><span>Sem marcação</span></div></div>';
-  var outros = (r.codigos || []).filter(function (x) { return ['P', '½', 'F'].indexOf(x.c) < 0; });
+  var outros = (r.codigos || []).filter(function (x) { return ['P', '½', 'F'].indexOf(x.c) < 0 && !x.oculto; });
   h += '<div class="tabela pres"><table><thead><tr><th>Nome</th><th class="nao-mob">Função</th><th>Presença</th></tr></thead><tbody>' + ativos.map(function (p) {
     var cat = catPres(p.valor), outro = cat !== 'vazio' && ['P', '½', 'F'].indexOf(p.valor) < 0 && cat !== 'numero', emp = /empreiteiro|prestador/i.test(p.vinculo);
     var ctl = '<div class="pres-ctl"><div class="seg" role="group" aria-label="Presença de ' + esc(p.nome) + '">' +
       ['P', '½', 'F'].map(function (v) { var c = codPres(v) || { nome: v };
         return '<button class="' + (v === '½' ? 'm' : v) + (p.valor === v ? ' on' : '') + '" aria-pressed="' + (p.valor === v) + '" title="' + esc(c.nome) + '" onclick="marcar(' + p.linha + ',\'' + v + '\')">' + v + '</button>'; }).join('') + '</div>' +
       '<select class="pres-outro' + (outro ? ' on ' + cat : '') + '" aria-label="Outro código para ' + esc(p.nome) + '" onchange="marcar(' + p.linha + ',this.value,true)">' +
-      '<option value="">' + (outro ? '' : 'Outro…') + '</option>' + outros.map(function (x) { return '<option value="' + esc(x.c) + '"' + (p.valor === x.c ? ' selected' : '') + '>' + esc(x.c + ' — ' + x.nome) + '</option>'; }).join('') + '</select>' +
+      '<option value="">' + (outro ? '' : 'Outro…') + '</option>' + outros.concat((r.codigos || []).filter(function (x) { return x.oculto && p.valor === x.c; })).map(function (x) { return '<option value="' + esc(x.c) + '"' + (p.valor === x.c ? ' selected' : '') + '>' + esc(x.c + ' — ' + x.nome) + '</option>'; }).join('') + '</select>' +
       (emp ? '<input class="pres-num" inputmode="numeric" placeholder="nº pessoas" title="Equipe do empreiteiro: quantas pessoas vieram" value="' + (cat === 'numero' ? esc(p.valor) : '') + '" onchange="marcar(' + p.linha + ',this.value.replace(/\\D/g,\'\'),true)">' : '') + '</div>';
     if (cat === 'just' || cat === 'falta') ctl += '<input class="pres-obs" placeholder="Motivo (opcional)" value="' + esc(p.obs || '') + '" onchange="motivo(' + p.linha + ',this.value)">';
     if (!emp && (cat === 'trab' || p.valor === 'CH' || p.he)) ctl += '<label class="pres-he" title="Horas extras do dia (além da jornada)">HE <input type="number" min="0" max="16" step="0.5" inputmode="decimal" placeholder="0" value="' + esc(p.he || '') + '" aria-label="Horas extras de ' + esc(p.nome) + '" onchange="marcarHE(' + p.linha + ',this.value)"> h</label>';
     return '<tr style="cursor:default"><td><b>' + esc(p.nome) + '</b><span class="info"><br><span class="so-mob">' + esc(p.funcao) + ' · </span>' + esc(p.vinculo) + '</span></td><td class="nao-mob">' + esc(p.funcao) + '</td><td>' + ctl + '</td></tr>';
   }).join('') + '</tbody></table></div>' +
-    '<details class="legenda-pres"><summary>O que significa cada código</summary><ul>' + (r.codigos || []).map(function (x) {
+    '<details class="legenda-pres"><summary>O que significa cada código</summary><ul>' + (r.codigos || []).filter(function (x) { return !x.oculto; }).map(function (x) {
       return '<li><b>' + esc(x.c) + '</b> ' + esc(x.nome) + ' <span class="info">— ' + (x.conta ? 'conta como dia trabalhado' : x.falta ? 'conta como falta' : 'ausência justificada (não conta como falta nem como dia trabalhado)') + '</span></li>'; }).join('') +
     '<li><b>número</b> Equipe de empreiteiro: quantas pessoas vieram no dia</li></ul><p class="info">Toque de novo no mesmo botão para desmarcar. Grava na hora na aba Presença. O motivo fica como nota na célula.</p></details>';
   el('area').innerHTML = h;
