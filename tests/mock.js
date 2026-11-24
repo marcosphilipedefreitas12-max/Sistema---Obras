@@ -29,9 +29,10 @@ window.SIS_MOCK = (function () {
     var col = function (i, nome, tipo, extra) { var c = { i: i, letra: String.fromCharCode(65 + i), nome: nome, ajuda: '', auto: false, tipo: tipo || 'texto', opcoes: [] }; for (var k in extra || {}) c[k] = extra[k]; return c; };
     var t = id === 'diario' ? {
       cols: [col(0, 'Data', 'data', { ajuda: 'Data do dia.' }), col(1, 'Clima manhã', 'texto', { opcoes: ['Bom', 'Nublado', 'Chuva fraca', 'Chuva forte'] }), col(2, 'Pedreiros', 'numero', { ajuda: 'Quantas pessoas de cada função trabalharam.' }),
-             col(3, 'Serviços executados (onde e o quê)'), col(4, 'Total efetivo', 'numero', { auto: true }), col(15, 'Fotos (link da pasta / imagem)')],
-      linhas: [{ linha: 6, d: ['17/11/26', 'Bom', '3', 'Demolição do muro de divisa', '3'], v: { 0: '2026-11-17', 1: 'Bom', 2: 3, 3: 'Demolição do muro de divisa' } },
-               { linha: 5, d: ['16/11/26', 'Nublado', '2', 'Limpeza do terreno', '2'], v: { 0: '2026-11-16', 1: 'Nublado', 2: 2, 3: 'Limpeza do terreno' } }]
+             col(12, 'Serviços executados (onde e o quê)'), col(13, 'Ocorrências / visitas / acidentes'), col(4, 'Total efetivo', 'numero', { auto: true }), col(15, 'Fotos (link da pasta / imagem)')],
+      linhas: [{ linha: 6, d: ['17/11/26', 'Bom', '3', 'Demolição do muro de divisa', '', '3'], v: { 0: '2026-11-17', 1: 'Bom', 2: 3, 12: 'Demolição do muro de divisa' } },
+               { linha: 5, d: ['16/11/26', 'Nublado', '2', 'Demolição e limpeza do terreno', 'Limpeza do lado direito', '2'], v: { 0: '2026-11-16', 1: 'Nublado', 2: 2, 12: 'Demolição e limpeza do terreno', 13: 'Limpeza do lado direito' } },
+               { linha: 4, d: ['20/10/26', 'Bom', '2', 'Demolição e limpeza do terreno', '', '2'], v: { 0: '2026-10-20', 1: 'Bom', 2: 2, 12: 'Demolição e limpeza do terreno' } }]
     } : {
       cols: [col(0, 'Item'), col(1, 'Descrição'), col(2, 'Valor', 'numero'), col(3, 'Status', 'texto', { opcoes: ['Aberto', 'Concluído'] })],
       linhas: [{ linha: 5, d: ['1', 'Registro de exemplo', '10', 'Aberto'], v: { 0: '1', 1: 'Registro de exemplo', 2: 10, 3: 'Aberto' } }]
@@ -92,6 +93,8 @@ window.SIS_MOCK = (function () {
         { linha: 7, nome: 'Equipe Teste', funcao: 'Pedreiro', vinculo: 'Prestador / empreiteiro', empresa: 'Empreiteira Exemplo', situacao: 'Ativo', v: dias.map(function (x, i) { return cod(i, function (j) { return String(4 + j % 3); }); }), obs: dias.map(function () { return ''; }) }].map(function (p) { p.he = dias.map(function (d) { return ((st.he || {})[d + '|' + p.linha]) || ''; }); return p; }) };
     }
     function HE_R() { st.fich = st.fich || { pags: [] }; st.fich.cfg = st.fich.cfg || { adiant: 40, p: {} }; st.fich.cfg.he = st.fich.cfg.he || { util: 50, sab: 50, df: 100, divisor: 220, bloco: 3, parcial: 'inteiro' }; return st.fich.cfg.he; }
+    if (fn === 'sisAtividades') return [{ etapa: 'Preliminares', atividade: 'Canteiro: tapume e barracão' }, { etapa: 'Infraestrutura', atividade: 'Demolição e limpeza do terreno' }, { etapa: 'Infraestrutura', atividade: 'Contenção das divisas' }, { etapa: 'Estrutura', atividade: 'Estrutura Pav 01 — Térreo' }];
+    if (fn === 'sisDiarioPadronizar') return 1;
     if (fn === 'sisAtalhos') { st.atalhos = args[0]; return args[0]; }
     if (fn === 'sisPensao') { st.pens = st.pens || {}; var sv = args[0]; if (sv) { if (Number(sv.pens)) st.pens[sv.linha] = { pens: Number(sv.pens), base: sv.base }; else delete st.pens[sv.linha]; } return JSON.parse(JSON.stringify(st.pens)); }
     if (/^sisFichado/.test(fn) || (/^sisDiarista(Pago|Cancelar)$/.test(fn) && st.fich && st.fich.pags.some(function (g) { return g.lanc === args[0]; }))) {

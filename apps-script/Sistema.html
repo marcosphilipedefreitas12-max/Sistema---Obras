@@ -210,6 +210,14 @@
   .mes-grade sup.he { font-size: 9px; color: var(--azul-t); margin-left: 1px; }
   .lk { cursor: pointer; text-decoration: underline; }
   .gav-sub { font-family: var(--titulo); font-size: 17px; margin: 6px 0 8px; }
+  .filtro-data { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 10px; font-size: 13px; color: var(--aco); }
+  .filtro-data label { display: inline-flex; align-items: center; gap: 6px; } .filtro-data input[type=date] { width: auto; } .filtro-data select { width: auto; }
+  td.txt-longo { max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+  .serv-sel { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; } .serv-sel .chip { background: var(--azul-f); color: var(--azul-t); border: 1px solid var(--azul2); border-radius: 12px; padding: 2px 9px; font-size: 12.5px; }
+  .serv-busca { margin-bottom: 6px; }
+  .serv-lista { max-height: 260px; overflow-y: auto; border: 1px solid var(--linha); background: var(--papel); padding: 4px 10px; }
+  .serv-g small { display: block; color: var(--aco); font-size: 11.5px; margin: 8px 0 2px; } .serv-it { display: flex; gap: 8px; align-items: flex-start; padding: 4px 0; font-size: 13.5px; cursor: pointer; }
+  .serv-it input { width: auto; min-height: 0; margin-top: 3px; }
   .faixa.dinheiro b { font-size: 24px; }
   .fich-pres { margin: 2px 0 10px; } .fich-pres .ruim { color: var(--verm); }
   .fich-pags { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--linha2); }
@@ -1292,12 +1300,40 @@ function vTabela(m, forcar) {
   var usar = function (t) { CACHE[m.id] = t; if (ATUAL === m.id) desenharTabela(m); };
   if (CACHE[m.id] && !forcar) usar(CACHE[m.id]); else chamar('sisAbaLer', m.id).then(usar);
 }
+var PERIODO = {}, ATIV = null;
+function periodoTab(id) { PERIODO[id] = { de: el('fdDe').value, ate: el('fdAte').value }; LIMITE[id] = 100; desenharTabela(mod(id)); }
+function periodoRapido(id, v) {
+  var h = hoje(), d = new Date(h + 'T12:00:00'), iso = function (x) { return x.toISOString().slice(0, 10); }, de = '', ate = h;
+  if (v === '7' || v === '30') { d.setDate(d.getDate() - Number(v) + 1); de = iso(d); }
+  else if (v === 'mes') de = h.slice(0, 8) + '01';
+  else if (v === 'mesant') { d.setDate(1); d.setMonth(d.getMonth() - 1); de = iso(d); var f = new Date(h.slice(0, 8) + '01T12:00:00'); f.setDate(0); ate = iso(f); }
+  else if (v === 'tudo') ate = '';
+  PERIODO[id] = { de: de, ate: ate }; LIMITE[id] = 100; desenharTabela(mod(id));
+}
+function carregarAtividades(depois) {
+  if (ATIV) return depois && depois();
+  api('sisAtividades').then(function (l) { ATIV = { lista: l, nomes: {} }; l.forEach(function (a) { ATIV.nomes[a.atividade] = 1; }); if (depois) depois(); }).catch(function () { ATIV = { lista: [], nomes: {} }; if (depois) depois(); });
+}
+function diarioPadronizar(n) {
+  abrirGaveta('<header><h2>Padronizar registros antigos</h2></header><div class="conteudo"><p>' + n + ' registro(s) têm "Serviços executados" escrito à mão. O texto vai para <b>Ocorrências</b>, começando com "Executado: …" (o que já estava em Ocorrências fica depois, com "Ocorrência: …"), e "Serviços executados" fica vazio para você marcar pela lista do Cronograma.</p><p class="info">Nada é apagado: o texto só muda de coluna.</p></div>' +
+    '<footer><span style="flex:1"></span><button class="btn sec" onclick="fecharGaveta()">Cancelar</button><button class="btn" onclick="api(\'sisDiarioPadronizar\').then(function(k){fecharGaveta();aviso(k+\' registro(s) ajustado(s).\');vTabela(mod(\'diario\'),true)}).catch(function(e){aviso(\'Não ajustou: \'+(e.message||e),6000)})">Passar para Ocorrências</button></footer>');
+}
 function desenharTabela(m) {
+  if (m.servicos >= 0 && !ATIV) return carregarAtividades(function () { desenharTabela(m); });
   if (m.dias >= 0 && (VISTA[m.id] || 'quadro') === 'quadro') return desenharQuadro(m);
   var t = CACHE[m.id], q = chave(BUSCA[m.id] || ''), lim = LIMITE[m.id] || 100;
   var cols = t.mostrar.length ? t.mostrar : t.cols.map(function (c, i) { return i; }).slice(0, 7);
   var ls = q ? t.linhas.filter(function (l) { return chave(l.d.join(' ')).indexOf(q) >= 0; }) : t.linhas;
-  var h = (m.dias >= 0 ? abasVista(m) : '') + '<div class="barra"><input type="search" id="buscaTab" aria-label="Buscar nesta lista" placeholder="Buscar nesta lista…" value="' + esc(BUSCA[m.id] || '') + '" oninput="BUSCA[\'' + m.id + '\']=this.value;desenharTabela(mod(\'' + m.id + '\'));manterFoco(\'#buscaTab\')">' +
+  // Filtro de período quando a coluna-chave é data (Diário, Produção, Lançamentos…)
+  var temData = t.cols[t.chave] && t.cols[t.chave].tipo === 'data', fd = PERIODO[m.id] || {};
+  if (temData && (fd.de || fd.ate)) ls = ls.filter(function (l) { var d = String(l.v[t.cols[t.chave].i] || '').slice(0, 10); return d && (!fd.de || d >= fd.de) && (!fd.ate || d <= fd.ate); });
+  var filtroData = temData ? '<div class="filtro-data" role="group" aria-label="Período"><label>De <input type="date" id="fdDe" value="' + esc(fd.de || '') + '" onchange="periodoTab(\'' + m.id + '\')"></label>' +
+    '<label>até <input type="date" id="fdAte" value="' + esc(fd.ate || '') + '" onchange="periodoTab(\'' + m.id + '\')"></label>' +
+    '<select aria-label="Período rápido" onchange="periodoRapido(\'' + m.id + '\',this.value)"><option value="">Período…</option><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="mes">Este mês</option><option value="mesant">Mês passado</option><option value="tudo">Tudo</option></select>' +
+    (fd.de || fd.ate ? '<button class="btn sec peq" onclick="PERIODO[\'' + m.id + '\']={};desenharTabela(mod(\'' + m.id + '\'))">Limpar</button>' : '') + '</div>' : '';
+  var antigos = m.servicos >= 0 && PM.admin && ATIV ? t.linhas.filter(function (l) { var x = String(l.v[m.servicos] || '').trim(); return x && !x.split(/\s*;\s*/).every(function (y) { return ATIV.nomes[y] || /^Outro/.test(y); }); }).length : 0;
+  var h = (m.dias >= 0 ? abasVista(m) : '') + filtroData + (antigos ? '<div class="aviso-orc nao-imprime">' + antigos + ' registro(s) antigo(s) têm "Serviços executados" em texto livre. <button class="btn sec peq" onclick="diarioPadronizar(' + antigos + ')">Passar esses textos para Ocorrências</button></div>' : '') +
+    '<div class="barra"><input type="search" id="buscaTab" aria-label="Buscar nesta lista" placeholder="Buscar nesta lista…" value="' + esc(BUSCA[m.id] || '') + '" oninput="BUSCA[\'' + m.id + '\']=this.value;desenharTabela(mod(\'' + m.id + '\'));manterFoco(\'#buscaTab\')">' +
     '<span class="info">' + ls.length + ' registro(s)</span><span class="esp"></span>' +
     '<button class="btn sec" onclick="vTabela(mod(\'' + m.id + '\'),true)">Atualizar</button>' +
     (t.novo ? '<button class="btn so-grava" onclick="abrirLinha(\'' + m.id + '\',0)">+ Novo registro</button>' : '') + '</div>';
@@ -1307,7 +1343,7 @@ function desenharTabela(m) {
     ls.slice(0, lim).map(function (l) {
       return '<tr tabindex="0" onkeydown="if(event.key===\'Enter\')this.click()" onclick="abrirLinha(\'' + m.id + '\',' + l.linha + ')">' + cols.map(function (i) {
         var c = t.cols[i], v = l.d[i];
-        return '<td class="' + (c.tipo === 'numero' ? 'num' : '') + '">' + (/status|situação|resultado|farol|pago\?|alerta|concluída\?/i.test(c.nome) ? stTag(v) : esc(v)) + '</td>';
+        return '<td class="' + (c.tipo === 'numero' && typeof l.v[c.i] === 'number' ? 'num' : c.i === m.servicos || c.i === m.descricao ? 'txt-longo' : '') + '">' + (/status|situação|resultado|farol|pago\?|alerta|concluída\?/i.test(c.nome) ? stTag(v) : esc(v)) + '</td>';
       }).join('') + '</tr>';
     }).join('') + '</tbody></table>' + (ls.length > lim ? '<div class="mais"><button class="btn sec" onclick="LIMITE[\'' + m.id + '\']=' + (lim + 200) + ';desenharTabela(mod(\'' + m.id + '\'))">Mostrar mais ' + Math.min(200, ls.length - lim) + '</button></div>' : '') + '</div>';
   el('area').innerHTML = h;
@@ -1317,7 +1353,32 @@ function valorCampo(c, v) {
   if (c.tipo === 'numero' && typeof v === 'number') return String(Math.round(v * 1e6) / 1e6).replace('.', ',');
   return String(v);
 }
+function campoServicos(c, v) {
+  var sel = String(v || '').split(/\s*;\s*/).filter(Boolean), conhecidos = sel.filter(function (x) { return ATIV && ATIV.nomes[x]; }), soltos = sel.filter(function (x) { return !(ATIV && ATIV.nomes[x]); });
+  var grupos = {}; (ATIV ? ATIV.lista : []).forEach(function (a) { (grupos[a.etapa || 'Outras'] = grupos[a.etapa || 'Outras'] || []).push(a.atividade); });
+  return '<div class="campo"><label>Serviços executados (atividades do Cronograma)</label><input type="hidden" id="c' + c.i + '" value="' + esc(v) + '">' +
+    '<div class="serv-sel" id="servSel">' + (sel.length ? sel.map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join('') : '<span class="info">Nenhum serviço marcado.</span>') + '</div>' +
+    (soltos.length ? '<div class="aj">Texto antigo (fora da lista): ' + esc(soltos.join('; ')) + '. Ao salvar, ele continua aqui até você desmarcar.</div>' : '') +
+    '<input type="search" class="serv-busca" placeholder="Procurar atividade do Cronograma" aria-label="Procurar atividade" oninput="filtrarServ(this.value)">' +
+    '<div class="serv-lista" role="group" aria-label="Atividades do Cronograma">' + Object.keys(grupos).map(function (g) {
+      return '<div class="serv-g"><small>' + esc(g) + '</small>' + grupos[g].map(function (a) {
+        return '<label class="serv-it"><input type="checkbox" value="' + esc(a) + '"' + (conhecidos.indexOf(a) >= 0 ? ' checked' : '') + ' onchange="marcarServ(' + c.i + ')"> ' + esc(a) + '</label>'; }).join('') + '</div>';
+    }).join('') + '<div class="serv-g"><small>Fora do cronograma</small><label class="serv-it"><input type="checkbox" value="Outro (ver Ocorrências)"' + (sel.indexOf('Outro (ver Ocorrências)') >= 0 ? ' checked' : '') + ' onchange="marcarServ(' + c.i + ')"> Outro (descrever em Ocorrências)</label></div>' +
+    (ATIV && !ATIV.lista.length ? '<p class="info">Não achei atividades na aba Cronograma.</p>' : '') + '</div>' +
+    '<div class="aj">Marque as atividades do Cronograma que andaram no dia. O detalhe (onde e o quê) vai em Ocorrências.</div></div>';
+}
+function marcarServ(i) {
+  var h = el('c' + i), antigos = String(h.value || '').split(/\s*;\s*/).filter(function (x) { return x && !(ATIV && ATIV.nomes[x]) && x !== 'Outro (ver Ocorrências)'; });
+  var marc = [].slice.call(document.querySelectorAll('.serv-lista input:checked')).map(function (x) { return x.value; });
+  var tudo = marc.concat(antigos); h.value = tudo.join('; ');
+  el('servSel').innerHTML = tudo.length ? tudo.map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join('') : '<span class="info">Nenhum serviço marcado.</span>';
+}
+function filtrarServ(q) {
+  q = chave(q); [].forEach.call(document.querySelectorAll('.serv-it'), function (lb) { lb.style.display = !q || chave(lb.textContent).indexOf(q) >= 0 ? '' : 'none'; });
+  [].forEach.call(document.querySelectorAll('.serv-g'), function (g) { g.style.display = [].some.call(g.querySelectorAll('.serv-it'), function (x) { return x.style.display !== 'none'; }) ? '' : 'none'; });
+}
 function abrirLinha(id, linha, pre) {
+  if (mod(id).servicos >= 0 && !ATIV) return carregarAtividades(function () { abrirLinha(id, linha, pre); });
   var m = mod(id), t = CACHE[id], l = linha ? t.linhas.filter(function (x) { return x.linha === linha; })[0] : { linha: 0, d: [], v: pre || {} };
   var digit = t.cols.filter(function (c) { return !c.auto; }), auto = t.cols.filter(function (c) { return c.auto; });
   if (m.dias >= 0) { // dias da semana logo depois da atividade
@@ -1329,6 +1390,8 @@ function abrirLinha(id, linha, pre) {
   h += digit.map(function (c) {
     var v = valorCampo(c, l.v[c.i]), idc = 'c' + c.i, ctl, obrig = t.cols[t.chave] === c;
     if (m.dias === c.i) return campoDias(c, v);
+    if (m.servicos === c.i) return campoServicos(c, v);
+    if (m.descricao === c.i) return '<div class="campo"><label for="' + idc + '">' + esc(c.nome) + '</label><textarea id="' + idc + '" rows="4" placeholder="Ex.: Demolição do muro de divisa lado esquerdo, trecho de 6 m. Chuva às 14h parou o serviço.">' + esc(v) + '</textarea><div class="aj">Descreva o que foi executado (onde e o quê) e as ocorrências do dia: visitas, acidentes, falta de material, chuva.</div></div>';
     if (m.fotos === c.i) return '<input type="hidden" id="' + idc + '" value="' + esc(v) + '">' + blocoFotos(id, linha); // coluna de fotos vira o bloco de fotos
     if (c.tipo === 'data') ctl = '<input id="' + idc + '" type="date" value="' + esc(String(v).slice(0, 10)) + '">';
     else if (c.opcoes.length && c.opcoes.length <= 12) ctl = '<select id="' + idc + '">' + opts(v && c.opcoes.indexOf(v) < 0 ? [v].concat(c.opcoes) : c.opcoes, v, '') + '</select>';
@@ -1433,7 +1496,7 @@ function segundaDe(iso) { var d = new Date(iso + 'T12:00:00'); d.setDate(d.getDa
 function diasDe(txt) { var s = String(txt || ''), out = []; DIAS_SEM.forEach(function (d, i) { if (new RegExp('\\b' + d.normalize('NFD').replace(/[̀-ͯ]/g, '').slice(0, 3), 'i').test(s.normalize('NFD').replace(/[̀-ͯ]/g, ''))) out.push(i); }); return out; }
 function campoDias(c, v) {
   var on = diasDe(v);
-  return '<div class="campo"><label>' + esc(c.nome) + '</label><input type="hidden" id="c' + c.i + '" value="' + esc(v) + '">' +
+  return '<div class="campo"><label>Serviços executados (atividades do Cronograma)</label><input type="hidden" id="c' + c.i + '" value="' + esc(v) + '">' +
     '<div class="dias-sel" role="group" aria-label="Dias da semana">' + DIAS_SEM.map(function (d, i) {
       return '<label class="' + (on.indexOf(i) >= 0 ? 'on' : '') + '"><input type="checkbox" value="' + d + '"' + (on.indexOf(i) >= 0 ? ' checked' : '') + ' onchange="this.parentNode.classList.toggle(\'on\',this.checked);atualizaDias(' + c.i + ')">' + d + '</label>'; }).join('') +
     '</div><small>Marque os dias em que o serviço acontece. Sem nenhum dia marcado, vale a semana toda.</small></div>';
@@ -2048,7 +2111,7 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { fe
 /* ---------------------------------------------------------------- obras */
 function urlObra(id) { if (window.google && google.script && google.script.history) google.script.history.replace(null, id ? { obra: id } : {}); }
 function abrirObra(id) {
-  OBRA = id; D = null; CFG = null; CACHE = {}; BUSCA = {}; LIMITE = {}; ATUAL = 'inicio'; urlObra(id);
+  OBRA = id; D = null; CFG = null; CACHE = {}; ATIV = null; PERIODO = {}; BUSCA = {}; LIMITE = {}; ATUAL = 'inicio'; urlObra(id);
   el('app').classList.remove('sem-lado');
   el('lado').innerHTML = ''; el('main').innerHTML = '<div class="vazio"><b>Abrindo a planilha da obra…</b>Isso leva alguns segundos.</div>';
   chamar('sisCarregar').then(function (r) {
