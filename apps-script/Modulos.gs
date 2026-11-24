@@ -107,7 +107,7 @@ var SIS_MODULOS = [
   { id: 'gestao', grupo: 'plan', aba: 'Gestão à Vista', tipo: 'consulta',
     serve: 'Quadro pavimento × serviço para imprimir e pendurar no canteiro.', quando: 'Toda semana.' },
 
-  { id: 'inspecoes', grupo: 'qual', aba: 'Inspeções de Serviço', tipo: 'tabela', hdr: 4, ini: 5, fim: 404, chave: 'B', ult: 'Y',
+  { id: 'inspecoes', grupo: 'qual', aba: 'Inspeções de Serviço', tipo: 'tabela', local: 'C', hdr: 4, ini: 5, fim: 404, chave: 'B', ult: 'Y',
     mostrar: ['A', 'B', 'C', 'D', 'R', 'S', 'X'], ordem: 'desc',
     serve: 'Uma linha por inspeção feita com o checklist: aprovado ou reprovado, correção e reinspeção.',
     quando: 'Depois de cada inspeção em campo.',
@@ -121,7 +121,7 @@ var SIS_MODULOS = [
     mostrar: ['A', 'B', 'C', 'V', 'W', 'X', 'AD'],
     serve: 'Vistoria de entrega de cada loja (18 itens).', quando: 'Na vistoria de entrega e na reinspeção.',
     passos: ['Mesma lógica dos apartamentos: C, NC ou NA em cada item, pendências e datas.'] },
-  { id: 'fvs', grupo: 'qual', aba: 'Qualidade (FVS)', tipo: 'tabela', hdr: 4, ini: 5, fim: 404, chave: 'B', ult: 'J',
+  { id: 'fvs', grupo: 'qual', aba: 'Qualidade (FVS)', tipo: 'tabela', local: 'C', hdr: 4, ini: 5, fim: 404, chave: 'B', ult: 'J',
     mostrar: ['A', 'B', 'C', 'D', 'E', 'G', 'I'], ordem: 'desc',
     serve: 'Não conformidades avulsas, vistas fora de um checklist.', quando: 'Quando encontrar um problema em campo.',
     passos: ['Data, serviço, local e o que foi visto.', 'Resultado, responsável pela correção e prazo.', 'Data da reinspeção quando corrigido.'] },
@@ -202,7 +202,7 @@ function sisConfig_() {
   ss.getSheets().forEach(function (s) { gid[s.getName()] = s.getSheetId(); });
   var mods = SIS_MODULOS.filter(function (m) { return !m.aba || gid[m.aba] !== undefined; }).map(function (m) {
     return { id: m.id, grupo: m.grupo, custo: !!m.custo, aba: m.aba || '', titulo: m.titulo || m.aba || (m.id === 'demandas' ? 'Demandas' : 'Fornecedores'),
-             tipo: m.tipo, fotos: m.fotos ? sisColNum_(m.fotos) - 1 : -1, dias: m.dias ? sisColNum_(m.dias) - 1 : -1, mapa: !!m.mapa, servicos: m.servicos ? sisColNum_(m.servicos) - 1 : -1, descricao: m.descricao ? sisColNum_(m.descricao) - 1 : -1, serve: m.serve || '', quando: m.quando || '', passos: m.passos || [], novo: m.novo !== false,
+             tipo: m.tipo, fotos: m.fotos ? sisColNum_(m.fotos) - 1 : -1, dias: m.dias ? sisColNum_(m.dias) - 1 : -1, mapa: !!m.mapa, local: m.local ? sisColNum_(m.local) - 1 : -1, servicos: m.servicos ? sisColNum_(m.servicos) - 1 : -1, descricao: m.descricao ? sisColNum_(m.descricao) - 1 : -1, serve: m.serve || '', quando: m.quando || '', passos: m.passos || [], novo: m.novo !== false,
              link: m.aba ? ss.getUrl() + '#gid=' + gid[m.aba] : '' };
   });
   return { grupos: SIS_GRUPOS, modulos: mods, url: ss.getUrl() };
@@ -1359,4 +1359,74 @@ function sisUnidadePendencia(linha, texto) {
     sisUhGravar_('', un, '', texto ? 'Pendência' : 'Pendência resolvida', '', '', texto || ('Resolvida: ' + antes));
     return sisUnidades();
   });
+}
+
+/* ---------------------------------------------------------------- LIGAÇÕES ENTRE AS ABAS */
+/** Lista de unidades (para escolher o "Local" de inspeções/FVS e o avanço pelo Diário). */
+function sisUnidadesNomes() {
+  var m = sisModulo_('unidades'), sh = sisSS_().getSheetByName(m.aba), n = m.fim - m.ini + 1;
+  var d = sh.getRange(m.ini, 1, n, 3).getDisplayValues(), cab = sh.getRange(m.hdr, 5, 1, 19).getDisplayValues()[0];
+  return { unidades: d.map(function (r, k) { return { linha: m.ini + k, un: String(r[0]).trim(), pav: String(r[1]).trim(), tipo: String(r[2]).trim() }; }).filter(function (x) { return x.un; }),
+    servicos: cab.map(function (x, k) { return { i: 4 + k, nome: String(x).replace(/^\d+\.\s*/, '').trim(), rotulo: String(x).trim() }; }).filter(function (x) { return x.nome; }) };
+}
+/** Avanço de um serviço em várias unidades de uma vez (vem do Diário). Concluído grava a data na aba Unidades. */
+function sisUnidadesLote(data, col, uns, ev, pct, obs) {
+  if (['Iniciado', 'Andamento', 'Concluído'].indexOf(ev) < 0) throw new Error('Tipo de avanço inválido.');
+  if (col < 4 || col > 22) throw new Error('Serviço inválido.');
+  if (!uns || !uns.length) return 0;
+  return sisComTrava_(function () {
+    var lista = sisUnidadesNomes(), s = lista.servicos.filter(function (x) { return x.i === col; })[0], n = 0;
+    if (!s) throw new Error('Serviço não encontrado na aba Unidades.');
+    uns.forEach(function (nome) {
+      var u = lista.unidades.filter(function (x) { return x.un === String(nome).trim(); })[0]; if (!u) return;
+      if (ev === 'Concluído') { var v = {}; v[col] = data; sisAbaSalvar('unidades', u.linha, v); }
+      sisUhGravar_(data, u.un, s.nome, ev, ev === 'Concluído' ? 100 : ev === 'Andamento' ? pct : '', '', obs || '');
+      n++;
+    });
+    return n;
+  });
+}
+/** Cotação fechada → linha nova em Compras (e o nº da compra volta para a cotação). */
+function sisCotacaoCompra(linha) {
+  return sisComTrava_(function () {
+    var mc = sisModulo_('cotacoes'); if (linha < mc.ini || linha > mc.fim) throw new Error('Cotação inválida.');
+    var sh = sisSS_().getSheetByName(mc.aba), r = sh.getRange(linha, 1, 1, 40).getValues()[0], d = sh.getRange(linha, 1, 1, 40).getDisplayValues()[0];
+    if (String(d[38]).trim() !== 'Fechado') throw new Error('A cotação precisa estar com Status "Fechado".');
+    if (!String(d[35]).trim()) throw new Error('Escolha o fornecedor (Fornecedor escolhido) antes.');
+    if (String(d[39]).trim()) throw new Error('Esta cotação já tem pedido/contrato: ' + d[39] + '.');
+    var cp = sisModulo_('compras'), sc = sisSS_().getSheetByName(cp.aba), ab = sc.getRange(cp.ini, 1, cp.fim - cp.ini + 1, 2).getValues(), hoje = sisIso_(new Date());
+    // a linha nova é a 1ª sem material; se o Nº já vem preenchido nela (numeração pronta), usa esse
+    var k0 = -1; for (var q = 0; q < ab.length; q++) if (String(ab[q][1]).trim() === '') { k0 = q; break; }
+    if (k0 < 0) throw new Error('A aba Compras está cheia.');
+    var nx = Number(ab[k0][0]) || (ab.reduce(function (a, x) { return String(x[1]).trim() ? Math.max(a, Number(x[0]) || 0) : a; }, 0) + 1);
+    var fi = [10, 15, 20, 25].filter(function (c) { return String(d[c]).trim() === String(d[35]).trim(); })[0], pag = fi ? String(d[fi + 3] || '').trim() : '';
+    var v = { 1: String(d[4]).trim(), 2: String(d[2]).trim(), 4: String(d[5]).trim(), 5: hoje, 7: String(d[35]).trim(), 8: hoje, 14: 'Da cotação ' + String(d[0]).trim() + (pag ? ' · pagamento: ' + pag : '') };
+    if (!Number(ab[k0][0]) && !sc.getRange(cp.ini, 1).getFormula()) v[0] = nx;
+    if (typeof r[6] === 'number') v[3] = r[6];
+    if (typeof r[36] === 'number') v[11] = r[36];
+    var res = sisAbaSalvar('compras', 0, v);
+    sisAbaSalvar('cotacoes', linha, { 39: 'Compra nº ' + nx });
+    return { compra: nx, linha: res.salva };
+  });
+}
+/** Compra → linha nova em Lançamentos (Material), sem duplicar. */
+function sisCompraLancar(linha, venc) {
+  return sisComTrava_(function () {
+    var cp = sisModulo_('compras'); if (linha < cp.ini || linha > cp.fim) throw new Error('Compra inválida.');
+    var sh = sisSS_().getSheetByName(cp.aba), r = sh.getRange(linha, 1, 1, 15).getValues()[0], d = sh.getRange(linha, 1, 1, 15).getDisplayValues()[0];
+    var num = String(d[0]).trim() || ('L' + linha), marca = '[COMPRA ' + num + ']';
+    if (!String(d[1]).trim()) throw new Error('Compra sem material.');
+    var la = sisSS_().getSheetByName('Lançamentos'), obs = la.getRange(5, 12, 499, 1).getDisplayValues();
+    for (var k = 0; k < obs.length; k++) if (obs[k][0].indexOf(marca) >= 0) throw new Error('Esta compra já foi lançada (linha ' + (5 + k) + ' de Lançamentos).');
+    var v = { 0: sisIso_(new Date()), 1: String(d[2]).trim(), 2: String(d[1]).trim(), 3: String(d[7]).trim(), 5: 'Material', 11: marca + ' Lançado pelo sistema por ' + sisUsuario_(), 14: 'Lançado' };
+    if (typeof r[3] === 'number') v[6] = r[3]; if (typeof r[11] === 'number') v[7] = r[11]; if (venc) v[8] = venc;
+    var res = sisAbaSalvar('lancamentos', 0, v);
+    return { linha: res.salva };
+  });
+}
+/** Quais compras já viraram lançamento (para a tela mostrar "Já lançada"). */
+function sisComprasLancadas() {
+  var o = sisSS_().getSheetByName('Lançamentos').getRange(5, 12, 499, 1).getDisplayValues(), out = {};
+  o.forEach(function (x, k) { var mm = String(x[0]).match(/\[COMPRA ([^\]]+)\]/); if (mm) out[mm[1]] = 5 + k; });
+  return out;
 }

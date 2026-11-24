@@ -44,6 +44,11 @@ window.SIS_MOCK = (function () {
       linhas: [{ linha: 5, d: ['18/11/26', 'Alvenaria 2º pav.', 'Pav. 2', 'Equipe A', '120', 'm²', 'Material', 'N', '', '', '', 'Seg, Ter, Qua'], v: { 0: SEG, 1: 'Alvenaria 2º pav.', 2: 'Pav. 2', 3: 'Equipe A', 4: 120, 5: 'm²', 6: 'Material', 7: 'N', 13: 'Seg, Ter, Qua' } },
                { linha: 6, d: ['18/11/26', 'Limpeza do canteiro', 'Canteiro', 'Serventes', '', '', 'Nenhuma', '', 'S', '', '', ''], v: { 0: SEG, 1: 'Limpeza do canteiro', 2: 'Canteiro', 3: 'Serventes', 6: 'Nenhuma', 8: 'S' } }]
     };
+    if (id === 'inspecoes') t = { cols: [col(0, 'Data', 'data'), col(1, 'Serviço'), col(2, 'Local (pav. / unidade)'), col(3, 'Inspetor')], linhas: [] };
+    if (id === 'cotacoes') t = { cols: [col(0, 'Nº'), col(4, 'Serviço / material'), col(35, 'Fornecedor escolhido'), col(36, 'Valor fechado (R$)', 'numero', { auto: true }), col(38, 'Status', 'texto', { opcoes: ['Em cotação', 'Fechado'] }), col(39, 'Nº contrato / pedido')],
+      linhas: [{ linha: 6, d: ['COT-001', 'Cimento CP-II', 'Fornecedor Exemplo', 'R$ 1.200,00', 'Fechado', ''], v: { 0: 'COT-001', 2: 'Estrutura', 4: 'Cimento CP-II', 5: 'sc', 6: 40, 35: 'Fornecedor Exemplo', 36: 1200, 38: 'Fechado' } }] };
+    if (id === 'compras') t = { cols: [col(0, 'Nº', 'numero'), col(1, 'Material'), col(7, 'Fornecedor'), col(11, 'Valor (R$)', 'numero')],
+      linhas: [{ linha: 5, d: ['1', 'Areia média', 'Areal Exemplo', '800'], v: { 0: 1, 1: 'Areia média', 2: 'Estrutura', 3: 6, 7: 'Areal Exemplo', 11: 800 } }] };
     t.id = id; t.aba = id; t.chave = 0; t.mostrar = []; t.livres = 100; t.novo = true;
     return (TAB[id] = t);
   }
@@ -93,7 +98,7 @@ window.SIS_MOCK = (function () {
         { linha: 7, nome: 'Equipe Teste', funcao: 'Pedreiro', vinculo: 'Prestador / empreiteiro', empresa: 'Empreiteira Exemplo', situacao: 'Ativo', v: dias.map(function (x, i) { return cod(i, function (j) { return String(4 + j % 3); }); }), obs: dias.map(function () { return ''; }) }].map(function (p) { p.he = dias.map(function (d) { return ((st.he || {})[d + '|' + p.linha]) || ''; }); return p; }) };
     }
     function HE_R() { st.fich = st.fich || { pags: [] }; st.fich.cfg = st.fich.cfg || { adiant: 40, p: {} }; st.fich.cfg.he = st.fich.cfg.he || { util: 50, sab: 50, df: 100, divisor: 220, bloco: 3, parcial: 'inteiro' }; return st.fich.cfg.he; }
-    if (/^sisUnidade/.test(fn)) {
+    if (/^sisUnidade(s|Servico|Evento|Pendencia)$/.test(fn)) {
       var U = st.un = st.un || (function () {
         var serv = ['2. Alvenaria', '3. Instalações hidráulicas', '4. Instalações elétricas', '5. Reboco', '6. Pintura'].map(function (n, k) { return { i: 4 + k, nome: n.replace(/^\d+\.\s*/, ''), rotulo: n }; });
         var lista = [], ln = 5, add = function (un, pav, tipo, feitos, extra) {
@@ -119,6 +124,13 @@ window.SIS_MOCK = (function () {
       });
       return JSON.parse(JSON.stringify({ hoje: st.hoje, obra: 'OBRA EXEMPLO', servicos: U.serv, unidades: uns, eventos: ['Iniciado', 'Andamento', 'Concluído'], temHistorico: true, regra: 'Regra de exemplo.' }));
     }
+    if (fn === 'sisUnidadesNomes') return { unidades: [{ linha: 5, un: 'Loja 01', pav: '01', tipo: 'Loja' }, { linha: 6, un: '201', pav: '02', tipo: '1 quarto' }, { linha: 7, un: '202', pav: '02', tipo: 'Estúdio' }, { linha: 8, un: '301', pav: '03', tipo: '1 quarto' }, { linha: 9, un: '302', pav: '03', tipo: '1 quarto' }],
+      servicos: [{ i: 4, nome: 'Alvenaria', rotulo: '2. Alvenaria' }, { i: 5, nome: 'Instalações hidráulicas', rotulo: '3. Instalações hidráulicas' }] };
+    if (fn === 'sisUnidadesLote') { st.lote = args; return args[2].length; }
+    if (fn === 'verLote') return st.lote;
+    if (fn === 'sisCotacaoCompra') { st.compra = args[0]; TAB.cotacoes.linhas[0].v[39] = 'Compra nº 2'; return { compra: 2, linha: 6 }; }
+    if (fn === 'sisComprasLancadas') return st.lancada ? { '1': 40 } : {};
+    if (fn === 'sisCompraLancar') { if (st.lancada) throw new Error('Esta compra já foi lançada (linha 40 de Lançamentos).'); st.lancada = true; return { linha: 40 }; }
     if (fn === 'sisAtividades') return [{ etapa: 'Preliminares', atividade: 'Canteiro: tapume e barracão' }, { etapa: 'Infraestrutura', atividade: 'Demolição e limpeza do terreno' }, { etapa: 'Infraestrutura', atividade: 'Contenção das divisas' }, { etapa: 'Estrutura', atividade: 'Estrutura Pav 01 — Térreo' }];
     if (fn === 'sisDiarioPadronizar') return 1;
     if (fn === 'sisAtalhos') { st.atalhos = args[0]; return args[0]; }
