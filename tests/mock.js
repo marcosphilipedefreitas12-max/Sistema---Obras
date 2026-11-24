@@ -97,10 +97,13 @@ window.SIS_MOCK = (function () {
     if (fn === 'sisDiarioPadronizar') return 1;
     if (fn === 'sisAtalhos') { st.atalhos = args[0]; return args[0]; }
     if (fn === 'sisPensao') { st.pens = st.pens || {}; var sv = args[0]; if (sv) { if (Number(sv.pens)) st.pens[sv.linha] = { pens: Number(sv.pens), base: sv.base }; else delete st.pens[sv.linha]; } return JSON.parse(JSON.stringify(st.pens)); }
-    if (/^sisFichado/.test(fn) || (/^sisDiarista(Pago|Cancelar)$/.test(fn) && st.fich && st.fich.pags.some(function (g) { return g.lanc === args[0]; }))) {
+    if (/^sisFichado/.test(fn) || (/^sisDiarista(Pago|Cancelar|Previsao)$/.test(fn) && st.fich && st.fich.pags.some(function (g) { return g.lanc === args[0]; }))) {
       var FI = st.fich = st.fich || { pags: [] };
-      if (fn === 'sisFichadoLancar') FI.pags.push({ linha: args[0], mes: args[1], lanc: 100 + FI.pags.length, tipo: args[2], valor: Number(String(args[3]).replace(/\./g, '').replace(',', '.')), status: args[6] ? 'Pago' : 'Lançado', venc: args[4], pagoEm: args[6] ? args[4] : '', forma: args[5] });
-      if (fn === 'sisDiaristaPago') FI.pags.forEach(function (g) { if (g.lanc === args[0]) { g.status = 'Pago'; g.pagoEm = args[1]; } });
+      if (fn === 'sisFichadoLancar') FI.pags.push({ linha: args[0], mes: args[1], lanc: 100 + FI.pags.length, tipo: args[2], valor: Number(String(args[3]).replace(/\./g, '').replace(',', '.')), status: args[6] === 'Pago' ? 'Pago' : (args[6] || 'Lançado'), venc: args[4], pagoEm: args[6] === 'Pago' ? args[4] : '', forma: args[5] });
+      if (fn === 'sisDiaristaPago') (function (lista) { var g = lista.filter(function (x) { return x.lanc === args[0]; })[0]; if (!g) return; var v = Number(String(args[2] || '').replace(/\./g, '').replace(',', '.')) || g.valor;
+        if (v < g.valor - 0.005) { var nv = JSON.parse(JSON.stringify(g)); nv.lanc = g.lanc + 500; nv.valor = Math.round((g.valor - v) * 100) / 100; nv.status = 'Lançado'; nv.pagoEm = ''; lista.push(nv); g.valor = v; }
+        g.status = 'Pago'; g.pagoEm = args[1]; })(FI.pags);
+      if (fn === 'sisDiaristaPrevisao') FI.pags.forEach(function (g) { if (g.lanc === args[0]) { g.venc = args[1]; g.status = args[2]; } });
       if (fn === 'sisDiaristaCancelar') FI.pags.forEach(function (g) { if (g.lanc === args[0]) g.status = 'Cancelado'; });
       FI.cfg = FI.cfg || { adiant: 40, p: {} };
       HE_R();
@@ -133,9 +136,12 @@ window.SIS_MOCK = (function () {
       if (fn === 'sisDiaristaLancar') {
         var pp = monta().pessoas.filter(function (x) { return x.linha === args[0]; })[0], ds = pp.aberto.dias.filter(function (x) { return x[0] >= args[1] && x[0] <= args[2]; }), qq = ds.reduce(function (a, x) { return a + x[1]; }, 0);
         if (!qq) throw new Error('Não há diárias em aberto nesse período.');
-        DI.pags.unshift({ linha: args[0], lanc: 10 + DI.pags.length, de: ds[0][0], ate: ds[ds.length - 1][0], dias: qq, valor: qq * pp.diaria, status: args[5] ? 'Pago' : 'Lançado', venc: args[3], pagoEm: args[5] ? args[3] : '', forma: args[4] });
+        DI.pags.unshift({ linha: args[0], lanc: 10 + DI.pags.length, de: ds[0][0], ate: ds[ds.length - 1][0], dias: qq, valor: qq * pp.diaria, status: args[5] === true || args[5] === 'Pago' ? 'Pago' : (args[5] || 'Lançado'), venc: args[3], pagoEm: args[5] ? args[3] : '', forma: args[4] });
       }
-      if (fn === 'sisDiaristaPago') DI.pags.forEach(function (g) { if (g.lanc === args[0]) { g.status = 'Pago'; g.pagoEm = args[1]; } });
+      if (fn === 'sisDiaristaPago') (function (lista) { var g = lista.filter(function (x) { return x.lanc === args[0]; })[0]; if (!g) return; var v = Number(String(args[2] || '').replace(/\./g, '').replace(',', '.')) || g.valor;
+        if (v < g.valor - 0.005) { var nv = JSON.parse(JSON.stringify(g)); nv.lanc = g.lanc + 500; nv.valor = Math.round((g.valor - v) * 100) / 100; nv.status = 'Lançado'; nv.pagoEm = ''; lista.push(nv); g.valor = v; }
+        g.status = 'Pago'; g.pagoEm = args[1]; })(DI.pags);
+      if (fn === 'sisDiaristaPrevisao') DI.pags.forEach(function (g) { if (g.lanc === args[0]) { g.venc = args[1]; g.status = args[2]; } });
       if (fn === 'sisDiaristaCancelar') DI.pags.forEach(function (g) { if (g.lanc === args[0]) g.status = 'Cancelado'; });
       if (fn === 'sisDiaristaAte') { if (args[1]) DI.ate[args[0]] = args[1]; else delete DI.ate[args[0]]; }
       return monta();

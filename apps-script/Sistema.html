@@ -1604,9 +1604,9 @@ function desenharDiaristas() {
     if (aberto) {
       x += '<div class="tabela"><table><thead><tr><th>Período</th><th class="num">Diárias</th><th class="num">Valor</th><th>Situação</th><th></th></tr></thead><tbody>' +
         (p.pagamentos.length ? p.pagamentos.map(function (g) {
-          var acoes = g.status !== 'Pago' && g.status !== 'Cancelado' ? '<button class="btn so-grava" onclick="diarPago(' + g.lanc + ',\'' + esc(p.nome) + '\')">Marcar como pago</button>' + (PM.apaga ? ' <button class="btn sec so-grava" onclick="diarCancelar(' + g.lanc + ')">Cancelar</button>' : '') : '';
+          var acoes = g.status !== 'Pago' && g.status !== 'Cancelado' ? '<button class="btn so-grava" onclick="diarPago(' + g.lanc + ',\'' + esc(p.nome) + '\',0,' + (g.valor || 0) + ')">Registrar pagamento</button> <button class="btn sec so-grava" onclick="diarPrev(' + g.lanc + ',\'' + esc(p.nome) + '\',0,\'' + esc(g.venc || '') + '\',\'' + esc(g.status) + '\')">Previsão</button>' + (PM.apaga ? ' <button class="btn sec so-grava" onclick="diarCancelar(' + g.lanc + ')">Cancelar</button>' : '') : '';
           return '<tr style="cursor:default"><td>' + br(g.de) + ' a ' + br(g.ate) + '</td><td class="num">' + numd(g.dias) + '</td><td class="num">' + rsd(g.valor) + '</td><td>' + stTag(g.status) +
-            (g.status === 'Pago' && g.pagoEm ? ' <span class="info">em ' + br(g.pagoEm) + '</span>' : g.venc ? ' <span class="info">venc. ' + br(g.venc) + '</span>' : '') + '</td><td>' + acoes + '</td></tr>';
+            (g.status === 'Pago' && g.pagoEm ? ' <span class="info">em ' + br(g.pagoEm) + '</span>' : g.status !== 'Cancelado' ? ' <span class="info">' + (g.venc ? 'previsto ' + br(g.venc) : 'sem previsão') + '</span>' : '') + '</td><td>' + acoes + '</td></tr>';
         }).join('') : '<tr style="cursor:default"><td colspan="5" class="info">Nenhum pagamento lançado por esta tela ainda.</td></tr>') + '</tbody></table></div>';
       if (p.outros.length) x += '<p class="info">Outros lançamentos de mão de obra em nome de ' + esc(p.nome) + ' (feitos direto na aba Lançamentos, sem período — <b>não</b> descontados do valor em aberto): ' +
         p.outros.map(function (o) { return br(o.data) + ' ' + rsd(o.valor) + (o.status ? ' (' + esc(o.status) + ')' : ''); }).join('; ') + '. Se já pagavam diárias, use "Lançar pagamento" → "Já foi pago" para o período e cancele o antigo.</p>';
@@ -1673,8 +1673,9 @@ function desenharFichados() {
     x += '<div class="fich-pags">' + Object.keys(r.tipos).map(function (tp) {
       var gs = p.pagamentos.filter(function (g) { return g.tipo === tp; }), ativos = gs.filter(function (g) { return g.status !== 'Cancelado'; });
       return '<div class="fich-pag"><small>' + esc(r.tipos[tp]) + '</small>' + gs.map(function (g) {
-        return '<div class="fich-lin"><b>' + rsd(g.valor) + '</b> ' + stTag(g.status) + (g.status === 'Pago' && g.pagoEm ? ' <span class="info">em ' + brCurta(g.pagoEm) + '</span>' : g.status !== 'Cancelado' && g.venc ? ' <span class="info">venc. ' + brCurta(g.venc) + '</span>' : '') +
-          (g.status !== 'Pago' && g.status !== 'Cancelado' ? '<div class="diar-bt"><button class="btn peq so-grava" onclick="diarPago(' + g.lanc + ',\'' + esc(p.nome) + '\',1)">Marcar como pago</button>' +
+        return '<div class="fich-lin"><b>' + rsd(g.valor) + '</b> ' + stTag(g.status) + (g.status === 'Pago' && g.pagoEm ? ' <span class="info">em ' + brCurta(g.pagoEm) + '</span>' : g.status !== 'Cancelado' ? ' <span class="info">' + (g.venc ? 'previsto ' + brCurta(g.venc) : 'sem previsão') + '</span>' : '') +
+          (g.status !== 'Pago' && g.status !== 'Cancelado' ? '<div class="diar-bt"><button class="btn peq so-grava" onclick="diarPago(' + g.lanc + ',\'' + esc(p.nome) + '\',1,' + (g.valor || 0) + ')">Registrar pagamento</button>' +
+            '<button class="btn sec peq so-grava" onclick="diarPrev(' + g.lanc + ',\'' + esc(p.nome) + '\',1,\'' + esc(g.venc || '') + '\',\'' + esc(g.status) + '\')">Previsão</button>' +
             (PM.apaga ? '<button class="btn sec peq so-grava" onclick="diarCancelar(' + g.lanc + ',1)">Cancelar</button>' : '') + '</div>' : '') + '</div>';
       }).join('') + (ativos.length ? '<a class="so-grava fich-mais" onclick="lancarFichado(' + p.linha + ',\'' + tp + '\')">+ outro lançamento</a>' :
         '<button class="btn sec peq so-grava" onclick="lancarFichado(' + p.linha + ',\'' + tp + '\')">Lançar</button>' + (gs.length || PM.grava ? '' : '<span class="info">Nada lançado</span>')) + '</div>';
@@ -1786,14 +1787,13 @@ function lancarFichado(linha, tipo) {
   abrirGaveta('<header><h2>Lançar pagamento</h2><div class="info">' + esc(p.nome) + ' · competência ' + mesBR + ' · grava na aba Lançamentos</div></header><div class="conteudo">' +
     campo('Tipo', '<select id="fTipo">' + Object.keys(FICH.tipos).map(function (k) { return '<option value="' + k + '"' + (k === tipo ? ' selected' : '') + '>' + esc(FICH.tipos[k]) + '</option>'; }).join('') + '</select>') +
     campo('Valor (R$)', '<input id="fValor" inputmode="decimal" placeholder="Ex.: 1.850,40" value="' + (sug ? sug.toFixed(2).replace('.', ',') : '') + '">', sug ? 'Já veio preenchido com a estimativa. Troque pelo valor do holerite do RH, que é o que vale.' : 'O valor líquido que está no holerite do RH.') +
-    campo('Situação', '<select id="fPago"><option value="">Lançar para pagar (vai para o financeiro)</option><option value="1">Já foi pago</option></select>', 'Se escolher "Já foi pago", a data abaixo vira a data do pagamento.') +
-    campo('Data (vencimento ou pagamento)', '<input id="fData" type="date" value="' + hoje() + '">') +
+    campoSit('f') +
     campo('Forma de pagamento', '<select id="fForma">' + ['PIX', 'Transferência', 'Dinheiro', 'Boleto', 'Cheque', 'Cartão'].map(function (f) { return '<option>' + f + '</option>'; }).join('') + '</select>') +
     '</div><footer><span style="flex:1"></span><button class="btn sec" onclick="fecharGaveta()">Cancelar</button><button class="btn so-grava" onclick="salvarFichado(' + linha + ')">Lançar</button></footer>');
 }
 function salvarFichado(linha) {
   var v = el('fValor').value.trim(); if (!v) return aviso('Digite o valor do holerite.');
-  chamar('sisFichadoLancar', linha, FICH.mes, el('fTipo').value, v, el('fData').value, el('fForma').value, !!el('fPago').value).then(function (r) { FICH = r; fecharGaveta(); desenharFichados(); aviso('Pagamento lançado na aba Lançamentos.'); }).catch(function () {});
+  chamar('sisFichadoLancar', linha, FICH.mes, el('fTipo').value, v, el('fData').value, el('fForma').value, el('fSit').value).then(function (r) { FICH = r; fecharGaveta(); desenharFichados(); aviso('Pagamento lançado na aba Lançamentos.'); }).catch(function () {});
 }
 function relFichados() {
   var r = FICH, nomeMes = new Date(r.mes + '-15T12:00:00').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
@@ -1817,14 +1817,25 @@ function relFichados() {
   el('area').innerHTML = h;
 }
 function diarPessoa(linha) { return DIAR.pessoas.filter(function (p) { return p.linha === linha; })[0] || DIAR.outras.filter(function (p) { return p.linha === linha; })[0]; }
+/* Situação do lançamento: Lançado / Enviado ao financeiro / Agendado (data = previsão de pagamento) ou Já foi pago (data = data do pagamento). */
+function campoSit(px) {
+  return campo('Situação', '<select id="' + px + 'Sit" onchange="sitMudou(\'' + px + '\')"><option value="Lançado">Lançado (ainda não foi para o financeiro)</option><option value="Enviado ao financeiro">Enviado ao financeiro</option>' +
+      '<option value="Agendado">Agendado pelo financeiro</option><option value="Pago">Já foi pago</option></select>') +
+    '<div class="campo"><label for="' + px + 'Data" id="' + px + 'DataL">Previsão de pagamento</label><input id="' + px + 'Data" type="date"><div class="aj" id="' + px + 'DataA">Deixe em branco se o financeiro ainda não passou a data. Dá para preencher depois pelo botão "Previsão".</div></div>';
+}
+function sitMudou(px) {
+  var pago = el(px + 'Sit').value === 'Pago';
+  el(px + 'DataL').textContent = pago ? 'Data do pagamento' : 'Previsão de pagamento';
+  el(px + 'DataA').textContent = pago ? 'Dia em que foi pago.' : 'Deixe em branco se o financeiro ainda não passou a data. Dá para preencher depois pelo botão "Previsão".';
+  if (pago && !el(px + 'Data').value) el(px + 'Data').value = hoje();
+}
 function lancarDiarias(linha) {
   var p = diarPessoa(linha), a = p.aberto;
   abrirGaveta('<header><h2>Lançar pagamento</h2><div class="info">' + esc(p.nome) + ' · grava na aba Lançamentos (Mão de obra)</div></header><div class="conteudo">' +
     '<div class="duas">' + campo('De', '<input id="dDe" type="date" value="' + a.de + '" min="' + a.de + '" max="' + a.ate + '" onchange="diarConta(' + linha + ')">') +
     campo('Até', '<input id="dAte" type="date" value="' + a.ate + '" min="' + a.de + '" max="' + a.ate + '" onchange="diarConta(' + linha + ')">') + '</div>' +
     '<div id="dConta" class="diar-conta" aria-live="polite"></div>' +
-    campo('Situação', '<select id="dPago"><option value="">Lançar para pagar (vai para o financeiro)</option><option value="1">Já foi pago</option></select>', 'Se escolher "Já foi pago", a data abaixo vira a data do pagamento.') +
-    campo('Data (vencimento ou pagamento)', '<input id="dData" type="date" value="' + hoje() + '">') +
+    campoSit('d') +
     campo('Forma de pagamento', '<select id="dForma">' + ['PIX', 'Transferência', 'Dinheiro', 'Boleto', 'Cheque', 'Cartão'].map(function (f) { return '<option>' + f + '</option>'; }).join('') + '</select>', p.temPix ? 'A chave PIX da tela Pessoas vai junto no lançamento.' : 'Sem chave PIX na tela Pessoas.') +
     '</div><footer><span style="flex:1"></span><button class="btn sec" onclick="fecharGaveta()">Cancelar</button><button class="btn so-grava" onclick="salvarDiarias(' + linha + ')">Lançar</button></footer>');
   diarConta(linha);
@@ -1836,13 +1847,27 @@ function diarConta(linha) {
 }
 function salvarDiarias(linha) {
   var de = el('dDe').value, ate = el('dAte').value; if (!de || !ate || de > ate) return aviso('Confira o período.');
-  chamar('sisDiaristaLancar', linha, de, ate, el('dData').value, el('dForma').value, !!el('dPago').value).then(function (r) { DIAR = r; fecharGaveta(); desenharDiaristas(); aviso('Pagamento lançado na aba Lançamentos.'); }).catch(function () {});
+  chamar('sisDiaristaLancar', linha, de, ate, el('dData').value, el('dForma').value, el('dSit').value).then(function (r) { DIAR = r; fecharGaveta(); desenharDiaristas(); aviso('Pagamento lançado na aba Lançamentos.'); }).catch(function () {});
 }
-function diarPago(lanc, nome, clt) {
-  abrirGaveta('<header><h2>Marcar como pago</h2><div class="info">' + esc(nome) + '</div></header><div class="conteudo">' + campo('Data do pagamento', '<input id="dPg" type="date" value="' + hoje() + '">') +
-    '</div><footer><span style="flex:1"></span><button class="btn sec" onclick="fecharGaveta()">Cancelar</button><button class="btn so-grava" onclick="diarPagoOk(' + lanc + ',' + (clt ? 1 : 0) + ')">Marcar como pago</button></footer>');
+function diarPago(lanc, nome, clt, valor) {
+  var vr = Number(valor) || 0;
+  abrirGaveta('<header><h2>Registrar pagamento</h2><div class="info">' + esc(nome) + (vr && PM.custos ? ' · lançado ' + rsd(vr) : '') + '</div></header><div class="conteudo">' + campo('Data do pagamento', '<input id="dPg" type="date" value="' + hoje() + '">') +
+    (PM.custos ? campo('Valor pago (R$)', '<input id="dPgV" inputmode="decimal" value="' + (vr ? vr.toFixed(2).replace('.', ',') : '') + '">', 'Se o financeiro pagou só uma parte, digite quanto foi pago. O restante continua lançado (numa linha nova na aba Lançamentos), esperando o próximo pagamento.') : '') +
+    '</div><footer><span style="flex:1"></span><button class="btn sec" onclick="fecharGaveta()">Cancelar</button><button class="btn so-grava" onclick="diarPagoOk(' + lanc + ',' + (clt ? 1 : 0) + ')">Registrar pagamento</button></footer>');
 }
-function diarPagoOk(lanc, clt) { chamar('sisDiaristaPago', lanc, el('dPg').value).then(function (r) { DIAR = r; fecharGaveta(); aviso('Marcado como pago.'); if (clt) vFichados(); else desenharDiaristas(); }).catch(function () {}); }
+function diarPagoOk(lanc, clt) {
+  var v = el('dPgV') ? el('dPgV').value.trim() : '';
+  chamar('sisDiaristaPago', lanc, el('dPg').value, v).then(function (r) { DIAR = r; fecharGaveta(); aviso('Pagamento registrado.'); if (clt) vFichados(); else desenharDiaristas(); }).catch(function () {});
+}
+function diarPrev(lanc, nome, clt, venc, sit) {
+  abrirGaveta('<header><h2>Previsão de pagamento</h2><div class="info">' + esc(nome) + '</div></header><div class="conteudo">' +
+    campo('Previsão de pagamento', '<input id="pvD" type="date" value="' + esc(venc || '') + '">', 'A data que o financeiro passou. Fica no Vencimento da aba Lançamentos.') +
+    campo('Situação', '<select id="pvS">' + ['Lançado', 'Enviado ao financeiro', 'Agendado'].map(function (o) { return '<option' + (o === (sit === 'Lançado' || !sit ? 'Agendado' : sit) ? ' selected' : '') + '>' + o + '</option>'; }).join('') + '</select>') +
+    '</div><footer><span style="flex:1"></span><button class="btn sec" onclick="fecharGaveta()">Cancelar</button><button class="btn so-grava" onclick="diarPrevOk(' + lanc + ',' + (clt ? 1 : 0) + ')">Salvar</button></footer>');
+}
+function diarPrevOk(lanc, clt) {
+  chamar('sisDiaristaPrevisao', lanc, el('pvD').value, el('pvS').value).then(function (r) { DIAR = r; fecharGaveta(); aviso('Previsão salva.'); if (clt) vFichados(); else desenharDiaristas(); }).catch(function () {});
+}
 function diarCancelar(lanc, clt) {
   abrirGaveta('<header><h2>Cancelar lançamento</h2></header><div class="conteudo"><p>O lançamento fica como "Cancelado" na aba Lançamentos' + (clt ? '.' : ' e as diárias voltam para "em aberto".') + '</p></div>' +
     '<footer><span style="flex:1"></span><button class="btn sec" onclick="fecharGaveta()">Voltar</button><button class="btn perigo so-grava" onclick="chamar(\'sisDiaristaCancelar\',' + lanc + ').then(function(r){DIAR=r;fecharGaveta();aviso(\'Lançamento cancelado.\');' + (clt ? 'vFichados()' : 'desenharDiaristas()') + '}).catch(function(){})">Cancelar lançamento</button></footer>');
