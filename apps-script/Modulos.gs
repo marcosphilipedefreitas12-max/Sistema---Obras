@@ -1023,8 +1023,8 @@ function sisDiaristaLancar(linha, de, ate, data, forma, pago) {
     var d1 = dias[0][0], d2 = dias[dias.length - 1][0], br = function (x) { return x.slice(8) + '/' + x.slice(5, 7); };
     var pix = String(sisSS_().getSheetByName('Pessoas').getRange(linha, 12).getValue() || '');
     var v = { 0: r.hoje, 1: p.etapa || '', 2: 'Diárias — ' + p.nome + ' (' + br(d1) + ' a ' + br(d2) + ', ' + q + ' dia(s))', 3: p.nome, 5: 'Mão de obra', 6: q, 7: q * p.diaria,
-      8: data || r.hoje, 11: '[DIARIAS ' + d1 + ' a ' + d2 + '] Lançado pelo sistema por ' + sisUsuario_(), 13: forma || 'PIX', 14: pago ? 'Pago' : 'Lançado' };
-    if (pago) v[15] = data || r.hoje; if (pix) v[16] = pix;
+      11: '[DIARIAS ' + d1 + ' a ' + d2 + '] Lançado pelo sistema por ' + sisUsuario_(), 13: forma || 'PIX' };
+    sisSituacao_(v, pago, data, r.hoje); if (pix) v[16] = pix;
     sisAbaSalvar('lancamentos', 0, v);
     return sisDiaristas();
   }
@@ -1033,7 +1033,41 @@ function sisDiaristaLanc_(lanc) {
   var obs = String(sisSS_().getSheetByName('Lançamentos').getRange(lanc, 12).getValue());
   if (!/\[(DIARIAS|CLT) /.test(obs)) throw new Error('Esse lançamento não é de diárias nem de fichado.');
 }
-function sisDiaristaPago(lanc, data) { sisDiaristaLanc_(lanc); sisAbaSalvar('lancamentos', lanc, { 14: 'Pago', 15: data || sisIso_(new Date()) }); return sisDiaristas(); }
+var SIS_SIT_PAG = ['Lançado', 'Enviado ao financeiro', 'Agendado', 'Pago'];
+/** Situação do pagamento: Lançado / Enviado ao financeiro / Agendado (com previsão em Vencimento) ou Pago (data do pagamento). */
+function sisSituacao_(v, sit, data, hoje) {
+  if (sit === true) sit = 'Pago'; if (!sit || sit === false) sit = 'Lançado';
+  if (SIS_SIT_PAG.indexOf(sit) < 0) throw new Error('Situação inválida.');
+  v[14] = sit;
+  if (sit === 'Pago') { v[15] = data || hoje; v[8] = data || hoje; } else if (data) v[8] = data;  // vencimento = previsão de pagamento
+}
+/** Marca como pago. Se o valor pago for menor que o lançado, divide: esta linha fica com o que foi pago e uma linha nova fica com o saldo. */
+function sisDiaristaPago(lanc, data, valor) {
+  return sisComTrava_(function () {
+    sisDiaristaLanc_(lanc);
+    var sh = sisSS_().getSheetByName('Lançamentos'), r = sh.getRange(lanc, 1, 1, 18).getValues()[0], f = sh.getRange(lanc, 1, 1, 18).getFormulas()[0];
+    var total = Number(r[7]) || 0, pg = valor === undefined || valor === null || valor === '' ? total : Number(String(valor).replace(/\./g, '').replace(',', '.'));
+    if (typeof valor === 'number') pg = valor;
+    if (!(pg > 0)) throw new Error('Informe o valor pago.');
+    pg = Math.round(pg * 100) / 100; if (pg > total + 0.005) throw new Error('O valor pago é maior que o lançado (R$ ' + total.toFixed(2).replace('.', ',') + ').');
+    var dt = data || sisIso_(new Date());
+    if (pg < total - 0.005) {
+      var resto = Math.round((total - pg) * 100) / 100, qtd = Number(r[6]) || 0, novo = {};
+      r.forEach(function (x, i) { if (!f[i] && x !== '' && x !== null) novo[i] = x instanceof Date ? sisIso_(x) : x; });
+      novo[7] = resto; if (qtd) novo[6] = Math.round(qtd * resto / total * 100) / 100; novo[14] = 'Lançado'; delete novo[15];
+      novo[11] = String(r[11] || '') + ' (saldo: pago R$ ' + pg.toFixed(2).replace('.', ',') + ' em ' + dt.slice(8) + '/' + dt.slice(5, 7) + ')';
+      sisAbaSalvar('lancamentos', lanc, { 7: pg, 6: qtd ? Math.round(qtd * pg / total * 100) / 100 : '', 14: 'Pago', 15: dt, 11: String(r[11] || '') + ' (parcela paga; saldo em outra linha)' });
+      sisAbaSalvar('lancamentos', 0, novo);
+    } else sisAbaSalvar('lancamentos', lanc, { 14: 'Pago', 15: dt });
+    return sisDiaristas();
+  });
+}
+/** Previsão de pagamento (o financeiro informa): grava no Vencimento e muda a situação. */
+function sisDiaristaPrevisao(lanc, data, sit) {
+  sisDiaristaLanc_(lanc); if (sit && ['Lançado', 'Enviado ao financeiro', 'Agendado'].indexOf(sit) < 0) throw new Error('Situação inválida.');
+  var v = {}; if (data) v[8] = data; if (sit) v[14] = sit; if (!data && !sit) throw new Error('Nada para salvar.');
+  sisAbaSalvar('lancamentos', lanc, v); return sisDiaristas();
+}
 function sisDiaristaCancelar(lanc) { sisDiaristaLanc_(lanc); sisAbaSalvar('lancamentos', lanc, { 14: 'Cancelado' }); return sisDiaristas(); }
 function sisDiaristaAte(linha, iso) {
   var a = sisDiarAte_(); if (iso) a[linha] = String(iso).slice(0, 10); else delete a[linha];
@@ -1091,9 +1125,9 @@ function sisFichadoLancar(linha, mes, tipo, valor, data, forma, pago) {
   var p = sisFichados(mes).pessoas.filter(function (x) { return x.linha === linha; })[0];
   if (!p) throw new Error('Pessoa não encontrada entre os fichados desse mês.');
   var hoje = sisIso_(new Date()), pix = String(sisSS_().getSheetByName('Pessoas').getRange(linha, 12).getValue() || '');
-  var w = { 0: hoje, 1: p.etapa || '', 2: SIS_CLT_TIPOS[tipo] + ' ' + mes.slice(5) + '/' + mes.slice(0, 4) + ' — ' + p.nome, 3: p.nome, 5: 'Mão de obra', 6: 1, 7: v, 8: data || hoje,
-    11: '[CLT ' + mes + ' ' + tipo + '] Valor do holerite. Lançado pelo sistema por ' + sisUsuario_(), 13: forma || 'PIX', 14: pago ? 'Pago' : 'Lançado' };
-  if (pago) w[15] = data || hoje; if (pix) w[16] = pix;
+  var w = { 0: hoje, 1: p.etapa || '', 2: SIS_CLT_TIPOS[tipo] + ' ' + mes.slice(5) + '/' + mes.slice(0, 4) + ' — ' + p.nome, 3: p.nome, 5: 'Mão de obra', 6: 1, 7: v,
+    11: '[CLT ' + mes + ' ' + tipo + '] Valor do holerite. Lançado pelo sistema por ' + sisUsuario_(), 13: forma || 'PIX' };
+  sisSituacao_(w, pago, data, hoje); if (pix) w[16] = pix;
   sisAbaSalvar('lancamentos', 0, w);
   return sisFichados(mes);
 }
