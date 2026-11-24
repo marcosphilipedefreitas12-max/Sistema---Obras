@@ -93,6 +93,32 @@ window.SIS_MOCK = (function () {
         { linha: 7, nome: 'Equipe Teste', funcao: 'Pedreiro', vinculo: 'Prestador / empreiteiro', empresa: 'Empreiteira Exemplo', situacao: 'Ativo', v: dias.map(function (x, i) { return cod(i, function (j) { return String(4 + j % 3); }); }), obs: dias.map(function () { return ''; }) }].map(function (p) { p.he = dias.map(function (d) { return ((st.he || {})[d + '|' + p.linha]) || ''; }); return p; }) };
     }
     function HE_R() { st.fich = st.fich || { pags: [] }; st.fich.cfg = st.fich.cfg || { adiant: 40, p: {} }; st.fich.cfg.he = st.fich.cfg.he || { util: 50, sab: 50, df: 100, divisor: 220, bloco: 3, parcial: 'inteiro' }; return st.fich.cfg.he; }
+    if (/^sisUnidade/.test(fn)) {
+      var U = st.un = st.un || (function () {
+        var serv = ['2. Alvenaria', '3. Instalações hidráulicas', '4. Instalações elétricas', '5. Reboco', '6. Pintura'].map(function (n, k) { return { i: 4 + k, nome: n.replace(/^\d+\.\s*/, ''), rotulo: n }; });
+        var lista = [], ln = 5, add = function (un, pav, tipo, feitos, extra) {
+          lista.push(Object.assign({ linha: ln++, un: un, pav: pav, tipo: tipo, area: 50, pend: '', feitosN: feitos, vist: null, qual: [], hist: [], ini: {} }, extra || {})); };
+        add('Loja 01', '01', 'Loja', 0); add('Loja 02', '01', 'Loja', 5, { vist: { aba: 'Vistoria Lojas', linha: 7, nc: 0, conf: 1, data: '2026-11-10', vistoriador: 'Eng. Exemplo', pend: '', resp: '', prazo: '', reinsp: '', sit: 'Liberada', entregue: '' } });
+        ['01', '02', '03', '04'].forEach(function (f, k) { add('2' + f, '02', k % 2 ? 'Estúdio' : '1 quarto', [5, 3, 0, 5][k], k === 3 ? { vist: { aba: 'Vistoria Aptos', linha: 9, nc: 2, conf: .9, data: '2026-11-15', vistoriador: 'Eng. Exemplo', pend: 'Rejunte; tomada', resp: 'Equipe X', prazo: '2026-11-30', reinsp: '', sit: 'Com pendências', entregue: '' } } : {}); });
+        ['01', '02', '03', '04'].forEach(function (f, k) { add('3' + f, '03', '1 quarto', [2, 0, 0, 1][k]); });
+        return { serv: serv, lista: lista };
+      })();
+      if (fn === 'sisUnidadeServico') { var uu = U.lista.filter(function (x) { return x.linha === args[0]; })[0], k2 = args[1] - 4; uu.datas = uu.datas || {}; uu.datas[k2] = args[2]; uu.hist.unshift({ data: args[2] || st.hoje, un: uu.un, serv: U.serv[k2].nome, ev: args[2] ? 'Concluído' : 'Reaberto', pct: args[2] ? 100 : '', resp: args[3] || '', obs: args[4] || '', por: 'usuario' }); }
+      if (fn === 'sisUnidadeEvento') { var ue = U.lista.filter(function (x) { return x.un === args[0]; })[0]; ue.hist.unshift({ data: args[3], un: ue.un, serv: args[1], ev: args[2], pct: args[4] === '' ? '' : Number(args[4]), resp: args[5], obs: args[6], por: 'usuario' }); }
+      if (fn === 'sisUnidadePendencia') { var up = U.lista.filter(function (x) { return x.linha === args[0]; })[0]; up.pend = args[1]; up.hist.unshift({ data: st.hoje, un: up.un, serv: '', ev: args[1] ? 'Pendência' : 'Pendência resolvida', pct: '', resp: '', obs: args[1], por: 'usuario' }); }
+      var uns = U.lista.map(function (x) {
+        x.datas = x.datas || (function () { var d = {}; for (var q = 0; q < x.feitosN; q++) d[q] = '2026-11-' + (10 + q); return d; })();
+        var serv = U.serv.map(function (sv, q) { var fimD = x.datas[q] || '', hs = x.hist.filter(function (h) { return h.serv === sv.nome; }), ini = hs.filter(function (h) { return h.ev === 'Iniciado'; }).map(function (h) { return h.data; })[0] || '';
+          var ult = hs[0]; return { i: sv.i, fim: fimD, ini: ini, pct: fimD ? 1 : (ult && ult.pct !== '' ? ult.pct / 100 : 0), st: fimD ? 'concluido' : (ini || (ult && /Iniciado|Andamento|Reaberto/.test(ult.ev)) ? 'execucao' : 'nao'), resp: ult ? ult.resp : '', obs: ult ? ult.obs : '' }; });
+        var feitos = serv.filter(function (z) { return z.st === 'concluido'; }).length, andando = serv.filter(function (z) { return z.st === 'execucao'; }).length;
+        var vp = x.vist && /pend/i.test(x.vist.sit), vok = x.vist && /liberada|entregue/i.test(x.vist.sit);
+        var stU = x.pend || vp ? 'pendencia' : feitos === serv.length ? (vok ? 'concluida' : 'vistoria') : feitos || andando ? 'execucao' : 'nao';
+        var mot = []; if (x.pend) mot.push('Pendências anotadas na unidade'); if (vp) mot.push('Vistoria: ' + x.vist.sit + ' (' + x.vist.nc + ' NC)');
+        return { linha: x.linha, un: x.un, pav: x.pav, tipo: x.tipo, area: x.area, pctPlan: '', vistFinal: '', pend: x.pend, serv: serv, feitos: feitos, andando: andando, pct: feitos / serv.length, st: stU, motivos: mot,
+          inicio: '', ultimo: '', concluidaEm: stU === 'concluida' ? '2026-11-14' : '', vist: x.vist, qual: x.un === '204' ? [{ aba: 'Inspeções de Serviço', linha: 5, data: '2026-11-12', serv: 'Revestimento', local: 'Apto 204', res: 'Reprovado', oque: 'Peças ocas', resp: 'Equipe X', prazo: '2026-11-20', sit: 'Em aberto', aberta: true }] : [], hist: x.hist };
+      });
+      return JSON.parse(JSON.stringify({ hoje: st.hoje, obra: 'OBRA EXEMPLO', servicos: U.serv, unidades: uns, eventos: ['Iniciado', 'Andamento', 'Concluído'], temHistorico: true, regra: 'Regra de exemplo.' }));
+    }
     if (fn === 'sisAtividades') return [{ etapa: 'Preliminares', atividade: 'Canteiro: tapume e barracão' }, { etapa: 'Infraestrutura', atividade: 'Demolição e limpeza do terreno' }, { etapa: 'Infraestrutura', atividade: 'Contenção das divisas' }, { etapa: 'Estrutura', atividade: 'Estrutura Pav 01 — Térreo' }];
     if (fn === 'sisDiarioPadronizar') return 1;
     if (fn === 'sisAtalhos') { st.atalhos = args[0]; return args[0]; }

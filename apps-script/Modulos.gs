@@ -46,6 +46,14 @@ var SIS_MODULOS = [
     quando: 'Sempre que chegar uma nota fiscal ou boleto, e quando ele for pago.',
     passos: ['Data, etapa, descrição, fornecedor, nº da NF e categoria.', 'Valor e vencimento.', 'Escolha o item do orçamento (código) para o custo cair no lugar certo.',
              'Status do pagamento: atualize quando enviar ao financeiro e quando for pago (com a data).', 'Cole a linha digitável ou a chave PIX e o link do comprovante.'] },
+  { id: 'diaristas', grupo: 'custo', aba: 'Pagamento Diaristas', tipo: 'diaristas', titulo: 'Pagamentos da equipe',
+    serve: 'Diaristas: quanto cada um tem a receber até hoje (pela Presença). Fichados: pagamentos do mês pelo holerite. Em ambos, o que foi lançado e o que já foi pago.',
+    quando: 'No dia de pagar (semana ou quinzena) e sempre que quiser conferir o que está em aberto.',
+    passos: ['O valor em aberto soma os dias P, ½, TR e chuva (CH: o diarista fica na obra aguardando) ainda não pagos, até hoje. Falta, mesmo com atestado, não é paga.', 'Clique em "Lançar pagamento", confira o período e escolha "Já foi pago" ou "Lançar para pagar".',
+             'O pagamento vai também para a aba Lançamentos (Mão de obra), entrando no custo da obra.', 'Quando o financeiro pagar, abra o histórico e clique em "Marcar como pago".',
+             'Se o diarista foi fichado (CLT), informe "Diarista até" (o último dia como diarista): os dias depois disso não entram mais.',
+             'Aba "Fichados (CLT)": escolha o mês e lance adiantamento, salário e vale-transporte/alimentação com o valor do holerite do RH; depois marque como pago.',
+             '"Relatório para o RH" mostra dias trabalhados, faltas, atestados e férias de cada fichado no mês, pronto para imprimir ou salvar em PDF.'] },
   { id: 'contas', grupo: 'custo', aba: 'Contas a Pagar', tipo: 'consulta',
     serve: 'O que vence hoje e nos próximos dias. Só consulta: o status muda em Lançamentos.', quando: 'Toda manhã.' },
 
@@ -69,21 +77,13 @@ var SIS_MODULOS = [
     serve: 'Ciclo de cada laje: previsto × real, com farol de atraso.',
     quando: 'No início, na concretagem e no término de cada pavimento.',
     passos: ['Abra o pavimento e preencha a data real de início, da concretagem da laje e do término.', 'Ciclo real, farol e situação são automáticos.'] },
-  { id: 'diaristas', grupo: 'equipe', aba: 'Pagamento Diaristas', tipo: 'diaristas', titulo: 'Pagamentos da equipe',
-    serve: 'Diaristas: quanto cada um tem a receber até hoje (pela Presença). Fichados: pagamentos do mês pelo holerite. Em ambos, o que foi lançado e o que já foi pago.',
-    quando: 'No dia de pagar (semana ou quinzena) e sempre que quiser conferir o que está em aberto.',
-    passos: ['O valor em aberto soma os dias P, ½, TR e chuva (CH: o diarista fica na obra aguardando) ainda não pagos, até hoje. Falta, mesmo com atestado, não é paga.', 'Clique em "Lançar pagamento", confira o período e escolha "Já foi pago" ou "Lançar para pagar".',
-             'O pagamento vai também para a aba Lançamentos (Mão de obra), entrando no custo da obra.', 'Quando o financeiro pagar, abra o histórico e clique em "Marcar como pago".',
-             'Se o diarista foi fichado (CLT), informe "Diarista até" (o último dia como diarista): os dias depois disso não entram mais.',
-             'Aba "Fichados (CLT)": escolha o mês e lance adiantamento, salário e vale-transporte/alimentação com o valor do holerite do RH; depois marque como pago.',
-             '"Relatório para o RH" mostra dias trabalhados, faltas, atestados e férias de cada fichado no mês, pronto para imprimir ou salvar em PDF.'] },
   { id: 'monitoramento', grupo: 'campo', aba: 'Monitoramento', tipo: 'tabela', hdr: 4, ini: 5, fim: 304, chave: 'A', ult: 'M',
     mostrar: ['A', 'C', 'E', 'G', 'H', 'J', 'K'], ordem: 'desc',
     serve: 'Leituras dos marcos e fissurômetros nos vizinhos. Avisa quando o deslocamento passa do limite.',
     quando: 'Na frequência definida (diária durante escavação e contenção, semanal depois).',
     passos: ['Uma linha por leitura: instrumento, imóvel, fase da obra, data e leitura atual.', 'Deslocamento, variação e situação são automáticos.'] },
 
-  { id: 'unidades', grupo: 'campo', aba: 'Unidades', tipo: 'tabela', hdr: 4, ini: 5, fim: 199, chave: 'A', ult: 'Z',
+  { id: 'unidades', grupo: 'campo', aba: 'Unidades', tipo: 'tabela', mapa: true, fotosPasta: true, titulo: 'Unidades — mapa de controle', hdr: 4, ini: 5, fim: 199, chave: 'A', ult: 'Z',
     mostrar: ['A', 'B', 'C', 'D', 'X', 'Y', 'Z'],
     serve: 'Cadastro dos apartamentos e lojas e a data em que cada serviço ficou pronto em cada unidade.',
     quando: 'Quando um serviço termina numa unidade.',
@@ -202,7 +202,7 @@ function sisConfig_() {
   ss.getSheets().forEach(function (s) { gid[s.getName()] = s.getSheetId(); });
   var mods = SIS_MODULOS.filter(function (m) { return !m.aba || gid[m.aba] !== undefined; }).map(function (m) {
     return { id: m.id, grupo: m.grupo, custo: !!m.custo, aba: m.aba || '', titulo: m.titulo || m.aba || (m.id === 'demandas' ? 'Demandas' : 'Fornecedores'),
-             tipo: m.tipo, fotos: m.fotos ? sisColNum_(m.fotos) - 1 : -1, dias: m.dias ? sisColNum_(m.dias) - 1 : -1, servicos: m.servicos ? sisColNum_(m.servicos) - 1 : -1, descricao: m.descricao ? sisColNum_(m.descricao) - 1 : -1, serve: m.serve || '', quando: m.quando || '', passos: m.passos || [], novo: m.novo !== false,
+             tipo: m.tipo, fotos: m.fotos ? sisColNum_(m.fotos) - 1 : -1, dias: m.dias ? sisColNum_(m.dias) - 1 : -1, mapa: !!m.mapa, servicos: m.servicos ? sisColNum_(m.servicos) - 1 : -1, descricao: m.descricao ? sisColNum_(m.descricao) - 1 : -1, serve: m.serve || '', quando: m.quando || '', passos: m.passos || [], novo: m.novo !== false,
              link: m.aba ? ss.getUrl() + '#gid=' + gid[m.aba] : '' };
   });
   return { grupos: SIS_GRUPOS, modulos: mods, url: ss.getUrl() };
@@ -546,7 +546,7 @@ function sisFotosCompartilhar_(pasta, ss) {
 }
 function sisSubpasta_(pai, nome) { var it = pai.getFoldersByName(nome); return it.hasNext() ? it.next() : pai.createFolder(nome); }
 function sisPastaRegistro_(id, chave, criar) {
-  var m = sisModulo_(id); if (!m.fotos) throw new Error('Esta tela não tem fotos.');
+  var m = sisModulo_(id); if (!m.fotos && !m.fotosPasta) throw new Error('Esta tela não tem fotos.');
   var raiz = sisPastaObra_(criar); if (!raiz) return null;
   var tela = criar ? sisSubpasta_(raiz, m.titulo || m.aba) : (function () { var it = raiz.getFoldersByName(m.titulo || m.aba); return it.hasNext() ? it.next() : null; })();
   if (!tela) return null;
@@ -576,7 +576,7 @@ function sisFotoEnviar(id, chave, linha, nome, base64) {
   if (dados.length > 8 * 1024 * 1024) throw new Error('Foto grande demais.');
   var arq = pasta.createFile(Utilities.newBlob(dados, 'image/jpeg', String(nome || 'foto.jpg').replace(/[\\/]/g, '-')));
   arq.setDescription('Enviada por ' + sisUsuario_() + ' pelo Sistema de Obras');
-  if (linha > 0) {
+  if (linha > 0 && m.fotos) {
     sisComTrava_(function () {
       var sh = sisSS_().getSheetByName(m.aba), c = sisColNum_(m.fotos), cel = sh.getRange(linha, c);
       if (!cel.getFormula() && String(cel.getValue()) !== pasta.getUrl()) cel.setValue(pasta.getUrl());
@@ -1232,5 +1232,131 @@ function sisDiarioPadronizar() {
     }
     if (mud) { sh.getRange(m.ini, cD, n, 1).setValues(ds); sh.getRange(m.ini, cS, n, 1).setValues(vs); }
     return mud;
+  });
+}
+
+/* ---------------------------------------------------------------- MAPA DE CONTROLE DAS UNIDADES */
+/* Lê só o que existe: aba Unidades (19 serviços com data de pronto, % pronto, vistoria final, pendências),
+   Vistoria Aptos / Vistoria Lojas (situação, NC, pendências), Inspeções de Serviço e FVS (local que cita a unidade)
+   e a aba "Unidades – Histórico" (criada pelo sistema: início, %, responsável e observações por serviço). */
+var SIS_UH_ABA = 'Unidades – Histórico';
+var SIS_UH_CAB = ['Data', 'Unidade', 'Serviço', 'Evento', '% executado', 'Responsável', 'Observação', 'Lançado por', 'Quando'];
+var SIS_UH_EVENTOS = ['Iniciado', 'Andamento', 'Concluído', 'Reaberto', 'Pendência', 'Pendência resolvida', 'Observação', 'Vistoria'];
+function sisUhAba_(criar) {
+  var ss = sisSS_(), sh = ss.getSheetByName(SIS_UH_ABA);
+  if (!sh && criar) {
+    sh = ss.insertSheet(SIS_UH_ABA); sh.getRange(1, 1, 1, SIS_UH_CAB.length).setValues([SIS_UH_CAB]).setFontWeight('bold'); sh.setFrozenRows(1);
+    sh.getRange('A:A').setNumberFormat('dd/mm/yyyy');
+  }
+  return sh;
+}
+function sisUhLer_() {
+  var sh = sisUhAba_(false); if (!sh || sh.getLastRow() < 2) return [];
+  return sh.getRange(2, 1, sh.getLastRow() - 1, 8).getValues().map(function (r) {
+    return { data: r[0] instanceof Date ? sisIso_(r[0]) : String(r[0] || ''), un: String(r[1] || '').trim(), serv: String(r[2] || '').trim(), ev: String(r[3] || ''),
+      pct: r[4] === '' ? '' : Number(r[4]), resp: String(r[5] || ''), obs: String(r[6] || ''), por: String(r[7] || '') };
+  }).filter(function (x) { return x.un && x.data; });
+}
+function sisUhGravar_(data, un, serv, ev, pct, resp, obs) {
+  var sh = sisUhAba_(true), d = String(data || sisIso_(new Date())).slice(0, 10);
+  sh.appendRow([sisDia_(+d.slice(0, 4), +d.slice(5, 7), +d.slice(8, 10)), un, serv || '', ev, pct === '' || pct == null ? '' : Number(pct), resp || '', obs || '', sisUsuario_(), new Date()]);
+}
+/** A unidade aparece no texto do "Local"? (401, apto 401, loja 01 / loja 1) */
+function sisUnCita_(local, un) {
+  var t = String(local || '').toLowerCase(), u = String(un).toLowerCase();
+  var lj = u.match(/^loja\s*0*(\d+)$/);
+  if (lj) return new RegExp('loja\\s*0*' + lj[1] + '(?!\\d)').test(t);
+  return new RegExp('(^|[^\\d])' + u.replace(/[^\w]/g, '') + '(?!\\d)').test(t);
+}
+function sisUnidades() {
+  var ss = sisSS_(), m = sisModulo_('unidades'), sh = ss.getSheetByName(m.aba), n = m.fim - m.ini + 1;
+  var cab = sh.getRange(m.hdr, 1, 1, 26).getDisplayValues()[0], vals = sh.getRange(m.ini, 1, n, 26).getValues(), disp = sh.getRange(m.ini, 1, n, 26).getDisplayValues();
+  var servicos = []; for (var c = 4; c <= 22; c++) if (String(cab[c]).trim()) servicos.push({ i: c, nome: String(cab[c]).replace(/^\d+\.\s*/, '').trim(), rotulo: String(cab[c]).trim() });
+  var hist = sisUhLer_(), hoje = sisIso_(new Date());
+  // vistorias (as linhas seguem a ordem da aba Unidades, mas casamos pelo nome da unidade)
+  var vist = {}, lerVist = function (aba, ini, fim, cNC, cPct, cData, cVist, cPend, cResp, cPrazo, cReinsp, cSit, cEntr) {
+    var s = ss.getSheetByName(aba); if (!s) return;
+    var v = s.getRange(ini, 1, fim - ini + 1, cEntr).getValues(), d = s.getRange(ini, 1, fim - ini + 1, cEntr).getDisplayValues();
+    v.forEach(function (r, k) { var un = String(d[k][0]).trim(); if (!un) return;
+      vist[un] = { aba: aba, linha: ini + k, nc: Number(r[cNC - 1]) || 0, conf: r[cPct - 1] === '' ? '' : Number(r[cPct - 1]), data: r[cData - 1] instanceof Date ? sisIso_(r[cData - 1]) : '',
+        vistoriador: String(r[cVist - 1] || ''), pend: String(r[cPend - 1] || ''), resp: String(r[cResp - 1] || ''), prazo: r[cPrazo - 1] instanceof Date ? sisIso_(r[cPrazo - 1]) : '',
+        reinsp: r[cReinsp - 1] instanceof Date ? sisIso_(r[cReinsp - 1]) : '', sit: String(d[k][cSit - 1] || ''), entregue: r[cEntr - 1] instanceof Date ? sisIso_(r[cEntr - 1]) : '' };
+    });
+  };
+  lerVist('Vistoria Aptos', 6, 155, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44);
+  lerVist('Vistoria Lojas', 6, 55, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31);
+  // inspeções e FVS que citam a unidade no "Local"
+  var qual = [], lerQ = function (aba, ini, fim, cols) {
+    var s = ss.getSheetByName(aba); if (!s) return;
+    var v = s.getRange(ini, 1, fim - ini + 1, cols.ult).getValues(), d = s.getRange(ini, 1, fim - ini + 1, cols.ult).getDisplayValues();
+    v.forEach(function (r, k) { if (!String(d[k][1]).trim()) return;
+      var sit = String(d[k][cols.sit - 1] || '');
+      qual.push({ aba: aba, linha: ini + k, data: r[0] instanceof Date ? sisIso_(r[0]) : '', serv: String(d[k][1]), local: String(d[k][2]), res: String(d[k][cols.res - 1] || ''),
+        oque: String(d[k][cols.oque - 1] || ''), resp: String(d[k][cols.resp - 1] || ''), prazo: r[cols.prazo - 1] instanceof Date ? sisIso_(r[cols.prazo - 1]) : '', sit: sit,
+        aberta: /em aberto|vencid/i.test(sit) });
+    });
+  };
+  lerQ('Inspeções de Serviço', 5, 404, { res: 19, oque: 20, resp: 21, prazo: 22, sit: 24, ult: 24 });
+  lerQ('Qualidade (FVS)', 5, 404, { res: 5, oque: 4, resp: 6, prazo: 7, sit: 9, ult: 9 });
+  var uns = [];
+  vals.forEach(function (r, k) {
+    var nome = String(disp[k][0]).trim(); if (!nome) return;
+    var linha = m.ini + k, h = hist.filter(function (x) { return x.un === nome; });
+    var serv = servicos.map(function (s) {
+      var fim = r[s.i] instanceof Date ? sisIso_(r[s.i]) : '', hs = h.filter(function (x) { return x.serv === s.nome || x.serv === s.rotulo; });
+      var ini = hs.filter(function (x) { return x.ev === 'Iniciado'; }).map(function (x) { return x.data; }).sort()[0] || '';
+      var ult = hs.slice().sort(function (a, b) { return a.data < b.data ? -1 : 1; }).pop() || null;
+      var pct = fim ? 1 : (ult && ult.pct !== '' && !isNaN(ult.pct) ? ult.pct / 100 : 0);
+      var st = fim ? 'concluido' : (ini || (ult && /Iniciado|Andamento|Reaberto/.test(ult.ev)) ? 'execucao' : 'nao');
+      return { i: s.i, fim: fim, ini: ini, pct: pct, st: st, resp: ult ? ult.resp : '', obs: ult ? ult.obs : '' };
+    });
+    var feitos = serv.filter(function (x) { return x.st === 'concluido'; }).length, andando = serv.filter(function (x) { return x.st === 'execucao'; }).length;
+    var vi = vist[nome] || null, q = qual.filter(function (x) { return sisUnCita_(x.local, nome); });
+    var pendTxt = String(disp[k][25] || '').trim(), qAberta = q.filter(function (x) { return x.aberta; }).length;
+    var vistFinal = String(disp[k][24] || '').trim(), vistPend = vi && /pend/i.test(vi.sit), vistOk = (vi && /liberada|entregue/i.test(vi.sit)) || /aprovad|liberad|^ok$|^s$|^sim$|\d{1,2}\/\d{1,2}/i.test(vistFinal);
+    var pct = servicos.length ? feitos / servicos.length : 0;
+    // Regra de situação (a primeira que valer): pendência > aguardando vistoria > concluída > em execução > não iniciada
+    var st = pendTxt || vistPend || qAberta ? 'pendencia' : feitos === servicos.length && servicos.length ? (vistOk ? 'concluida' : 'vistoria') : feitos || andando ? 'execucao' : 'nao';
+    var motivos = [];
+    if (pendTxt) motivos.push('Pendências anotadas na unidade');
+    if (vistPend) motivos.push('Vistoria: ' + vi.sit + (vi.nc ? ' (' + vi.nc + ' NC)' : ''));
+    if (qAberta) motivos.push(qAberta + ' inspeção/FVS em aberto');
+    var datas = serv.map(function (x) { return x.fim; }).filter(Boolean).sort(), inis = serv.map(function (x) { return x.ini; }).filter(Boolean).sort();
+    uns.push({ linha: linha, un: nome, pav: String(disp[k][1]).trim(), tipo: String(disp[k][2]).trim(), area: r[3] === '' ? '' : Number(r[3]), pctPlan: r[23] === '' ? '' : Number(r[23]),
+      vistFinal: vistFinal, pend: pendTxt, serv: serv, feitos: feitos, andando: andando, pct: pct, st: st, motivos: motivos,
+      inicio: [inis[0], datas[0]].filter(Boolean).sort()[0] || '', ultimo: datas[datas.length - 1] || '', concluidaEm: st === 'concluida' ? (vi && vi.entregue) || datas[datas.length - 1] || '' : '',
+      vist: vi, qual: q, hist: h.sort(function (a, b) { return a.data < b.data ? 1 : -1; }) });
+  });
+  return { hoje: hoje, obra: String(ss.getSheetByName('Resumo') ? ss.getSheetByName('Resumo').getRange('B2').getDisplayValue() : ''), servicos: servicos, unidades: uns,
+    eventos: SIS_UH_EVENTOS, temHistorico: !!sisUhAba_(false),
+    regra: 'Situação (a primeira que valer): 1) Com pendência — texto em Pendências, vistoria com pendência ou inspeção/FVS em aberto citando a unidade; 2) Aguardando vistoria — todos os serviços prontos e vistoria não liberada; 3) Concluída — todos os serviços prontos, vistoria liberada/entregue e sem pendência; 4) Em execução — algum serviço pronto ou iniciado; 5) Não iniciada. % da unidade = serviços prontos ÷ ' + servicos.length + ' (todos com o mesmo peso, como na planilha).' };
+}
+/** Marca (ou desfaz) a data de pronto de um serviço na aba Unidades e registra no histórico. */
+function sisUnidadeServico(linha, col, data, resp, obs) {
+  return sisComTrava_(function () {
+    var m = sisModulo_('unidades'); if (linha < m.ini || linha > m.fim || col < 4 || col > 22) throw new Error('Serviço ou unidade inválida.');
+    var sh = sisSS_().getSheetByName(m.aba), un = String(sh.getRange(linha, 1).getDisplayValue()).trim(), nomeS = String(sh.getRange(m.hdr, col + 1).getDisplayValue()).replace(/^\d+\.\s*/, '').trim();
+    if (!un) throw new Error('Unidade não encontrada.');
+    var v = {}; v[col] = data || ''; sisAbaSalvar('unidades', linha, v);
+    sisUhGravar_(data || sisIso_(new Date()), un, nomeS, data ? 'Concluído' : 'Reaberto', data ? 100 : '', resp, obs);
+    return sisUnidades();
+  });
+}
+/** Registra um acontecimento no histórico (início, andamento, observação…), sem mexer na aba Unidades. */
+function sisUnidadeEvento(un, serv, ev, data, pct, resp, obs) {
+  if (SIS_UH_EVENTOS.indexOf(ev) < 0 || /Concluído|Reaberto/.test(ev)) throw new Error('Tipo de registro inválido.');
+  if (!String(un || '').trim()) throw new Error('Unidade inválida.');
+  if (pct !== '' && pct != null && !(Number(pct) >= 0 && Number(pct) <= 100)) throw new Error('% deve ser de 0 a 100.');
+  sisComTrava_(function () { sisUhGravar_(data, String(un).trim(), serv, ev, pct, resp, obs); });
+  return sisUnidades();
+}
+/** Pendências da unidade (coluna Pendências da aba Unidades) + histórico. */
+function sisUnidadePendencia(linha, texto) {
+  return sisComTrava_(function () {
+    var m = sisModulo_('unidades'); if (linha < m.ini || linha > m.fim) throw new Error('Unidade inválida.');
+    var sh = sisSS_().getSheetByName(m.aba), un = String(sh.getRange(linha, 1).getDisplayValue()).trim(), antes = String(sh.getRange(linha, 26).getDisplayValue()).trim();
+    sisAbaSalvar('unidades', linha, { 25: texto || '' });
+    sisUhGravar_('', un, '', texto ? 'Pendência' : 'Pendência resolvida', '', '', texto || ('Resolvida: ' + antes));
+    return sisUnidades();
   });
 }
