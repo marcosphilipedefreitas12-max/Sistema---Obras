@@ -19,12 +19,12 @@ var SIS_GRUPOS = [
 
 // tipo: 'tabela' (lista + formulário), 'consulta' (só abre na planilha), 'presenca', 'demandas', 'fornecedores'
 var SIS_MODULOS = [
-  { id: 'diario', grupo: 'campo', aba: 'Diário de Obra', tipo: 'tabela', hdr: 4, ini: 5, fim: 404, chave: 'A', ult: 'T', fotos: 'P',
+  { id: 'diario', grupo: 'campo', aba: 'Diário de Obra', tipo: 'tabela', hdr: 4, ini: 5, fim: 404, chave: 'A', ult: 'T', fotos: 'P', servicos: 'M', descricao: 'N',
     mostrar: ['A', 'B', 'C', 'K', 'M', 'N', 'O'], ordem: 'desc',
     serve: 'Registro do dia: clima, quantas pessoas de cada função, equipamentos, serviços executados e ocorrências.',
     quando: 'Todo dia, no fim do expediente. Um registro por dia.',
     passos: ['Clique em "Novo registro" e escolha a data.', 'Preencha o clima da manhã e da tarde.', 'Digite quantas pessoas de cada função trabalharam.',
-             'Descreva os serviços executados e qualquer ocorrência (visita, acidente, falta de material, chuva).', 'O total de efetivo e as colunas "pela folha" são automáticos.', 'Fotos: no registro do dia, toque em "Adicionar fotos" (no celular abre a câmera). Elas vão para a pasta de fotos da obra no Google Drive, separadas por dia.'] },
+             'Em "Serviços executados", marque na lista as atividades do Cronograma que andaram no dia (pode marcar várias).', 'Em "Ocorrências", descreva o que foi executado (onde e o quê) e qualquer ocorrência (visita, acidente, falta de material, chuva).', 'O total de efetivo e as colunas "pela folha" são automáticos.', 'Fotos: no registro do dia, toque em "Adicionar fotos" (no celular abre a câmera). Elas vão para a pasta de fotos da obra no Google Drive, separadas por dia.'] },
   { id: 'presenca', grupo: 'campo', aba: 'Presença', tipo: 'presenca',
     serve: 'Presença de cada pessoa cadastrada, dia a dia. Alimenta o pagamento dos diaristas e o custo de mão de obra.',
     quando: 'Todo dia, de manhã, depois de conferir quem chegou.',
@@ -202,7 +202,7 @@ function sisConfig_() {
   ss.getSheets().forEach(function (s) { gid[s.getName()] = s.getSheetId(); });
   var mods = SIS_MODULOS.filter(function (m) { return !m.aba || gid[m.aba] !== undefined; }).map(function (m) {
     return { id: m.id, grupo: m.grupo, custo: !!m.custo, aba: m.aba || '', titulo: m.titulo || m.aba || (m.id === 'demandas' ? 'Demandas' : 'Fornecedores'),
-             tipo: m.tipo, fotos: m.fotos ? sisColNum_(m.fotos) - 1 : -1, dias: m.dias ? sisColNum_(m.dias) - 1 : -1, serve: m.serve || '', quando: m.quando || '', passos: m.passos || [], novo: m.novo !== false,
+             tipo: m.tipo, fotos: m.fotos ? sisColNum_(m.fotos) - 1 : -1, dias: m.dias ? sisColNum_(m.dias) - 1 : -1, servicos: m.servicos ? sisColNum_(m.servicos) - 1 : -1, descricao: m.descricao ? sisColNum_(m.descricao) - 1 : -1, serve: m.serve || '', quando: m.quando || '', passos: m.passos || [], novo: m.novo !== false,
              link: m.aba ? ss.getUrl() + '#gid=' + gid[m.aba] : '' };
   });
   return { grupos: SIS_GRUPOS, modulos: mods, url: ss.getUrl() };
@@ -1207,5 +1207,30 @@ function sisPresencaHE(iso, linha, horas) {
       if (ex.length) sh.getRange(ex[0].row, 1, 1, linhaV.length).setValues([linhaV]); else sh.appendRow(linhaV);
     }
     return h;
+  });
+}
+
+/* ---------------------------------------------------------------- DIÁRIO: serviços padronizados */
+/** Atividades do Cronograma (etapa + atividade) para a lista de "Serviços executados" do Diário. */
+function sisAtividades() {
+  var sh = sisSS_().getSheetByName('Cronograma'); if (!sh) return [];
+  return sh.getRange(7, 2, 61, 2).getDisplayValues().filter(function (r) { return String(r[1]).trim(); })
+    .map(function (r) { return { etapa: String(r[0]).trim(), atividade: String(r[1]).trim() }; });
+}
+/** Uma vez só (Administrador): o texto livre antigo de "Serviços executados" vai para "Ocorrências" (na frente do que já havia). */
+function sisDiarioPadronizar() {
+  return sisComTrava_(function () {
+    var m = sisModulo_('diario'), sh = sisSS_().getSheetByName(m.aba), cS = sisColNum_(m.servicos), cD = sisColNum_(m.descricao);
+    var at = {}; sisAtividades().forEach(function (a) { at[a.atividade] = 1; });
+    var n = m.fim - m.ini + 1, vs = sh.getRange(m.ini, cS, n, 1).getValues(), ds = sh.getRange(m.ini, cD, n, 1).getValues(), mud = 0;
+    if (sh.getRange(m.ini, cS).getFormula() || sh.getRange(m.ini, cD).getFormula()) throw new Error('Coluna com fórmula: não mexi em nada.');
+    for (var i = 0; i < n; i++) {
+      var t = String(vs[i][0] || '').trim(); if (!t) continue;
+      if (t.split(/\s*;\s*/).every(function (x) { return at[x] || /^Outro/.test(x); })) continue;  // já está no padrão
+      var d = String(ds[i][0] || '').trim();
+      ds[i][0] = 'Executado: ' + t + (d ? ' | Ocorrência: ' + d : ''); vs[i][0] = ''; mud++;
+    }
+    if (mud) { sh.getRange(m.ini, cD, n, 1).setValues(ds); sh.getRange(m.ini, cS, n, 1).setValues(vs); }
+    return mud;
   });
 }
