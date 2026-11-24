@@ -17,6 +17,7 @@
     --titulo: "Barlow Condensed", "Arial Narrow", sans-serif; --texto: "IBM Plex Sans", "Segoe UI", Arial, sans-serif;
     --campo: #ffffff; --campo-b: #c4cacf; --cab: #f4f5f6; --hover: #f7f8fa; --st: #eef0f2; --st-t: #3d464d; --coluna: #e2e5e4; --azul-t: #1f3864;
     --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s0: #c3c9ce; --grade: #e8ebec;
+    --u-ok: #2f7d32; --u-ok-t: #ffffff; --u-exec: #2a63b8; --u-exec-t: #ffffff; --u-pend: #b42318; --u-pend-t: #ffffff; --u-vist: #f2b705; --u-vist-t: #3a2a00; --u-nao: #d5dadd; --u-nao-t: #2b3237;
     color-scheme: light;
   }
   :root[data-tema="escuro"] {
@@ -26,6 +27,7 @@
     --verm: #f07167; --verm-f: #3a1f1d; --verde: #6cc070; --verde-f: #1d3320; --ambar: #e0a43a; --ambar-f: #3a2d12;
     --campo: #171b1e; --campo-b: #424b52; --cab: #262c31; --hover: #262c31; --st: #2c3338; --st-t: #d3d8dc; --coluna: #191d20;
     --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s0: #59636b; --grade: #2c3338;
+    --u-ok: #2f8f4e; --u-ok-t: #ffffff; --u-exec: #3a7bd5; --u-exec-t: #ffffff; --u-pend: #d0453a; --u-pend-t: #ffffff; --u-vist: #e0a800; --u-vist-t: #1e1600; --u-nao: #3b444b; --u-nao-t: #e6eaec;
     color-scheme: dark;
   }
   * { box-sizing: border-box; }
@@ -218,6 +220,49 @@
   .serv-lista { max-height: 260px; overflow-y: auto; border: 1px solid var(--linha); background: var(--papel); padding: 4px 10px; }
   .serv-g small { display: block; color: var(--aco); font-size: 11.5px; margin: 8px 0 2px; } .serv-it { display: flex; gap: 8px; align-items: flex-start; padding: 4px 0; font-size: 13.5px; cursor: pointer; }
   .serv-it input { width: auto; min-height: 0; margin-top: 3px; }
+  .u-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 8px; margin-bottom: 14px; }
+  .u-kpi { text-align: left; background: var(--papel); border: 1px solid var(--linha); border-top: 3px solid var(--linha); padding: 9px 11px; font: inherit; color: var(--tinta); cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
+  .u-kpi[disabled] { cursor: default; opacity: 1; } .u-kpi b { font-family: var(--titulo); font-size: 26px; line-height: 1; } .u-kpi span { font-size: 12.5px; } .u-kpi small { font-size: 11px; color: var(--aco); }
+  .u-kpi.k-ok { border-top-color: var(--u-ok); } .u-kpi.k-exec { border-top-color: var(--u-exec); } .u-kpi.k-pend { border-top-color: var(--u-pend); } .u-kpi.k-vist { border-top-color: var(--u-vist); } .u-kpi.k-nao { border-top-color: var(--u-nao); }
+  .u-kpi.on { outline: 2px solid var(--sinal); outline-offset: -2px; }
+  .u-filtros { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: flex-end; margin: 4px 0 12px; }
+  .u-f { display: flex; flex-direction: column; gap: 3px; font-size: 11.5px; color: var(--aco); } .u-f select, .u-f input { width: auto; min-width: 110px; padding: 6px 8px; font-size: 13px; } .u-busca input { width: 110px; }
+  .u-mapa-cab { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: center; margin-bottom: 8px; } .u-mapa-cab b { font-family: var(--titulo); font-size: 19px; }
+  .u-leg { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--aco); } .u-leg span { display: inline-flex; align-items: center; gap: 5px; }
+  .u-dot { width: 12px; height: 12px; display: inline-block; border-radius: 3px; background: var(--uc); }
+  .u-ok { --uc: var(--u-ok); --ut: var(--u-ok-t); } .u-exec { --uc: var(--u-exec); --ut: var(--u-exec-t); } .u-pend { --uc: var(--u-pend); --ut: var(--u-pend-t); } .u-vist { --uc: var(--u-vist); --ut: var(--u-vist-t); } .u-nao { --uc: var(--u-nao); --ut: var(--u-nao-t); }
+  .u-mapa { display: flex; flex-direction: column; gap: 6px; background: var(--papel); border: 1px solid var(--linha); padding: 10px; overflow-x: auto; }
+  .u-pav { display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 8px; align-items: stretch; min-width: max-content; } @media (min-width: 821px) { .u-pav { min-width: 0; } }
+  .u-pav-n { display: flex; flex-direction: column; justify-content: center; border-right: 2px solid var(--linha); padding-right: 6px; } .u-pav-n b { font-family: var(--titulo); font-size: 15px; } .u-pav-n small { font-size: 11px; color: var(--aco); }
+  .u-linha { display: grid; grid-template-columns: repeat(var(--ncol, 10), minmax(70px, 1fr)); gap: 5px; }
+  .u-pav-cab .u-linha span { text-align: center; font-size: 11px; color: var(--aco); } .u-mapa { min-width: 0; }
+  .u-card { background: var(--uc); color: var(--ut); border: 0; border-radius: 6px; padding: 6px 7px 5px; min-width: 0; text-align: left; font: inherit; cursor: pointer; display: flex; flex-direction: column; gap: 3px; min-height: 74px; }
+  .u-card:hover { filter: brightness(1.06); } .u-card:focus-visible { outline: 3px solid var(--sinal); outline-offset: 2px; }
+  .u-card b { font-family: var(--titulo); font-size: 18px; line-height: 1; white-space: nowrap; } .u-card b.longo { font-size: 15px; } .u-card small { font-size: 10px; opacity: .9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .u-st { display: flex; align-items: center; gap: 4px; font-size: 10.5px; } .u-st .ico { width: 13px; height: 13px; } .u-st em { font-style: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .u-bar { height: 4px; background: rgba(255,255,255,.35); border-radius: 2px; overflow: hidden; } .u-bar i { display: block; height: 100%; background: var(--ut); }
+  .u-calor-res { margin: 0 0 8px; } .u-regra { margin-top: 10px; }
+  .u-pend-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; }
+  .u-pend-box, .u-an { background: var(--papel); border: 1px solid var(--linha); padding: 10px 12px; } .u-pend-box h3, .u-an h3 { font-family: var(--titulo); font-size: 17px; margin: 0 0 6px; }
+  .u-pend-box ul, .u-an ul { list-style: none; margin: 0; padding: 0; max-height: 320px; overflow-y: auto; } .u-pend-box li, .u-an li { border-top: 1px solid var(--linha2); }
+  .lk-btn { background: none; border: 0; padding: 6px 2px; font: inherit; color: var(--tinta); cursor: pointer; text-align: left; width: 100%; } .lk-btn:hover { background: var(--hover); }
+  .u-barras { display: flex; flex-direction: column; gap: 6px; } .u-br { display: grid; grid-template-columns: minmax(90px, 38%) minmax(0, 1fr) 40px; gap: 6px; align-items: center; font-size: 12.5px; } .u-br small { grid-column: 2 / 4; margin-top: -4px; font-size: 11px; }
+  .u-br-n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .u-br b { text-align: right; font-variant-numeric: tabular-nums; }
+  .u-meses { display: flex; align-items: flex-end; gap: 6px; height: 150px; overflow-x: auto; } .u-meses div { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; min-width: 34px; font-size: 11px; }
+  .u-meses span { width: 22px; background: var(--s1); border-radius: 3px 3px 0 0; min-height: 2px; } .u-meses small { color: var(--aco); }
+  .gaveta.larga { width: min(720px, 100vw); }
+  .u-chip { display: inline-block; background: var(--uc); color: var(--ut); border-radius: 10px; padding: 1px 8px; font-size: 11.5px; font-family: var(--texto, inherit); font-weight: 500; vertical-align: middle; white-space: nowrap; }
+  .u-atalhos { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .u-cad { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px 14px; margin: 0 0 8px; } .u-cad dt { font-size: 11px; color: var(--aco); } .u-cad dd { margin: 0; font-weight: 500; }
+  .u-motivos { display: flex; gap: 6px; align-items: flex-start; background: var(--verm-f); color: var(--verm); padding: 8px 10px; font-size: 13px; margin: 6px 0; } .u-motivos .ico { width: 16px; height: 16px; flex: none; }
+  .u-pre { white-space: pre-wrap; background: var(--fundo); padding: 8px 10px; margin: 4px 0 8px; font-size: 13px; }
+  .u-servs { display: flex; flex-direction: column; } .u-serv { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--linha2); }
+  .u-serv-n b { font-size: 13.5px; font-weight: 500; } .u-serv-n small { display: block; }
+  .u-lista { margin: 0; padding-left: 18px; font-size: 13px; } .u-lista li { margin: 4px 0; }
+  .u-tl { list-style: none; margin: 0; padding: 0 0 0 14px; border-left: 2px solid var(--linha); } .u-tl li { position: relative; padding: 4px 0 8px 8px; font-size: 13px; }
+  .u-tl li::before { content: ''; position: absolute; left: -20px; top: 9px; width: 9px; height: 9px; border-radius: 50%; background: var(--azul2); } .u-tl time { display: block; font-size: 11.5px; color: var(--aco); } .u-tl p { margin: 2px 0; }
+  @media (max-width: 820px) { .u-pav { grid-template-columns: 44px minmax(0, 1fr); } .u-linha { grid-template-columns: repeat(var(--ncol, 10), 66px); } .u-card { min-height: 64px; } .u-card small { display: none; } .u-card b { font-size: 17px; } .u-serv { grid-template-columns: minmax(0, 1fr) auto; } .u-serv-bt { grid-column: 1 / 3; } }
+  @media print { .u-card, .u-dot, .u-chip, .u-kpi { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .u-mapa { overflow: visible; } }
   .faixa.dinheiro b { font-size: 24px; }
   .fich-pres { margin: 2px 0 10px; } .fich-pres .ruim { color: var(--verm); }
   .fich-pags { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--linha2); }
@@ -667,6 +712,7 @@ function ir(id) {
   if (id === 'relatorios') return vRelatorios();
   if (id === 'executivo') return vExecutivo();
   var m = mod(id);
+  if (m.mapa) return vUnidades(m);
   if (m.tipo === 'tabela') return vTabela(m);
   if (m.tipo === 'consulta') return vConsulta(m);
   if (m.tipo === 'presenca') return vPresenca(m);
@@ -1332,7 +1378,7 @@ function desenharTabela(m) {
     '<select aria-label="Período rápido" onchange="periodoRapido(\'' + m.id + '\',this.value)"><option value="">Período…</option><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="mes">Este mês</option><option value="mesant">Mês passado</option><option value="tudo">Tudo</option></select>' +
     (fd.de || fd.ate ? '<button class="btn sec peq" onclick="PERIODO[\'' + m.id + '\']={};desenharTabela(mod(\'' + m.id + '\'))">Limpar</button>' : '') + '</div>' : '';
   var antigos = m.servicos >= 0 && PM.admin && ATIV ? t.linhas.filter(function (l) { var x = String(l.v[m.servicos] || '').trim(); return x && !x.split(/\s*;\s*/).every(function (y) { return ATIV.nomes[y] || /^Outro/.test(y); }); }).length : 0;
-  var h = (m.dias >= 0 ? abasVista(m) : '') + filtroData + (antigos ? '<div class="aviso-orc nao-imprime">' + antigos + ' registro(s) antigo(s) têm "Serviços executados" em texto livre. <button class="btn sec peq" onclick="diarioPadronizar(' + antigos + ')">Passar esses textos para Ocorrências</button></div>' : '') +
+  var h = (m.mapa ? '<div class="barra nao-imprime"><button class="btn sec" onclick="UN_VISTA=\'mapa\';vUnidades(mod(\'' + m.id + '\'))">← Voltar ao mapa</button><span class="info">Tabela da aba ' + esc(m.aba) + '</span></div>' : '') + (m.dias >= 0 ? abasVista(m) : '') + filtroData + (antigos ? '<div class="aviso-orc nao-imprime">' + antigos + ' registro(s) antigo(s) têm "Serviços executados" em texto livre. <button class="btn sec peq" onclick="diarioPadronizar(' + antigos + ')">Passar esses textos para Ocorrências</button></div>' : '') +
     '<div class="barra"><input type="search" id="buscaTab" aria-label="Buscar nesta lista" placeholder="Buscar nesta lista…" value="' + esc(BUSCA[m.id] || '') + '" oninput="BUSCA[\'' + m.id + '\']=this.value;desenharTabela(mod(\'' + m.id + '\'));manterFoco(\'#buscaTab\')">' +
     '<span class="info">' + ls.length + ' registro(s)</span><span class="esp"></span>' +
     '<button class="btn sec" onclick="vTabela(mod(\'' + m.id + '\'),true)">Atualizar</button>' +
@@ -1343,7 +1389,8 @@ function desenharTabela(m) {
     ls.slice(0, lim).map(function (l) {
       return '<tr tabindex="0" onkeydown="if(event.key===\'Enter\')this.click()" onclick="abrirLinha(\'' + m.id + '\',' + l.linha + ')">' + cols.map(function (i) {
         var c = t.cols[i], v = l.d[i];
-        return '<td class="' + (c.tipo === 'numero' && typeof l.v[c.i] === 'number' ? 'num' : c.i === m.servicos || c.i === m.descricao ? 'txt-longo' : '') + '">' + (/status|situação|resultado|farol|pago\?|alerta|concluída\?/i.test(c.nome) ? stTag(v) : esc(v)) + '</td>';
+        return '<td class="' + (c.tipo === 'numero' && typeof l.v[c.i] === 'number' ? 'num' : c.i === m.servicos || c.i === m.descricao ? 'txt-longo' : '') + '">' + (/status|situação|resultado|farol|pago\?|alerta|concluída\?/i.test(c.nome) ? stTag(v) : esc(v)) +
+          (m.id === 'lancamentos' && c.i === 2 && /\[(DIARIAS|CLT) /.test(String(l.v[11] || '')) ? ' <span class="st azul" title="Veio de Pagamentos da equipe">Equipe</span>' : '') + '</td>';
       }).join('') + '</tr>';
     }).join('') + '</tbody></table>' + (ls.length > lim ? '<div class="mais"><button class="btn sec" onclick="LIMITE[\'' + m.id + '\']=' + (lim + 200) + ';desenharTabela(mod(\'' + m.id + '\'))">Mostrar mais ' + Math.min(200, ls.length - lim) + '</button></div>' : '') + '</div>';
   el('area').innerHTML = h;
@@ -1881,6 +1928,208 @@ function diarAte(linha) {
 }
 function diarAteOk(linha, v) { chamar('sisDiaristaAte', linha, v).then(function (r) { DIAR = r; fecharGaveta(); desenharDiaristas(); aviso('Salvo.'); }).catch(function () {}); }
 
+/* ---------------------------------------------------------------- MAPA DE CONTROLE DAS UNIDADES */
+var UN = null, UNF = { busca: '', pav: '', tipo: '', st: '', serv: '', resp: '', de: '', ate: '' }, UN_VISTA = 'mapa';
+var UN_ST = {
+  concluida: { nome: 'Concluída', ico: 'ok', cls: 'u-ok' }, execucao: { nome: 'Em execução', ico: 'capacete', cls: 'u-exec' },
+  pendencia: { nome: 'Com pendência', ico: 'alerta', cls: 'u-pend' }, vistoria: { nome: 'Aguardando vistoria', ico: 'prancheta', cls: 'u-vist' },
+  nao: { nome: 'Não iniciada', ico: 'circulo', cls: 'u-nao' }
+};
+var UN_SV = { concluido: { nome: 'Concluído', cls: 'u-ok' }, execucao: { nome: 'Em execução', cls: 'u-exec' }, nao: { nome: 'Não iniciado', cls: 'u-nao' }, pendencia: { nome: 'Unidade com pendência', cls: 'u-pend' } };
+ICO.alerta = '<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17v.01"/>';
+ICO.prancheta = '<rect x="5" y="4" width="14" height="17" rx="1"/><path d="M9 4h6v3H9zM9 12l2 2 4-4"/>';
+ICO.circulo = '<circle cx="12" cy="12" r="6"/>';
+ICO.ok = '<circle cx="12" cy="12" r="8"/><path d="M8.5 12.2l2.4 2.4 4.6-5"/>';
+function vUnidades(m) {
+  el('main').innerHTML = carimbo('Mapa de controle das unidades', 'Acompanhe a evolução física, os serviços executados, as pendências e as vistorias de cada unidade do empreendimento.', ['Aba da planilha', m.aba]) +
+    '<div id="area"><div class="vazio"><b>Montando o mapa…</b>Lendo unidades, vistorias e inspeções.</div></div>';
+  chamar('sisUnidades').then(function (r) { UN = r; desenharUnidades(); }).catch(function () {});
+}
+function unFiltradas() {
+  var q = chave(UNF.busca);
+  return UN.unidades.filter(function (u) {
+    if (q && chave(u.un).indexOf(q) < 0) return false;
+    if (UNF.pav && u.pav !== UNF.pav) return false; if (UNF.tipo && u.tipo !== UNF.tipo) return false; if (UNF.st && u.st !== UNF.st) return false;
+    if (UNF.resp && !u.hist.some(function (h) { return h.resp === UNF.resp; })) return false;
+    if (UNF.de || UNF.ate) {
+      var dentro = function (d) { return d && (!UNF.de || d >= UNF.de) && (!UNF.ate || d <= UNF.ate); };
+      if (!u.serv.some(function (s) { return dentro(s.fim) || dentro(s.ini); }) && !u.hist.some(function (h) { return dentro(h.data); })) return false;
+    }
+    return true;
+  });
+}
+function unServSt(u, iServ) { var s = u.serv.filter(function (x) { return x.i === iServ; })[0]; if (!s) return 'nao'; if (s.st !== 'concluido' && u.st === 'pendencia') return 'pendencia'; return s.st; }
+function pct(v) { return Math.round((v || 0) * 100) + '%'; }
+function desenharUnidades() {
+  var r = UN, us = r.unidades, fl = unFiltradas(), cont = { concluida: 0, execucao: 0, pendencia: 0, vistoria: 0, nao: 0 };
+  us.forEach(function (u) { cont[u.st]++; });
+  var media = us.length ? us.reduce(function (a, u) { return a + u.pct; }, 0) / us.length : 0;
+  var pavs = us.map(function (u) { return u.pav; }).filter(function (x, i, a) { return x && a.indexOf(x) === i; }).sort(function (a, b) { return Number(b) - Number(a); });
+  var tipos = us.map(function (u) { return u.tipo; }).filter(function (x, i, a) { return x && a.indexOf(x) === i; });
+  var resps = []; us.forEach(function (u) { u.hist.forEach(function (h) { if (h.resp && resps.indexOf(h.resp) < 0) resps.push(h.resp); }); });
+  var kp = function (n, t, sub, cls, st) { return '<button class="u-kpi ' + (cls || '') + (UNF.st === st && st ? ' on' : '') + '"' + (st !== undefined ? ' onclick="UNF.st=UNF.st===\'' + st + '\'?\'\':\'' + st + '\';desenharUnidades()" aria-pressed="' + (UNF.st === st && !!st) + '"' : ' disabled') + '><b>' + n + '</b><span>' + t + '</span>' + (sub ? '<small>' + sub + '</small>' : '') + '</button>'; };
+  var h = '<div class="u-kpis">' + kp(us.length, 'Unidades cadastradas', r.servicos.length + ' serviços por unidade', '', '') + kp(cont.concluida, 'Concluídas', 'serviços + vistoria + sem pendência', 'k-ok', 'concluida') +
+    kp(cont.execucao, 'Em execução', '', 'k-exec', 'execucao') + kp(cont.nao, 'Não iniciadas', '', 'k-nao', 'nao') + kp(cont.pendencia, 'Com pendências', '', 'k-pend', 'pendencia') +
+    kp(cont.vistoria, 'Aguardando vistoria', '', 'k-vist', 'vistoria') + kp(pct(media), 'Conclusão média', 'serviços prontos ÷ ' + r.servicos.length) + '</div>';
+  h += '<div class="abas-pres nao-imprime" role="tablist">' + [['mapa', 'Mapa'], ['pend', 'Pendências'], ['analise', 'Análise'], ['tabela', 'Tabela']].map(function (a) {
+    return '<button role="tab" class="' + (UN_VISTA === a[0] ? 'on' : '') + '" aria-selected="' + (UN_VISTA === a[0]) + '" onclick="UN_VISTA=\'' + a[0] + '\';' + (a[0] === 'tabela' ? 'vTabela(mod(\'unidades\'))' : 'desenharUnidades()') + '">' + a[1] + '</button>'; }).join('') + '</div>';
+  var sel = function (id, rot, ops, v) { return '<label class="u-f"><span>' + rot + '</span><select onchange="UNF.' + id + '=this.value;desenharUnidades()"><option value="">Todos</option>' + ops.map(function (o) { return '<option value="' + esc(o[0]) + '"' + (v === o[0] ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('') + '</select></label>'; };
+  h += '<div class="u-filtros nao-imprime"><label class="u-f u-busca"><span>Unidade</span><input type="search" id="unBusca" placeholder="Ex.: 401" value="' + esc(UNF.busca) + '" oninput="UNF.busca=this.value;desenharUnidades();manterFoco(\'#unBusca\')"></label>' +
+    '<label class="u-f"><span>Empreendimento</span><select disabled><option>' + esc(r.obra || D.obra) + '</option></select></label>' +
+    '<label class="u-f"><span>Bloco</span><select disabled title="A planilha tem uma torre só (sem coluna de bloco)"><option>Torre única</option></select></label>' +
+    sel('pav', 'Pavimento', pavs.map(function (p) { return [p, 'Pav. ' + p]; }), UNF.pav) + sel('tipo', 'Tipologia', tipos.map(function (t) { return [t, t]; }), UNF.tipo) +
+    sel('st', 'Situação', Object.keys(UN_ST).map(function (k) { return [k, UN_ST[k].nome]; }), UNF.st) +
+    sel('serv', 'Mapa de calor por serviço', r.servicos.map(function (s) { return [String(s.i), s.rotulo]; }), UNF.serv) +
+    (resps.length ? sel('resp', 'Responsável', resps.map(function (x) { return [x, x]; }), UNF.resp) : '') +
+    '<label class="u-f"><span>Serviços de</span><input type="date" value="' + esc(UNF.de) + '" onchange="UNF.de=this.value;desenharUnidades()"></label><label class="u-f"><span>até</span><input type="date" value="' + esc(UNF.ate) + '" onchange="UNF.ate=this.value;desenharUnidades()"></label>' +
+    (Object.keys(UNF).some(function (k) { return UNF[k]; }) ? '<button class="btn sec peq" onclick="UNF={busca:\'\',pav:\'\',tipo:\'\',st:\'\',serv:\'\',resp:\'\',de:\'\',ate:\'\'};desenharUnidades()">Limpar filtros</button>' : '') + '</div>';
+  if (UN_VISTA === 'pend') h += unPendencias(fl);
+  else if (UN_VISTA === 'analise') h += unAnalise(fl);
+  else h += unMapa(fl);
+  el('area').innerHTML = h;
+}
+function unLegenda(calor) {
+  var L = calor ? UN_SV : UN_ST;
+  return '<div class="u-leg" aria-label="Legenda">' + Object.keys(L).map(function (k) { return '<span><i class="u-dot ' + L[k].cls + '"></i>' + L[k].nome + '</span>'; }).join('') + '</div>';
+}
+function unMapa(fl) {
+  var r = UN, calor = UNF.serv ? Number(UNF.serv) : -1, sv = calor >= 0 ? r.servicos.filter(function (s) { return s.i === calor; })[0] : null;
+  if (!fl.length) return '<div class="vazio"><b>Nenhuma unidade com esses filtros</b>Mude ou limpe os filtros.</div>';
+  var porPav = {}; fl.forEach(function (u) { (porPav[u.pav] = porPav[u.pav] || []).push(u); });
+  var pavs = Object.keys(porPav).sort(function (a, b) { return Number(b) - Number(a); });
+  var h = '<div class="u-mapa-cab"><div><b>' + (sv ? 'Mapa de calor: ' + esc(sv.rotulo) : 'Mapa por pavimento') + '</b><span class="info"> · ' + fl.length + ' unidade(s) · Torre única</span></div>' + unLegenda(!!sv) + '</div>';
+  if (sv) { var c = { concluido: 0, execucao: 0, nao: 0, pendencia: 0 }; fl.forEach(function (u) { c[unServSt(u, calor)]++; });
+    h += '<p class="info u-calor-res">' + esc(sv.rotulo) + ': <b>' + c.concluido + '</b> concluída(s), <b>' + c.execucao + '</b> em execução, <b>' + c.nao + '</b> não iniciada(s), <b>' + c.pendencia + '</b> em unidade com pendência.</p>'; }
+  // cada coluna é o final do número (01, 02, …): o mapa fica com cara de fachada, sem inventar posição física
+  var fim = function (u) { var mm = String(u.un).match(/(\d{1,2})\s*$/); return mm ? Number(mm[1]) : 0; };
+  var nCol = Math.max.apply(null, fl.map(fim).concat([1]));
+  h += '<div class="u-mapa" role="list" style="--ncol:' + nCol + '"><div class="u-pav u-pav-cab" aria-hidden="true"><div></div><div class="u-linha">' + Array.apply(null, Array(nCol)).map(function (x, i) { return '<span>' + (i < 9 ? '0' : '') + (i + 1) + '</span>'; }).join('') + '</div></div>' + pavs.map(function (p) {
+    var lista = porPav[p].sort(function (a, b) { return a.un < b.un ? -1 : 1; });
+    var feitos = lista.reduce(function (a, u) { return a + u.pct; }, 0) / lista.length;
+    return '<div class="u-pav" role="listitem"><div class="u-pav-n"><b>Pav. ' + esc(p) + '</b><small>' + pct(feitos) + '</small></div><div class="u-linha">' + lista.map(function (u) {
+      var st = sv ? UN_SV[unServSt(u, calor)] : UN_ST[u.st];
+      var tit = u.un + ' — ' + (sv ? sv.rotulo + ': ' + st.nome : st.nome + ', ' + pct(u.pct) + ' dos serviços') + (u.motivos.length ? ' (' + u.motivos.join('; ') + ')' : '');
+      return '<button class="u-card ' + st.cls + '" style="grid-column:' + (fim(u) || 'auto') + '" onclick="unFicha(' + u.linha + ')" title="' + esc(tit) + '" aria-label="' + esc(tit) + '"><b' + (u.un.length > 5 ? ' class="longo"' : '') + '>' + esc(u.un) + '</b>' +
+        '<span class="u-st">' + ico(sv ? (unServSt(u, calor) === 'concluido' ? 'ok' : unServSt(u, calor) === 'execucao' ? 'capacete' : unServSt(u, calor) === 'pendencia' ? 'alerta' : 'circulo') : st.ico) + '<em>' + pct(u.pct) + '</em></span>' +
+        '<span class="u-bar"><i style="width:' + Math.round(u.pct * 100) + '%"></i></span><small>' + esc(u.tipo) + '</small></button>';
+    }).join('') + '</div></div>';
+  }).join('') + '</div><p class="info u-regra">' + esc(r.regra) + '</p>';
+  return h;
+}
+function unPendencias(fl) {
+  var grupos = [
+    ['Com pendências abertas', fl.filter(function (u) { return u.st === 'pendencia'; }), function (u) { return u.motivos.join(' · '); }],
+    ['Reprovadas na vistoria (com NC)', fl.filter(function (u) { return u.vist && u.vist.nc > 0 && !/liberada|entregue/i.test(u.vist.sit); }), function (u) { return u.vist.nc + ' NC · ' + u.vist.sit + (u.vist.prazo ? ' · prazo ' + br(u.vist.prazo) : ''); }],
+    ['Aguardando vistoria', fl.filter(function (u) { return u.st === 'vistoria'; }), function (u) { return 'Todos os serviços prontos' + (u.vist ? ' · vistoria: ' + u.vist.sit : ''); }],
+    ['Em execução', fl.filter(function (u) { return u.st === 'execucao'; }), function (u) { return u.feitos + ' de ' + UN.servicos.length + ' serviços prontos' + (u.andando ? ' · ' + u.andando + ' iniciado(s)' : ''); }],
+    ['Não iniciadas', fl.filter(function (u) { return u.st === 'nao'; }), function () { return 'Nenhum serviço pronto ou iniciado'; }]
+  ];
+  return '<div class="u-pend-grid">' + grupos.map(function (g) {
+    return '<section class="u-pend-box"><h3>' + esc(g[0]) + ' <span class="info">(' + g[1].length + ')</span></h3>' + (g[1].length ? '<ul>' + g[1].slice(0, 60).map(function (u) {
+      return '<li><button class="lk-btn" onclick="unFicha(' + u.linha + ')"><b>' + esc(u.un) + '</b> <span class="info">Pav. ' + esc(u.pav) + ' · ' + esc(g[2](u)) + '</span></button></li>'; }).join('') + (g[1].length > 60 ? '<li class="info">… e mais ' + (g[1].length - 60) + '</li>' : '') + '</ul>' : '<p class="info">Nenhuma.</p>') + '</section>';
+  }).join('') + '</div><p class="info">Atrasos por serviço aparecem quando houver datas previstas por pavimento e serviço (ainda não existem na planilha).</p>';
+}
+function unAnalise(fl) {
+  var r = UN, barras = function (itens) {
+    return '<div class="u-barras">' + itens.map(function (it) { return '<div class="u-br"><span class="u-br-n">' + esc(it[0]) + '</span><span class="g-trilho"><span class="g-bar ok" style="left:0;width:' + Math.max(0, Math.min(100, it[1] * 100)) + '%"><div style="width:100%"></div></span></span><b>' + pct(it[1]) + '</b>' + (it[2] ? '<small class="info">' + esc(it[2]) + '</small>' : '') + '</div>'; }).join('') + '</div>';
+  };
+  var porPav = {}; fl.forEach(function (u) { (porPav[u.pav] = porPav[u.pav] || []).push(u); });
+  var pavs = Object.keys(porPav).sort(function (a, b) { return Number(b) - Number(a); });
+  var porServ = r.servicos.map(function (s) { var f = fl.filter(function (u) { return u.serv.some(function (x) { return x.i === s.i && x.st === 'concluido'; }); }).length; return [s.rotulo, fl.length ? f / fl.length : 0, f + ' de ' + fl.length]; });
+  var maisPend = fl.filter(function (u) { return u.motivos.length || (u.vist && u.vist.nc); }).sort(function (a, b) { return ((b.vist ? b.vist.nc : 0) + b.motivos.length) - ((a.vist ? a.vist.nc : 0) + a.motivos.length); }).slice(0, 10);
+  var meses = {}; fl.forEach(function (u) { u.serv.forEach(function (s) { if (s.fim) meses[s.fim.slice(0, 7)] = (meses[s.fim.slice(0, 7)] || 0) + 1; }); });
+  var mk = Object.keys(meses).sort(), maxM = Math.max.apply(null, mk.map(function (k) { return meses[k]; }).concat([1]));
+  return '<div class="nao-imprime" style="margin-bottom:10px"><button class="btn sec" onclick="window.print()">Imprimir / salvar PDF (com os filtros atuais)</button></div>' +
+    '<div class="duas-col"><section class="u-an"><h3>Conclusão por pavimento</h3>' + barras(pavs.map(function (p) { var l = porPav[p]; return ['Pav. ' + p, l.reduce(function (a, u) { return a + u.pct; }, 0) / l.length, l.filter(function (u) { return u.st === 'concluida'; }).length + ' concluída(s) de ' + l.length]; })) + '</section>' +
+    '<section class="u-an"><h3>Unidades com o serviço pronto</h3>' + barras(porServ) + '</section></div>' +
+    '<div class="duas-col"><section class="u-an"><h3>Unidades com mais pendências</h3>' + (maisPend.length ? '<ul>' + maisPend.map(function (u) { return '<li><button class="lk-btn" onclick="unFicha(' + u.linha + ')"><b>' + esc(u.un) + '</b> <span class="info">' + esc((u.vist && u.vist.nc ? u.vist.nc + ' NC na vistoria · ' : '') + u.motivos.join(' · ')) + '</span></button></li>'; }).join('') + '</ul>' : '<p class="info">Nenhuma pendência registrada.</p>') + '</section>' +
+    '<section class="u-an"><h3>Serviços concluídos por mês</h3>' + (mk.length ? '<div class="u-meses">' + mk.map(function (k) { return '<div><span style="height:' + Math.round(meses[k] / maxM * 100) + '%" title="' + meses[k] + ' serviço(s)"></span><b>' + meses[k] + '</b><small>' + k.slice(5) + '/' + k.slice(2, 4) + '</small></div>'; }).join('') + '</div>' : '<p class="info">Ainda não há datas de serviço pronto na aba Unidades.</p>') + '</section></div>' +
+    '<p class="info">Atrasos e comparação de produtividade precisam de datas previstas por pavimento e serviço, que ainda não existem na planilha.</p>';
+}
+var UN_ATUAL = 0;
+function unFicha(linha) {
+  var u = UN.unidades.filter(function (x) { return x.linha === linha; })[0]; if (!u) return; UN_ATUAL = linha;
+  var st = UN_ST[u.st], v = u.vist;
+  var h = '<header><h2>Unidade ' + esc(u.un) + ' <span class="u-chip ' + st.cls + '">' + esc(st.nome) + '</span></h2><div class="info">Pav. ' + esc(u.pav) + ' · ' + esc(u.tipo) + ' · linha ' + u.linha + ' da aba Unidades</div></header><div class="conteudo">' +
+    '<div class="u-atalhos so-grava"><button class="btn peq" onclick="unRegistrar(' + linha + ')">Registrar serviço</button><button class="btn sec peq" onclick="unPend(' + linha + ')">Registrar pendência</button>' +
+    '<button class="btn sec peq" onclick="unVistoria(' + linha + ')">Registrar vistoria</button><a class="btn sec peq" href="#u-hist" onclick="el(\'u-hist\').scrollIntoView();return false">Histórico</a></div>' +
+    '<dl class="u-cad"><div><dt>Empreendimento</dt><dd>' + esc(UN.obra || D.obra) + '</dd></div><div><dt>Bloco</dt><dd>Torre única</dd></div><div><dt>Pavimento</dt><dd>' + esc(u.pav) + '</dd></div><div><dt>Tipologia</dt><dd>' + esc(u.tipo) + '</dd></div>' +
+    '<div><dt>Área total</dt><dd>' + (u.area !== '' && !isNaN(u.area) && u.area ? Number(u.area).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' m²' : '—') + '</dd></div><div><dt>Conclusão</dt><dd>' + pct(u.pct) + ' <small class="info">(' + u.feitos + '/' + UN.servicos.length + ')</small></dd></div>' +
+    '<div><dt>Início</dt><dd>' + (u.inicio ? br(u.inicio) : '—') + '</dd></div><div><dt>Previsão de conclusão</dt><dd title="Ainda não existe data prevista por unidade na planilha">—</dd></div><div><dt>Concluída em</dt><dd>' + (u.concluidaEm ? br(u.concluidaEm) : '—') + '</dd></div></dl>' +
+    (u.motivos.length ? '<div class="u-motivos">' + ico('alerta') + esc(u.motivos.join(' · ')) + '</div>' : '') +
+    (u.pend ? '<div class="secao">Pendências anotadas</div><p class="u-pre">' + esc(u.pend) + '</p>' : '');
+  h += '<div class="secao">Acompanhamento dos serviços<small>Data de pronto vem da aba Unidades; início, %, responsável e observações vêm do histórico.</small></div><div class="u-servs">' + UN.servicos.map(function (s) {
+    var x = u.serv.filter(function (y) { return y.i === s.i; })[0], sv = x.st === 'concluido' ? UN_SV.concluido : x.st === 'execucao' ? UN_SV.execucao : UN_SV.nao;
+    return '<div class="u-serv"><div class="u-serv-n"><b>' + esc(s.rotulo) + '</b><small class="info">' + [x.ini ? 'início ' + brCurta(x.ini) : '', x.fim ? 'pronto ' + brCurta(x.fim) : '', x.resp ? x.resp : '', !x.fim && x.pct ? pct(x.pct) : ''].filter(Boolean).map(esc).join(' · ') + (x.obs ? '<br>' + esc(x.obs) : '') + '</small></div>' +
+      '<span class="u-chip ' + sv.cls + '">' + sv.nome + '</span>' +
+      '<span class="so-grava u-serv-bt">' + (x.fim ? '<button class="btn sec peq" onclick="unServ(' + linha + ',' + s.i + ',\'\')" title="Tirar a data de pronto">Desfazer</button>' : '<button class="btn peq" onclick="unRegistrar(' + linha + ',' + s.i + ')">Atualizar</button>') + '</span></div>';
+  }).join('') + '</div>';
+  h += '<div class="secao">Vistoria</div>' + (v ? '<dl class="u-cad"><div><dt>Situação</dt><dd>' + stTag(v.sit) + '</dd></div><div><dt>Data</dt><dd>' + (v.data ? br(v.data) : '—') + '</dd></div><div><dt>Vistoriador</dt><dd>' + esc(v.vistoriador || '—') + '</dd></div>' +
+      '<div><dt>Itens NC</dt><dd>' + v.nc + '</dd></div><div><dt>% conforme</dt><dd>' + (v.conf !== '' && !isNaN(v.conf) ? pct(v.conf) : '—') + '</dd></div><div><dt>Reinspeção</dt><dd>' + (v.reinsp ? br(v.reinsp) : '—') + '</dd></div>' +
+      '<div><dt>Entregue</dt><dd>' + (v.entregue ? br(v.entregue) : '—') + '</dd></div></dl>' + (v.pend ? '<p class="u-pre"><b>Pendências da vistoria:</b> ' + esc(v.pend) + (v.resp ? ' · ' + esc(v.resp) : '') + (v.prazo ? ' · prazo ' + br(v.prazo) : '') + '</p>' : '') +
+      '<p class="info">Itens e pendências ficam na tela ' + esc(v.aba) + ' (linha ' + v.linha + ').</p>' : '<p class="info">Esta unidade não aparece em Vistoria Aptos / Vistoria Lojas.</p>');
+  h += '<div class="secao">Inspeções e FVS que citam a unidade</div>' + (u.qual.length ? '<ul class="u-lista">' + u.qual.map(function (q) {
+    return '<li>' + (q.data ? brCurta(q.data) + ' · ' : '') + '<b>' + esc(q.serv) + '</b> · ' + esc(q.local) + ' ' + stTag(q.sit || q.res) + (q.oque ? '<br><span class="info">' + esc(q.oque) + (q.resp ? ' · ' + esc(q.resp) : '') + (q.prazo ? ' · prazo ' + brCurta(q.prazo) : '') + '</span>' : '') + ' <span class="info">(' + esc(q.aba) + ')</span></li>'; }).join('') + '</ul>' :
+    '<p class="info">Nenhuma inspeção ou FVS com "' + esc(u.un) + '" no local.</p>');
+  h += '<div class="secao">Registro fotográfico<small>Pasta da unidade no Google Drive (o nome da foto leva o serviço e a data).</small></div><div class="fotos" id="fotos"><span class="info" id="fotosInfo">Carregando fotos…</span></div>' +
+    '<div class="barra so-grava" style="margin-top:8px"><select id="unFotoServ" style="width:auto" aria-label="Serviço da foto"><option value="geral">Geral</option>' + UN.servicos.map(function (s) { return '<option value="' + esc(s.nome) + '">' + esc(s.rotulo) + '</option>'; }).join('') + '</select>' +
+    '<label class="btn sec" for="unFotoArq" tabindex="0" role="button">📷 Adicionar fotos</label><input id="unFotoArq" type="file" accept="image/*" multiple style="display:none" onchange="unFotos(this.files)"><a class="info" id="fotoPasta" target="_blank" style="display:none">Abrir a pasta no Drive</a></div>';
+  h += '<div class="secao" id="u-hist">Histórico de execução</div>' + (u.hist.length ? '<ol class="u-tl">' + u.hist.map(function (x) {
+    return '<li><time>' + br(x.data) + '</time><b>' + esc(x.ev) + (x.serv ? ' — ' + esc(x.serv) : '') + '</b>' + (x.pct !== '' && !isNaN(x.pct) ? ' <span class="info">' + Math.round(x.pct) + '%</span>' : '') +
+      (x.obs ? '<p>' + esc(x.obs) + '</p>' : '') + '<small class="info">' + esc([x.resp ? 'Responsável: ' + x.resp : '', x.por ? 'lançado por ' + x.por : ''].filter(Boolean).join(' · ')) + '</small></li>'; }).join('') + '</ol>' :
+    '<p class="info">Nada registrado ainda. Os registros feitos por esta ficha aparecem aqui' + (UN.temHistorico ? '' : ' (a aba "Unidades – Histórico" é criada no primeiro registro)') + '.</p>');
+  h += '</div><footer><span style="flex:1"></span><button class="btn" onclick="fecharGaveta()">Voltar ao mapa</button></footer>';
+  abrirGaveta(h, true); el('gaveta').classList.add('larga');
+  api('sisFotos', 'unidades', u.un).then(function (r) { FOTOS = r.fotos; mostrarFotos(FOTOS, r.pasta); if (!r.fotos.length && el('fotos')) el('fotos').innerHTML = '<span class="info">Nenhuma foto desta unidade ainda.</span>'; }).catch(function () { if (el('fotosInfo')) el('fotosInfo').textContent = 'Não consegui ler as fotos.'; });
+}
+function unFotos(arqs) {
+  var u = UN.unidades.filter(function (x) { return x.linha === UN_ATUAL; })[0], lista = [].slice.call(arqs || []), i = 0, ok = 0, sv = el('unFotoServ').value;
+  var prox = function () {
+    if (i >= lista.length) { ocupado(false); aviso(ok + ' foto(s) enviada(s).', 4000); el('unFotoArq').value = ''; return; }
+    var a = lista[i++]; ocupado(true); aviso('Enviando foto ' + i + ' de ' + lista.length + '…', 60000);
+    reduzir(a).then(function (d) {
+      var nome = u.un + '_' + sv.replace(/[^\wÀ-ú -]/g, '').slice(0, 30) + '_' + hoje() + '_' + new Date().toTimeString().slice(0, 8).replace(/:/g, '') + '.jpg';
+      return api('sisFotoEnviar', 'unidades', u.un, 0, nome, d).then(function (r) { ok++; r.foto.local = d; FOTOS.push(r.foto); mostrarFotos(FOTOS, r.pasta); });
+    }).catch(function (e) { aviso('Foto ' + i + ' não foi: ' + (e.message || e), 5000); }).then(prox);
+  };
+  prox();
+}
+function unRecarregar(r, msg) { UN = r; fecharGaveta(); desenharUnidades(); aviso(msg); unFicha(UN_ATUAL); }
+function unServ(linha, col, data) {
+  chamar('sisUnidadeServico', linha, col, data, '', '').then(function (r) { unRecarregar(r, data ? 'Serviço marcado como pronto.' : 'Data de pronto retirada.'); }).catch(function () {});
+}
+function unRegistrar(linha, col) {
+  var u = UN.unidades.filter(function (x) { return x.linha === linha; })[0];
+  abrirGaveta('<header><h2>Registrar serviço</h2><div class="info">Unidade ' + esc(u.un) + '</div></header><div class="conteudo">' +
+    campo('Serviço', '<select id="urS">' + UN.servicos.map(function (s) { return '<option value="' + s.i + '"' + (s.i === col ? ' selected' : '') + '>' + esc(s.rotulo) + '</option>'; }).join('') + '</select>') +
+    campo('O que aconteceu', '<select id="urE" onchange="el(\'urPctC\').style.display=this.value===\'Andamento\'?\'\':\'none\'"><option value="Concluído">Concluído (grava a data de pronto na aba Unidades)</option><option value="Iniciado">Iniciado</option><option value="Andamento">Andamento (% executado)</option><option value="Observação">Observação</option></select>') +
+    '<div class="duas">' + campo('Data', '<input id="urD" type="date" value="' + hoje() + '">') + '<div id="urPctC" style="display:none">' + campo('% executado', '<input id="urP" type="number" min="0" max="100" step="5">') + '</div></div>' +
+    campo('Responsável', '<input id="urR" list="urRl" placeholder="Equipe ou pessoa"><datalist id="urRl">' + (D.pessoas || []).map(function (n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist>') +
+    campo('Observações', '<textarea id="urO" rows="2"></textarea>') +
+    '</div><footer><button class="btn sec" onclick="unFicha(' + linha + ')">Voltar</button><span style="flex:1"></span><button class="btn so-grava" onclick="unRegistrarOk(' + linha + ')">Salvar</button></footer>');
+}
+function unRegistrarOk(linha) {
+  var u = UN.unidades.filter(function (x) { return x.linha === linha; })[0], col = Number(el('urS').value), ev = el('urE').value, s = UN.servicos.filter(function (x) { return x.i === col; })[0];
+  if (!el('urD').value) return aviso('Informe a data.');
+  var p = ev === 'Concluído' ? chamar('sisUnidadeServico', linha, col, el('urD').value, el('urR').value, el('urO').value) :
+    chamar('sisUnidadeEvento', u.un, s.nome, ev, el('urD').value, ev === 'Andamento' ? el('urP').value : '', el('urR').value, el('urO').value);
+  p.then(function (r) { unRecarregar(r, 'Registrado.'); }).catch(function () {});
+}
+function unPend(linha) {
+  var u = UN.unidades.filter(function (x) { return x.linha === linha; })[0];
+  abrirGaveta('<header><h2>Pendências da unidade</h2><div class="info">Unidade ' + esc(u.un) + ' · coluna Pendências da aba Unidades</div></header><div class="conteudo">' +
+    campo('Pendências em aberto', '<textarea id="upT" rows="5" placeholder="Ex.: Rejunte do banheiro social falhado; trocar 2 cerâmicas da cozinha.">' + esc(u.pend) + '</textarea>', 'Enquanto houver texto aqui, a unidade fica vermelha (com pendência). Apague quando resolver.') +
+    '</div><footer><button class="btn sec" onclick="unFicha(' + linha + ')">Voltar</button><span style="flex:1"></span>' + (u.pend ? '<button class="btn sec so-grava" onclick="el(\'upT\').value=\'\';unPendOk(' + linha + ')">Marcar como resolvidas</button>' : '') + '<button class="btn so-grava" onclick="unPendOk(' + linha + ')">Salvar</button></footer>');
+}
+function unPendOk(linha) { chamar('sisUnidadePendencia', linha, el('upT').value.trim()).then(function (r) { unRecarregar(r, 'Pendências salvas.'); }).catch(function () {}); }
+function unVistoria(linha) {
+  var u = UN.unidades.filter(function (x) { return x.linha === linha; })[0], v = u.vist;
+  if (!v) return aviso('Esta unidade não está em Vistoria Aptos / Vistoria Lojas.');
+  var id = v.aba === 'Vistoria Lojas' ? 'vlojas' : 'vaptos';
+  fecharGaveta(); ir(id);
+  var tenta = 0, abre = function () { if (CACHE[id]) abrirLinha(id, v.linha); else if (tenta++ < 40) setTimeout(abre, 250); };
+  abre();
+}
 /* ---------------------------------------------------------------- presença: mês inteiro */
 var PMES = null, PMES_F = { vinc: '', q: '' };
 function vPresencaMes(mes) {
@@ -2129,7 +2378,7 @@ function gravarInt(fid) {
 function feito(iid) { var i = Object.assign({}, D.interacoes.filter(function (x) { return x.ID === iid; })[0], { 'Feito?': 'SIM' }); salvarCRM('sisSalvarInteracao', i, 'Marcado como feito.').then(function () { abrirForn(i['Fornecedor ID'], 'contatos'); }); }
 
 /* ---------------------------------------------------------------- gaveta */
-function abrirGaveta(h) { el('gaveta').innerHTML = h; document.body.classList.add('aberta'); var f = el('gaveta').querySelector('input,select,textarea'); if (f) setTimeout(function () { f.focus(); }, 230); }
+function abrirGaveta(h, semFoco) { el('gaveta').classList.remove('larga'); el('gaveta').innerHTML = h; document.body.classList.add('aberta'); var f = semFoco ? el('gaveta').querySelector('h2') : el('gaveta').querySelector('input,select,textarea'); if (semFoco && f) f.setAttribute('tabindex', '-1'); if (f) setTimeout(function () { f.focus(); }, 230); }
 function fecharGaveta() { document.body.classList.remove('aberta'); }
 document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { fecharGaveta(); fecharIA(); } });
 

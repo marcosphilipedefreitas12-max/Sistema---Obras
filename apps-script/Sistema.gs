@@ -391,7 +391,7 @@ function sisChamar(obraId, fn, args) {
   var permitidas = { sisCarregar: sisCarregar, sisSalvarDemanda: sisSalvarDemanda, sisSalvarFornecedor: sisSalvarFornecedor,
     sisSalvarInteracao: sisSalvarInteracao, sisImportarFornecedores: sisImportarFornecedores, sisAbaLer: sisAbaLer,
     sisAbaSalvar: sisAbaSalvar, sisAbaLimpar: sisAbaLimpar, sisPresenca: sisPresenca, sisPresencaMes: sisPresencaMes, sisPresencaMarcar: sisPresencaMarcar, sisPresencaHE: sisPresencaHE,
-    sisPerfis: sisPerfis, sisPerfisSalvar: sisPerfisSalvar, sisFotos: sisFotos, sisFotoEnviar: sisFotoEnviar, sisRelatorio: sisRelatorio, sisDiaristas: sisDiaristas, sisDiaristaLancar: sisDiaristaLancar, sisDiaristaPago: sisDiaristaPago, sisDiaristaCancelar: sisDiaristaCancelar, sisDiaristaPrevisao: sisDiaristaPrevisao, sisDiaristaAte: sisDiaristaAte, sisFichados: sisFichados, sisFichadoLancar: sisFichadoLancar, sisFichadoConfig: sisFichadoConfig, sisPensao: sisPensao, sisAtalhos: sisAtalhos, sisAtividades: sisAtividades, sisDiarioPadronizar: sisDiarioPadronizar, sisConsultaLer: sisConsultaLer, sisOrcConfirmar: sisOrcConfirmar, sisConsultaGravar: sisConsultaGravar, sisExecutivo: sisExecutivo, sisExecPrazo: sisExecPrazo, sisPlanReprogramar: sisPlanReprogramar, sisIaPerguntar: sisIaPerguntar, sisIaConfig: sisIaConfig, sisIaSalvarConfig: sisIaSalvarConfig,
+    sisPerfis: sisPerfis, sisPerfisSalvar: sisPerfisSalvar, sisFotos: sisFotos, sisFotoEnviar: sisFotoEnviar, sisRelatorio: sisRelatorio, sisDiaristas: sisDiaristas, sisDiaristaLancar: sisDiaristaLancar, sisDiaristaPago: sisDiaristaPago, sisDiaristaCancelar: sisDiaristaCancelar, sisDiaristaPrevisao: sisDiaristaPrevisao, sisDiaristaAte: sisDiaristaAte, sisFichados: sisFichados, sisFichadoLancar: sisFichadoLancar, sisFichadoConfig: sisFichadoConfig, sisPensao: sisPensao, sisAtalhos: sisAtalhos, sisAtividades: sisAtividades, sisUnidades: sisUnidades, sisUnidadeServico: sisUnidadeServico, sisUnidadeEvento: sisUnidadeEvento, sisUnidadePendencia: sisUnidadePendencia, sisDiarioPadronizar: sisDiarioPadronizar, sisConsultaLer: sisConsultaLer, sisOrcConfirmar: sisOrcConfirmar, sisConsultaGravar: sisConsultaGravar, sisExecutivo: sisExecutivo, sisExecPrazo: sisExecPrazo, sisPlanReprogramar: sisPlanReprogramar, sisIaPerguntar: sisIaPerguntar, sisIaConfig: sisIaConfig, sisIaSalvarConfig: sisIaSalvarConfig,
     sisObras: sisObras, sisObraCadastrar: sisObraCadastrar, sisObraNova: sisObraNova, sisObraRemover: sisObraRemover, sisModeloDefinir: sisModeloDefinir };
   if (!permitidas[fn]) throw new Error('Função não permitida: ' + fn);
   SIS_OBRA_ID = String(obraId || ''); SIS_SS = null; SIS_PERFIL = null; SIS_TZ = null;
@@ -534,7 +534,7 @@ function sisPermissoes_() {
 /** Confere no servidor (não só na tela) se o perfil pode chamar a função. */
 function sisPermitir_(fn, args) {
   var pm = sisPermissoes_(), nega = function () { throw new Error('Seu perfil (' + pm.perfil + ') não permite esta ação. Fale com o administrador da obra.'); };
-  var grava = ['sisFichadoConfig', 'sisFichadoLancar', 'sisDiaristaLancar', 'sisDiaristaPago', 'sisDiaristaPrevisao', 'sisDiaristaCancelar', 'sisDiaristaAte', 'sisConsultaGravar', 'sisPlanReprogramar', 'sisFotoEnviar', 'sisAbaSalvar', 'sisAbaLimpar', 'sisPresencaMarcar', 'sisPresencaHE', 'sisSalvarDemanda', 'sisSalvarFornecedor', 'sisSalvarInteracao', 'sisImportarFornecedores'];
+  var grava = ['sisUnidadeServico', 'sisUnidadeEvento', 'sisUnidadePendencia', 'sisFichadoConfig', 'sisFichadoLancar', 'sisDiaristaLancar', 'sisDiaristaPago', 'sisDiaristaPrevisao', 'sisDiaristaCancelar', 'sisDiaristaAte', 'sisConsultaGravar', 'sisPlanReprogramar', 'sisFotoEnviar', 'sisAbaSalvar', 'sisAbaLimpar', 'sisPresencaMarcar', 'sisPresencaHE', 'sisSalvarDemanda', 'sisSalvarFornecedor', 'sisSalvarInteracao', 'sisImportarFornecedores'];
   if (grava.indexOf(fn) >= 0 && !pm.grava) nega();
   if (fn === 'sisAbaLimpar' && !pm.apaga) nega();
   if ((/^sisAba/.test(fn) || /^sisFoto/.test(fn) || /^sisConsulta/.test(fn)) && pm.modulos.indexOf(args[0]) < 0) nega();
@@ -543,6 +543,7 @@ function sisPermitir_(fn, args) {
   if (fn === 'sisRelatorio' && pm.modulos.indexOf('diario') < 0) nega();
   if (fn === 'sisExecPrazo' && !pm.admin) nega();
   if (fn === 'sisDiarioPadronizar' && !pm.admin) nega();
+  if (/^sisUnidade/.test(fn) && pm.modulos.indexOf('unidades') < 0) nega();
   if ((fn === 'sisAtividades' || fn === 'sisDiarioPadronizar') && pm.modulos.indexOf('diario') < 0) nega();
   if (/^sis(Diarista|Fichado|Pensao)/.test(fn) && pm.modulos.indexOf('diaristas') < 0) nega();
   if (fn === 'sisDiaristaCancelar' && !pm.apaga) nega();
