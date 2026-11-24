@@ -123,6 +123,20 @@ const fs = require('fs'), path = require('path');
   await p.screenshot({ path: path.join(out, 'demandas.png'), fullPage: true });
   await p.evaluate(() => ir('fornecedores')); await p.click('text=Importar todos'); await p.waitForTimeout(500);
   await p.screenshot({ path: path.join(out, 'fornecedores.png'), fullPage: true });
+  // lançamento rápido
+  await p.evaluate(() => ir('inicio')); await p.waitForTimeout(300);
+  var ats = await p.innerText('#lado .grupo:has(.gt:has-text("Seus atalhos"))');
+  if (!/Lançamento rápido/.test(ats) || /Pagamentos da equipe|Lançamentos\b/.test(ats.replace('Lançamento rápido', ''))) erros.push('rápido: atalhos errados: ' + ats.replace(/\n/g, ' | '));
+  await p.click('#lado >> text=Lançamento rápido'); await p.waitForTimeout(300);
+  if ((await p.locator('.rap-card').count()) !== 2) erros.push('rápido: janela sem os 2 cards');
+  await p.screenshot({ path: path.join(out, 'rapido.png') });
+  await p.click('.rap-card:has-text("Despesas e lançamentos")'); await p.waitForTimeout(900);
+  if (await p.evaluate(() => ATUAL) !== 'lancamentos' || !/Novo registro/.test(await p.innerText('#gaveta'))) erros.push('rápido: não abriu o formulário de Lançamentos');
+  await p.evaluate(() => fecharGaveta());
+  await p.click('#lado >> text=Lançamento rápido'); await p.waitForTimeout(300); await p.click('.rap-card:has-text("Pagamento de equipe")'); await p.waitForTimeout(600);
+  if (await p.evaluate(() => ATUAL) !== 'diaristas') erros.push('rápido: não abriu Pagamentos da equipe');
+  if (!(await p.locator('#lado .sub a:has-text("Pagamentos da equipe")').count()) && !(await p.evaluate(() => !!mod('diaristas')))) erros.push('rápido: Pagamentos da equipe sumiu do Financeiro');
+  await p.evaluate(() => ir('inicio')); await p.waitForTimeout(200);
   // menu novo
   await p.evaluate(() => ir('inicio')); await p.waitForTimeout(300);
   var nLinks = await p.locator('#lado a:visible, #lado .area-bt:visible').count();
@@ -228,6 +242,7 @@ const fs = require('fs'), path = require('path');
   if (await m.evaluate(() => document.documentElement.scrollWidth > 392)) erros.push('diaristas: estoura a largura no celular');
   if (!(await m.locator('#barraMob button').count())) erros.push('menu: sem barra inferior no celular');
   await m.screenshot({ path: path.join(out, 'celular_barra.png') });
+  await m.evaluate(() => abrirRapido()); await m.waitForTimeout(300); await m.screenshot({ path: path.join(out, 'celular_rapido.png') }); await m.evaluate(() => fecharRapido());
   await m.evaluate(() => menuMob()); await m.waitForTimeout(300); await m.screenshot({ path: path.join(out, 'celular_menu.png') });
   await b.close(); fs.unlinkSync(path.join(dir, '_pagina.html'));
   if (erros.length) { console.error('ERROS:', erros); process.exit(1); }
