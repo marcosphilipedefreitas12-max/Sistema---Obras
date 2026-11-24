@@ -380,7 +380,7 @@ var SIS_PRES_COD = [
   { c: 'P', nome: 'Presente', conta: 1 },
   { c: '½', nome: 'Meio período', conta: 0.5 },
   { c: 'F', nome: 'Falta (sem justificativa)', falta: true },
-  { c: 'FJ', nome: 'Falta justificada / abonada', just: true },
+  { c: 'FJ', nome: 'Falta justificada (antigo — hoje use A)', just: true, oculto: true },  // só para marcações antigas; falta justificada = atestado (A)
   { c: 'A', nome: 'Atestado médico', just: true },
   { c: 'FE', nome: 'Férias', just: true },
   { c: 'FG', nome: 'Folga / compensação de horas', just: true },
@@ -424,10 +424,10 @@ function sisPresencaAtualizar_() {
   pr.getRange(6, 4, 120, 1).setFormulas(linhasD); pr.getRange(6, 5, 120, 1).setFormulas(linhasE); pr.getRange(6, 6, 120, 1).setFormulas(linhasF);
   log.push('Presença');
   // lista suspensa com todos os códigos (números continuam aceitos para equipe de empreiteiro)
-  var dv = SpreadsheetApp.newDataValidation().requireValueInList(SIS_PRES_COD.map(function (x) { return x.c; }), true).setAllowInvalid(true)
-    .setHelpText(SIS_PRES_COD.map(function (x) { return x.c + ' = ' + x.nome; }).join(' · ')).build();
+  var dv = SpreadsheetApp.newDataValidation().requireValueInList(SIS_PRES_COD.filter(function (x) { return !x.oculto; }).map(function (x) { return x.c; }), true).setAllowInvalid(true)
+    .setHelpText(SIS_PRES_COD.filter(function (x) { return !x.oculto; }).map(function (x) { return x.c + ' = ' + x.nome; }).join(' · ')).build();
   pr.getRange(6, 8, 120, nc - 7).setDataValidation(dv);
-  pr.getRange('D2').setValue('Marque: ' + SIS_PRES_COD.map(function (x) { return x.c + ' = ' + x.nome.toLowerCase(); }).join(' · ') +
+  pr.getRange('D2').setValue('Marque: ' + SIS_PRES_COD.filter(function (x) { return !x.oculto; }).map(function (x) { return x.c + ' = ' + x.nome.toLowerCase(); }).join(' · ') +
     '. P, ½ e TR contam como dia trabalhado; F e S contam como falta. Para equipe de empreiteiro, digite o NÚMERO de pessoas do dia (ex.: 6).');
   // Pagamento Diaristas
   var pg = ss.getSheetByName('Pagamento Diaristas');
@@ -743,7 +743,7 @@ function sisIaFerramentas_(pm) {
       input_schema: { type: 'object', properties: { tela: { type: 'string', enum: mods }, linha: { type: 'integer', description: 'linha da aba (só para alterar)' },
         valores: { type: 'object', description: 'nome da coluna → valor', additionalProperties: { type: 'string' } }, resumo: { type: 'string', description: 'uma frase dizendo o que será gravado' } }, required: ['tela', 'valores', 'resumo'] } }
   ];
-  if (pm.modulos.indexOf('presenca') >= 0) t.push({ name: 'presenca_mes', description: 'Folha de presença de um mês (aaaa-mm): código de cada pessoa por dia (P presente, ½ meio, F falta, FJ justificada, A atestado, FE férias, FG folga, AF afastado, CH chuva, TR treinamento, OB outra obra, S suspensão; número = equipe de empreiteiro).',
+  if (pm.modulos.indexOf('presenca') >= 0) t.push({ name: 'presenca_mes', description: 'Folha de presença de um mês (aaaa-mm): código de cada pessoa por dia (P presente, ½ meio, F falta, FJ falta justificada (marcação antiga), A atestado (única falta justificada), FE férias, FG folga, AF afastado, CH chuva, TR treinamento, OB outra obra, S suspensão; número = equipe de empreiteiro).',
     input_schema: { type: 'object', properties: { mes: { type: 'string' } }, required: ['mes'] } });
   if (pm.modulos.indexOf('demandas') >= 0) t.push({ name: 'propor_demanda', description: 'PROPÕE criar uma demanda/tarefa (a pessoa confirma na tela).',
     input_schema: { type: 'object', properties: { titulo: { type: 'string' }, descricao: { type: 'string' }, responsavel: { type: 'string' }, prazo: { type: 'string', description: 'aaaa-mm-dd' }, prioridade: { type: 'string', enum: ['Baixa', 'Média', 'Alta', 'Urgente'] } }, required: ['titulo'] } });

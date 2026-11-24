@@ -30,7 +30,7 @@ const fs = require('fs'), path = require('path');
   await p.setInputFiles('#fotoArq', { name: 'foto.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==', 'base64') });
   await p.waitForTimeout(800); if (await p.locator('.fotos .foto').count() !== 1) erros.push('foto não apareceu');
   await p.click('#gaveta >> text=Salvar na planilha'); await p.waitForTimeout(500);
-  await p.evaluate(() => ir('presenca')); await p.waitForTimeout(400); await p.click('.seg button.P >> nth=0'); await p.waitForTimeout(400); await p.locator('select.pres-outro').nth(1).selectOption('FJ'); await p.fill('.pres-obs', 'Teste'); await p.locator('.pres-obs').blur(); await p.waitForTimeout(300);
+  await p.evaluate(() => ir('presenca')); await p.waitForTimeout(400); await p.click('.seg button.P >> nth=0'); await p.waitForTimeout(400); if (await p.locator('select.pres-outro >> nth=1 >> option[value="FJ"]').count()) erros.push('presença: FJ ainda aparece para escolher'); await p.locator('select.pres-outro').nth(1).selectOption('A'); await p.fill('.pres-obs', 'Teste'); await p.locator('.pres-obs').blur(); await p.waitForTimeout(300);
   await p.screenshot({ path: path.join(out, 'presenca.png') });
   await p.click('text=Mês inteiro'); await p.waitForTimeout(400); await p.screenshot({ path: path.join(out, 'presenca_mes.png'), fullPage: true });
   if (await p.locator('.mes-grade tbody tr').count() !== 2) erros.push('mês: linhas erradas');
