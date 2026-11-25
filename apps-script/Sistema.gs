@@ -391,7 +391,7 @@ function sisChamar(obraId, fn, args) {
   var permitidas = { sisCarregar: sisCarregar, sisSalvarDemanda: sisSalvarDemanda, sisSalvarFornecedor: sisSalvarFornecedor,
     sisSalvarInteracao: sisSalvarInteracao, sisImportarFornecedores: sisImportarFornecedores, sisAbaLer: sisAbaLer,
     sisAbaSalvar: sisAbaSalvar, sisAbaLimpar: sisAbaLimpar, sisPresenca: sisPresenca, sisPresencaMes: sisPresencaMes, sisPresencaMarcar: sisPresencaMarcar, sisPresencaHE: sisPresencaHE,
-    sisPerfis: sisPerfis, sisPerfisSalvar: sisPerfisSalvar, sisFotos: sisFotos, sisFotoEnviar: sisFotoEnviar, sisRelatorio: sisRelatorio, sisDiaristas: sisDiaristas, sisDiaristaLancar: sisDiaristaLancar, sisDiaristaPago: sisDiaristaPago, sisDiaristaCancelar: sisDiaristaCancelar, sisDiaristaPrevisao: sisDiaristaPrevisao, sisDiaristaAte: sisDiaristaAte, sisFichados: sisFichados, sisFichadoLancar: sisFichadoLancar, sisFichadoConfig: sisFichadoConfig, sisPensao: sisPensao, sisAtalhos: sisAtalhos, sisAtividades: sisAtividades, sisUnidades: sisUnidades, sisUnidadesNomes: sisUnidadesNomes, sisUnidadesLote: sisUnidadesLote, sisCotacaoCompra: sisCotacaoCompra, sisCompraLancar: sisCompraLancar, sisComprasLancadas: sisComprasLancadas, sisUnidadeServico: sisUnidadeServico, sisUnidadeEvento: sisUnidadeEvento, sisUnidadePendencia: sisUnidadePendencia, sisDiarioPadronizar: sisDiarioPadronizar, sisConsultaLer: sisConsultaLer, sisOrcConfirmar: sisOrcConfirmar, sisConsultaGravar: sisConsultaGravar, sisExecutivo: sisExecutivo, sisExecPrazo: sisExecPrazo, sisPlanReprogramar: sisPlanReprogramar, sisIaPerguntar: sisIaPerguntar, sisIaConfig: sisIaConfig, sisIaSalvarConfig: sisIaSalvarConfig,
+    sisPerfis: sisPerfis, sisPerfisSalvar: sisPerfisSalvar, sisFotos: sisFotos, sisFotoEnviar: sisFotoEnviar, sisRelatorio: sisRelatorio, sisDiaristas: sisDiaristas, sisDiaristaLancar: sisDiaristaLancar, sisDiaristaPago: sisDiaristaPago, sisDiaristaCancelar: sisDiaristaCancelar, sisDiaristaPrevisao: sisDiaristaPrevisao, sisDiaristaAte: sisDiaristaAte, sisFichados: sisFichados, sisFichadoLancar: sisFichadoLancar, sisFichadoConfig: sisFichadoConfig, sisPensao: sisPensao, sisAtalhos: sisAtalhos, sisAtividades: sisAtividades, sisUnidades: sisUnidades, sisUnidadesNomes: sisUnidadesNomes, sisUnidadesLote: sisUnidadesLote, sisCotacaoCompra: sisCotacaoCompra, sisCompraLancar: sisCompraLancar, sisComprasLancadas: sisComprasLancadas, sisUnidadeServico: sisUnidadeServico, sisUnidadeEvento: sisUnidadeEvento, sisUnidadePendencia: sisUnidadePendencia, sisDiarioPadronizar: sisDiarioPadronizar, sisDiarioClassificar: sisDiarioClassificar, sisConsultaLer: sisConsultaLer, sisOrcConfirmar: sisOrcConfirmar, sisConsultaGravar: sisConsultaGravar, sisExecutivo: sisExecutivo, sisExecPrazo: sisExecPrazo, sisPlanReprogramar: sisPlanReprogramar, sisIaPerguntar: sisIaPerguntar, sisIaConfig: sisIaConfig, sisIaSalvarConfig: sisIaSalvarConfig,
     sisObras: sisObras, sisObraCadastrar: sisObraCadastrar, sisObraNova: sisObraNova, sisObraRemover: sisObraRemover, sisModeloDefinir: sisModeloDefinir };
   if (!permitidas[fn]) throw new Error('Função não permitida: ' + fn);
   SIS_OBRA_ID = String(obraId || ''); SIS_SS = null; SIS_PERFIL = null; SIS_TZ = null;
@@ -542,13 +542,13 @@ function sisPermitir_(fn, args) {
   if (fn === 'sisSalvarDemanda' && pm.modulos.indexOf('demandas') < 0) nega();
   if (fn === 'sisRelatorio' && pm.modulos.indexOf('diario') < 0) nega();
   if (fn === 'sisExecPrazo' && !pm.admin) nega();
-  if (fn === 'sisDiarioPadronizar' && !pm.admin) nega();
+  if ((fn === 'sisDiarioPadronizar' || fn === 'sisDiarioClassificar') && !pm.admin) nega();
   if (/^sisUnidade(Servico|Evento|Pendencia)$/.test(fn) && pm.modulos.indexOf('unidades') < 0) nega();
   if (fn === 'sisUnidades' && pm.modulos.indexOf('unidades') < 0) nega();
   if ((fn === 'sisUnidadesNomes' || fn === 'sisUnidadesLote') && !['unidades', 'diario', 'inspecoes', 'fvs'].some(function (x) { return pm.modulos.indexOf(x) >= 0; })) nega();
   if (fn === 'sisCotacaoCompra' && (pm.modulos.indexOf('cotacoes') < 0 || pm.modulos.indexOf('compras') < 0)) nega();
   if ((fn === 'sisCompraLancar' || fn === 'sisComprasLancadas') && (pm.modulos.indexOf('compras') < 0 || pm.modulos.indexOf('lancamentos') < 0)) nega();
-  if ((fn === 'sisAtividades' || fn === 'sisDiarioPadronizar') && pm.modulos.indexOf('diario') < 0) nega();
+  if ((fn === 'sisAtividades' || fn === 'sisDiarioPadronizar' || fn === 'sisDiarioClassificar') && pm.modulos.indexOf('diario') < 0) nega();
   if (/^sis(Diarista|Fichado|Pensao)/.test(fn) && pm.modulos.indexOf('diaristas') < 0) nega();
   if (fn === 'sisDiaristaCancelar' && !pm.apaga) nega();
   if (fn === 'sisOrcConfirmar' && !pm.admin) nega();

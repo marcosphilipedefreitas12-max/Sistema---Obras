@@ -1430,3 +1430,25 @@ function sisComprasLancadas() {
   o.forEach(function (x, k) { var mm = String(x[0]).match(/\[COMPRA ([^\]]+)\]/); if (mm) out[mm[1]] = 5 + k; });
   return out;
 }
+
+/** Classifica registros antigos do Diário: "Serviços executados" passa a ser a atividade escolhida (lista do Cronograma)
+    e o texto livre antigo vai para "Ocorrências" ("Executado: … | Ocorrência: …"). Só Administrador. */
+function sisDiarioClassificar(itens) {
+  return sisComTrava_(function () {
+    var m = sisModulo_('diario'), sh = sisSS_().getSheetByName(m.aba), cS = sisColNum_(m.servicos), cD = sisColNum_(m.descricao);
+    if (sh.getRange(m.ini, cS).getFormula() || sh.getRange(m.ini, cD).getFormula()) throw new Error('Coluna com fórmula: não mexi em nada.');
+    var ok = {}; sisAtividades().forEach(function (a) { ok[a.atividade] = 1; }); ok['Outro (ver Ocorrências)'] = 1;
+    var n = 0;
+    (itens || []).forEach(function (it) {
+      var linha = Number(it.linha); if (!(linha >= m.ini && linha <= m.fim)) return;
+      var sv = String(it.servicos || '').split(/\s*;\s*/).filter(function (x) { return ok[x]; });
+      if (!sv.length) return;
+      var t = String(sh.getRange(linha, cS).getValue() || '').trim(); if (!t) return;
+      if (t.split(/\s*;\s*/).every(function (x) { return ok[x]; })) return;  // já está no padrão
+      var d = String(sh.getRange(linha, cD).getValue() || '').trim();
+      sh.getRange(linha, cD).setValue('Executado: ' + t + (d ? ' | Ocorrência: ' + d : ''));
+      sh.getRange(linha, cS).setValue(sv.join('; ')); n++;
+    });
+    return n;
+  });
+}
