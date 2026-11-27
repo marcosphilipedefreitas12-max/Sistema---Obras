@@ -242,6 +242,37 @@ const fs = require('fs'), path = require('path');
   await p.click('text=Relatório para o RH'); await p.waitForTimeout(300);
   if (!/HE sábado 100% \(h\)/.test(await p.innerText('#area'))) erros.push('HE: relatório RH sem horas extras');
 
+  // cronograma: linha do tempo por equipe
+  await p.evaluate(() => ir('cronograma')); await p.waitForTimeout(500);
+  if ((await p.locator('.lt-card').count()) < 8) erros.push('linha do tempo: barras faltando (' + (await p.locator('.lt-card').count()) + ')');
+  if (!(await p.locator('.lt-hoje').count())) erros.push('linha do tempo: sem linha de hoje');
+  if (!/Em atraso \(2\)/.test(await p.innerText('.lt-lado'))) erros.push('linha do tempo: painel de atraso errado');
+  await p.screenshot({ path: path.join(out, 'linha_tempo.png'), fullPage: true });
+  await p.evaluate(() => { LT_MOV = { linha: 12, ini: '2026-11-16', eq: null }; desenharLinha(); }); await p.waitForTimeout(200);
+  if (!/adianta 14 dias/.test(await p.innerText('.lt-mov'))) erros.push('linha do tempo: barra de confirmação sem o adiantamento');
+  if (!/começa antes de terminar "Estrutura Pav 09"/.test(await p.innerText('.lt-mov'))) erros.push('linha do tempo: sem aviso de dependência');
+  await p.screenshot({ path: path.join(out, 'linha_tempo_mover.png') });
+  await p.click('.lt-mov .btn:not(.sec)'); await p.waitForTimeout(200);
+  if (!(await p.isVisible('#ltMovErr'))) erros.push('linha do tempo: salvou sem motivo');
+  await p.selectOption('#ltMotivo', 'Antecipação (frente liberada)'); await p.click('.lt-mov .btn:not(.sec)'); await p.waitForTimeout(400);
+  if (await p.locator('.lt-mov').count()) erros.push('linha do tempo: mudança não salvou');
+  await p.click('.lt-card[data-l="9"]'); await p.waitForTimeout(400);
+  const fic = await p.innerText('#gaveta');
+  if (!/Depende de:/.test(fic) || !/Diário: atividade executada/.test(fic) || !/Chuva/.test(fic)) erros.push('linha do tempo: ficha incompleta');
+  await p.click('#gaveta .lt-form .btn >> nth=0'); await p.waitForTimeout(200);
+  if (!/Escreva o que aconteceu/.test(await p.innerText('#lhErr'))) erros.push('linha do tempo: registrou histórico vazio');
+  await p.fill('#lhTxt', 'Faltaram 2 armadores; reforço na segunda.'); await p.click('#gaveta .lt-form .btn >> nth=0'); await p.waitForTimeout(400);
+  if (!/Faltaram 2 armadores/.test(await p.innerText('#gaveta'))) erros.push('linha do tempo: histórico não entrou');
+  await p.screenshot({ path: path.join(out, 'linha_tempo_ficha.png') });
+  await p.evaluate(() => fecharGaveta());
+  await p.evaluate(() => { LTV.vista = 'rep'; desenharLinha(); }); await p.waitForTimeout(200);
+  if (!/Antecipação \(frente liberada\)/.test(await p.innerText('#area'))) erros.push('linha do tempo: replanejamento não aparece na lista');
+  await p.screenshot({ path: path.join(out, 'linha_tempo_rep.png'), fullPage: true });
+  await p.evaluate(() => { LTV.vista = 'todas'; LTV.zoom = 'dia'; LTV.ini = '2026-11-16'; desenharLinha(); trocarTema(); }); await p.waitForTimeout(200);
+  await p.screenshot({ path: path.join(out, 'linha_tempo_escuro.png'), fullPage: true }); await p.evaluate(() => trocarTema());
+  await p.click('text=Tabela >> nth=0').catch(() => {}); await p.evaluate(() => { LT_TABELA = true; vTabela(mod('cronograma')); }); await p.waitForTimeout(400);
+  if (!/Voltar à linha do tempo/.test(await p.innerText('#main'))) erros.push('linha do tempo: tabela sem botão de voltar');
+
   const m = await abrir(390, 844);
   await m.screenshot({ path: path.join(out, 'celular_obras.png') }); await m.click('.obra .abre >> nth=0'); await m.waitForTimeout(600);
   await m.screenshot({ path: path.join(out, 'celular.png'), fullPage: true });
@@ -253,6 +284,9 @@ const fs = require('fs'), path = require('path');
   if (!(await m.locator('#barraMob button').count())) erros.push('menu: sem barra inferior no celular');
   await m.screenshot({ path: path.join(out, 'celular_barra.png') });
   await m.evaluate(() => abrirRapido()); await m.waitForTimeout(300); await m.screenshot({ path: path.join(out, 'celular_rapido.png') }); await m.evaluate(() => fecharRapido());
+  await m.evaluate(() => ir('cronograma')); await m.waitForTimeout(500); await m.screenshot({ path: path.join(out, 'celular_linha_tempo.png'), fullPage: true });
+  if (await m.evaluate(() => document.documentElement.scrollWidth > 392)) erros.push('linha do tempo: estoura a largura no celular');
+  await m.click('.lt-card >> nth=2'); await m.waitForTimeout(400); await m.screenshot({ path: path.join(out, 'celular_linha_ficha.png') }); await m.evaluate(() => fecharGaveta());
   await m.evaluate(() => menuMob()); await m.waitForTimeout(300); await m.screenshot({ path: path.join(out, 'celular_menu.png') });
   await b.close(); fs.unlinkSync(path.join(dir, '_pagina.html'));
   if (erros.length) { console.error('ERROS:', erros); process.exit(1); }

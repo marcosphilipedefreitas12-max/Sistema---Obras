@@ -131,6 +131,38 @@ window.SIS_MOCK = (function () {
     if (fn === 'sisCotacaoCompra') { st.compra = args[0]; TAB.cotacoes.linhas[0].v[39] = 'Compra nº 2'; return { compra: 2, linha: 6 }; }
     if (fn === 'sisComprasLancadas') return st.lancada ? { '1': 40 } : {};
     if (fn === 'sisCompraLancar') { if (st.lancada) throw new Error('Esta compra já foi lançada (linha 40 de Lançamentos).'); st.lancada = true; return { linha: 40 }; }
+    if (/^sis(LinhaTempo|Tarefa)/.test(fn)) {
+      var LTM = st.lt || (st.lt = (function () {
+        var A = function (l, id, et, nome, resp, ini, fim, pct, status, dep) { return { linha: l, id: String(id), etapa: et, nome: nome, resp: resp, dep: dep || [], fixo: '', fixoFormula: false, dur: 10, ini: ini, fim: fim, pct: pct, status: status, obs: '' }; };
+        return { hoje: st.hoje, inicioObra: '2026-09-01', feriados: ['2026-11-20'], motivos: ['Chuva', 'Falta de material', 'Falta de mão de obra', 'Serviço anterior atrasado', 'Projeto / revisão', 'Antecipação (frente liberada)', 'Outro'], temHistorico: true,
+          equipes: ['Equipe estrutura', 'Equipe A — alvenaria', 'Reboco (empreiteiro)', 'Elétrica', 'Hidráulica'],
+          ativ: [A(7, 1, 'Preliminares', 'Canteiro: tapume e barracão', 'Equipe A — alvenaria', '2026-09-01', '2026-09-14', 1, 'Concluído'),
+            A(8, 2, 'Estrutura', 'Estrutura Pav 08', 'Equipe estrutura', '2026-11-02', '2026-11-13', 1, 'Concluído', ['1']),
+            A(9, 3, 'Estrutura', 'Estrutura Pav 09', 'Equipe estrutura', '2026-11-04', '2026-11-17', 0.6, 'Atrasado', ['2']),
+            A(10, 4, 'Estrutura', 'Estrutura Pav 10', 'Equipe estrutura', '2026-11-18', '2026-12-01', 0, 'Em andamento', ['3']),
+            A(11, 5, 'Vedações', 'Alvenaria Pav 08', 'Equipe A — alvenaria', '2026-11-10', '2026-11-27', 0.35, 'Em andamento', ['2']),
+            A(12, 6, 'Vedações', 'Alvenaria Pav 09', 'Equipe A — alvenaria', '2026-11-30', '2026-12-18', 0, 'Não iniciado', ['3']),
+            A(13, 7, 'Acabamento', 'Reboco / emboço interno', 'Reboco (empreiteiro)', '2026-11-09', '2026-12-11', 0.4, 'Em andamento'),
+            A(14, 8, 'Acabamento', 'Contrapiso', '', '2026-12-02', '2026-12-15', 0, 'Não iniciado', ['7']),
+            A(15, 9, 'Instalações', 'Instalações elétricas e hidráulicas embutidas', 'Elétrica', '2026-11-05', '2026-11-16', 0.5, 'Atrasado'),
+            A(16, 10, 'Instalações', 'Prumadas e combate a incêndio', 'Hidráulica', '2026-11-16', '2026-11-27', 0.1, 'Em andamento'),
+            A(17, 11, 'Acabamento', 'Fachada: reboco e revestimento', '', '', '', 0, 'Sem data', ['6']),
+            A(18, 12, 'Acabamento', 'Forro de gesso', 'Reboco (empreiteiro)', '2026-11-20', '2026-12-04', 0, 'Não iniciado')],
+          hist: [{ quando: '2026-11-17T16:10', id: '3', ativ: 'Estrutura Pav 09', tipo: 'Atraso', texto: 'Chuva na segunda; concretagem passou para quinta.', motivo: 'Chuva', de: '', para: '', por: 'usuario' }],
+          diario: { 'Estrutura Pav 09': [{ data: '2026-11-16', oc: 'Armação conferida pela FVS.' }, { data: '2026-11-13', oc: '' }] } };
+      })());
+      var ach = function (l) { return LTM.ativ.filter(function (x) { return x.linha === l; })[0]; };
+      if (fn === 'sisTarefaMover') {
+        var am = ach(args[0]), quando = st.hoje + 'T10:00';
+        if (args[1] && !args[3]) throw new Error('Escolha o motivo do replanejamento.');
+        if (args[2] !== null && args[2] !== undefined && args[2] !== am.resp) { LTM.hist.push({ quando: quando, id: am.id, ativ: am.nome, tipo: 'Equipe', texto: (am.resp || 'sem equipe') + ' → ' + (args[2] || 'sem equipe'), motivo: '', de: '', para: '', por: 'usuario' }); am.resp = args[2]; if (args[2] && LTM.equipes.indexOf(args[2]) < 0) LTM.equipes.push(args[2]); }
+        if (args[1]) { var de = am.ini, nv = args[1] === 'dep' ? de : args[1], dur = am.ini && am.fim ? Math.round((new Date(am.fim) - new Date(am.ini)) / 864e5) : 9; am.ini = nv; am.fim = new Date(new Date(nv + 'T12:00:00Z').getTime() + dur * 864e5).toISOString().slice(0, 10); am.fixo = args[1] === 'dep' ? '' : nv; if (am.status === 'Sem data') am.status = 'Não iniciado';
+          LTM.hist.push({ quando: quando, id: am.id, ativ: am.nome, tipo: 'Replanejamento', texto: args[4] || '', motivo: args[3], de: de, para: nv, por: 'usuario' }); }
+        else if (args[4]) LTM.hist.push({ quando: quando, id: am.id, ativ: am.nome, tipo: 'Observação', texto: args[4], motivo: '', de: '', para: '', por: 'usuario' });
+      }
+      if (fn === 'sisTarefaRegistrar') { var ar = ach(args[0]); if (!args[2]) throw new Error('Escreva o que aconteceu.'); LTM.hist.push({ quando: st.hoje + 'T11:00', id: ar.id, ativ: ar.nome, tipo: args[1], texto: args[2], motivo: args[3] || '', de: '', para: '', por: 'usuario' }); }
+      return JSON.parse(JSON.stringify(LTM));
+    }
     if (fn === 'sisAtividades') return [{ etapa: 'Preliminares', atividade: 'Canteiro: tapume e barracão' }, { etapa: 'Infraestrutura', atividade: 'Demolição e limpeza do terreno' }, { etapa: 'Infraestrutura', atividade: 'Contenção das divisas' }, { etapa: 'Estrutura', atividade: 'Estrutura Pav 01 — Térreo' }];
     if (fn === 'sisDiarioPadronizar') return 1;
     if (fn === 'sisDiarioClassificar') { st.cls = args[0]; return args[0].length; }

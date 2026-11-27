@@ -66,11 +66,14 @@ var SIS_MODULOS = [
              'Informe local, equipe, quantidade e o que precisa antes (restrição). Restrição não resolvida aparece com ⚠.',
              'Durante a semana: marque quando a restrição for resolvida.', 'Sexta: "Concluída?" S, Parcial ou N; se não, escolha o motivo. O PPC da semana é calculado na hora.',
              '"Copiar o que não foi concluído" leva para a semana seguinte as atividades que ficaram para trás.'] },
-  { id: 'cronograma', grupo: 'plan', aba: 'Cronograma', tipo: 'tabela', hdr: 6, ini: 7, fim: 67, chave: 'C', ult: 'N',
-    mostrar: ['A', 'B', 'C', 'H', 'I', 'J', 'K', 'L'],
+  { id: 'cronograma', grupo: 'plan', aba: 'Cronograma', tipo: 'tabela', hdr: 6, ini: 7, fim: 67, chave: 'C', ult: 'N', linha: true,
+    mostrar: ['A', 'B', 'C', 'D', 'H', 'I', 'J', 'K', 'L'],
     serve: 'Todas as atividades da obra, com dependências, duração, datas e % concluído.',
     quando: 'Sexta: atualize o % concluído. Mude durações e dependências só quando o planejamento mudar.',
-    passos: ['Atualize o "% Concluído" de cada atividade em andamento (lajes são automáticas).', 'Início e término são calculados pelas dependências e pela duração.',
+    passos: ['A tela abre na "Linha do tempo": cada equipe é uma faixa; a linha vermelha é hoje. Clique numa barra para abrir a atividade com o histórico.',
+             'Para adiantar ou atrasar, arraste a barra (ou mude o início na ficha) e escolha o motivo: o novo início vai para "Início fixo" e as atividades seguintes se ajustam.',
+             'Para dar equipe a uma atividade, arraste-a para a faixa da equipe ou escolha a equipe na ficha (coluna Responsável).',
+             'Na aba "Tabela": atualize o "% Concluído" de cada atividade em andamento (lajes são automáticas). Início e término são calculados pelas dependências e pela duração.',
              'Com a chave SIM na tela Quantitativos, a duração vem do cálculo de mão de obra.'] },
   { id: 'estrutura', grupo: 'campo', aba: 'Programação Estrutura', tipo: 'tabela', hdr: 7, ini: 8, fim: 37, chave: 'C', ult: 'O',
     mostrar: ['C', 'E', 'F', 'I', 'J', 'K', 'M', 'N'], novo: false,
@@ -202,7 +205,7 @@ function sisConfig_() {
   ss.getSheets().forEach(function (s) { gid[s.getName()] = s.getSheetId(); });
   var mods = SIS_MODULOS.filter(function (m) { return !m.aba || gid[m.aba] !== undefined; }).map(function (m) {
     return { id: m.id, grupo: m.grupo, custo: !!m.custo, aba: m.aba || '', titulo: m.titulo || m.aba || (m.id === 'demandas' ? 'Demandas' : 'Fornecedores'),
-             tipo: m.tipo, fotos: m.fotos ? sisColNum_(m.fotos) - 1 : -1, dias: m.dias ? sisColNum_(m.dias) - 1 : -1, mapa: !!m.mapa, local: m.local ? sisColNum_(m.local) - 1 : -1, servicos: m.servicos ? sisColNum_(m.servicos) - 1 : -1, descricao: m.descricao ? sisColNum_(m.descricao) - 1 : -1, serve: m.serve || '', quando: m.quando || '', passos: m.passos || [], novo: m.novo !== false,
+             tipo: m.tipo, fotos: m.fotos ? sisColNum_(m.fotos) - 1 : -1, dias: m.dias ? sisColNum_(m.dias) - 1 : -1, mapa: !!m.mapa, linha: !!m.linha, local: m.local ? sisColNum_(m.local) - 1 : -1, servicos: m.servicos ? sisColNum_(m.servicos) - 1 : -1, descricao: m.descricao ? sisColNum_(m.descricao) - 1 : -1, serve: m.serve || '', quando: m.quando || '', passos: m.passos || [], novo: m.novo !== false,
              link: m.aba ? ss.getUrl() + '#gid=' + gid[m.aba] : '' };
   });
   return { grupos: SIS_GRUPOS, modulos: mods, url: ss.getUrl() };
@@ -1450,5 +1453,106 @@ function sisDiarioClassificar(itens) {
       sh.getRange(linha, cS).setValue(sv.join('; ')); n++;
     });
     return n;
+  });
+}
+
+/* ---------------------------------------------------------------- CRONOGRAMA: LINHA DO TEMPO POR EQUIPE */
+/* Lê a aba Cronograma (linhas 7–67: A ID, B Etapa, C Atividade, D Responsável/equipe, E/F Depende de, G Início fixo,
+   H Duração, I Início, J Término, K %, L Status, M Observações). Início e término continuam sendo fórmulas da planilha:
+   adiantar/atrasar = gravar o "Início fixo" (G); trocar equipe = gravar D. Cada mudança e cada observação vão para a aba
+   "Cronograma – Histórico" (criada pelo sistema). Os dias do Diário em que a atividade foi marcada entram no histórico sozinhos. */
+var SIS_CH_ABA = 'Cronograma – Histórico';
+var SIS_CH_CAB = ['Quando', 'ID', 'Atividade', 'Tipo', 'Texto', 'Motivo', 'De', 'Para', 'Lançado por'];
+var SIS_CH_MOTIVOS = ['Chuva', 'Falta de material', 'Falta de mão de obra', 'Serviço anterior atrasado', 'Projeto / revisão', 'Equipamento', 'Retrabalho',
+  'Antecipação (frente liberada)', 'Mudança de prioridade', 'Outro'];
+function sisChAba_(criar) {
+  var ss = sisSS_(), sh = ss.getSheetByName(SIS_CH_ABA);
+  if (!sh && criar) {
+    sh = ss.insertSheet(SIS_CH_ABA); sh.getRange(1, 1, 1, SIS_CH_CAB.length).setValues([SIS_CH_CAB]).setFontWeight('bold'); sh.setFrozenRows(1);
+    sh.getRange('A:A').setNumberFormat('dd/mm/yyyy hh:mm');
+  }
+  return sh;
+}
+function sisChLer_() {
+  var sh = sisChAba_(false); if (!sh || sh.getLastRow() < 2) return [];
+  return sh.getRange(2, 1, sh.getLastRow() - 1, 9).getValues().map(function (r) {
+    return { quando: r[0] instanceof Date ? Utilities.formatDate(r[0], sisTz_(), "yyyy-MM-dd'T'HH:mm") : String(r[0] || ''), id: String(r[1] || '').trim(), ativ: String(r[2] || ''),
+      tipo: String(r[3] || ''), texto: String(r[4] || ''), motivo: String(r[5] || ''), de: r[6] instanceof Date ? sisIso_(r[6]) : String(r[6] || ''),
+      para: r[7] instanceof Date ? sisIso_(r[7]) : String(r[7] || ''), por: String(r[8] || '') };
+  }).filter(function (x) { return x.id; });
+}
+function sisChGravar_(id, ativ, tipo, texto, motivo, de, para) {
+  sisChAba_(true).appendRow([new Date(), id, ativ, tipo, texto || '', motivo || '', de || '', para || '', sisUsuario_()]);
+}
+function sisLinhaTempo() {
+  var ss = sisSS_(), sh = ss.getSheetByName('Cronograma'); if (!sh) throw new Error('Aba Cronograma não encontrada.');
+  var n = 61, v = sh.getRange(7, 1, n, 13).getValues(), d = sh.getRange(7, 1, n, 13).getDisplayValues(), fG = sh.getRange(7, 7, n, 1).getFormulas();
+  var hojeV = sh.getRange('C3').getValue(), hoje = hojeV instanceof Date ? sisIso_(hojeV) : sisIso_(new Date());
+  var iso = function (x) { return x instanceof Date ? sisIso_(x) : ''; };
+  var ativ = [];
+  for (var i = 0; i < n; i++) {
+    var nome = String(v[i][2] || '').trim(); if (!nome) continue;
+    var pctV = v[i][10], pct = typeof pctV === 'number' ? pctV : (Number(String(d[i][10]).replace('%', '').replace(',', '.')) / (/%/.test(d[i][10]) ? 100 : 1) || 0);
+    ativ.push({ linha: 7 + i, id: String(d[i][0]).trim(), etapa: String(v[i][1] || '').trim(), nome: nome, resp: String(v[i][3] || '').trim(),
+      dep: [String(d[i][4]).trim(), String(d[i][5]).trim()].filter(Boolean), fixo: iso(v[i][6]), fixoFormula: !!fG[i][0],
+      dur: typeof v[i][7] === 'number' ? v[i][7] : (Number(d[i][7]) || ''), ini: iso(v[i][8]), fim: iso(v[i][9]), pct: pct > 1 ? pct / 100 : pct,
+      status: String(d[i][11] || '').trim(), obs: String(v[i][12] || '') });
+  }
+  // equipes: o que já está em "Responsável" + a lista "Equipes / empreiteiros" da aba Serviços
+  var eq = {}; ativ.forEach(function (a) { if (a.resp) eq[a.resp] = 1; });
+  var sv = ss.getSheetByName('Serviços'); if (sv) sv.getRange(6, 7, 80, 1).getDisplayValues().forEach(function (r) { var x = String(r[0]).trim(); if (x) eq[x] = 1; });
+  // dias do Diário em que cada atividade foi marcada em "Serviços executados"
+  var dia = {}, md = sisModulo_('diario'), shD = ss.getSheetByName(md.aba);
+  if (shD) {
+    var cS = sisColNum_(md.servicos), cN = sisColNum_(md.descricao), nd = md.fim - md.ini + 1;
+    var dv = shD.getRange(md.ini, 1, nd, 1).getValues(), sv2 = shD.getRange(md.ini, cS, nd, 1).getValues(), oc = shD.getRange(md.ini, cN, nd, 1).getValues();
+    for (var k = 0; k < nd; k++) {
+      if (!(dv[k][0] instanceof Date)) continue;
+      String(sv2[k][0] || '').split(/\s*;\s*/).forEach(function (s) { s = s.trim(); if (s) (dia[s] = dia[s] || []).push({ data: sisIso_(dv[k][0]), oc: String(oc[k][0] || '').slice(0, 240) }); });
+    }
+  }
+  return { hoje: hoje, inicioObra: iso(sh.getRange('C4').getValue()), ativ: ativ, equipes: Object.keys(eq).sort(), feriados: Object.keys(sisFeriados_()),
+    hist: sisChLer_(), diario: dia, motivos: SIS_CH_MOTIVOS, temHistorico: !!sisChAba_(false) };
+}
+/** Muda início (Início fixo, coluna G) e/ou equipe (coluna D) de uma atividade e registra no histórico.
+    ini: 'aaaa-mm-dd' = novo início; '' = não mexe; 'dep' = apaga o início fixo (volta a seguir a dependência). */
+function sisTarefaMover(linha, ini, equipe, motivo, texto) {
+  return sisComTrava_(function () {
+    linha = Number(linha); if (!(linha >= 7 && linha <= 67)) throw new Error('Linha do Cronograma inválida.');
+    var sh = sisSS_().getSheetByName('Cronograma'), r = sh.getRange(linha, 1, 1, 10).getValues()[0], nome = String(r[2] || '').trim(), id = String(r[0] || '').trim();
+    if (!nome) throw new Error('Atividade não encontrada nesta linha.');
+    var mudouData = ini === 'dep' || /^\d{4}-\d{2}-\d{2}$/.test(String(ini || ''));
+    var antes = r[8] instanceof Date ? sisIso_(r[8]) : '';
+    if (mudouData) {
+      if (sh.getRange(linha, 7).getFormula()) throw new Error('O início desta atividade vem de fórmula na planilha; não mudei.');
+      if (!String(motivo || '').trim()) throw new Error('Escolha o motivo do replanejamento.');
+      if (ini === 'dep' && !String(r[4]).trim() && !String(r[5]).trim()) throw new Error('Esta atividade não depende de outra; informe uma data.');
+      sh.getRange(linha, 7).setValue(ini === 'dep' ? '' : sisData_(ini));
+    }
+    var eqAntes = String(r[3] || '').trim(), eqNova = equipe == null ? eqAntes : String(equipe).trim();
+    if (eqNova !== eqAntes) {
+      if (sh.getRange(linha, 4).getFormula()) throw new Error('A coluna Responsável tem fórmula; não mudei.');
+      sh.getRange(linha, 4).setValue(eqNova);
+      sisChGravar_(id, nome, 'Equipe', (eqAntes ? eqAntes : 'sem equipe') + ' → ' + (eqNova || 'sem equipe'), '', '', '');
+    }
+    if (mudouData) {
+      SpreadsheetApp.flush();
+      var dep = sh.getRange(linha, 9).getValue();
+      sisChGravar_(id, nome, 'Replanejamento', String(texto || '').trim() || (ini === 'dep' ? 'Voltou a seguir a dependência.' : ''), motivo, antes, dep instanceof Date ? sisIso_(dep) : '');
+    } else if (String(texto || '').trim()) sisChGravar_(id, nome, 'Observação', String(texto).trim(), motivo || '', '', '');
+    return sisLinhaTempo();
+  });
+}
+/** Escreve no histórico de uma atividade (observação, andamento ou atraso com motivo). */
+function sisTarefaRegistrar(linha, tipo, texto, motivo) {
+  return sisComTrava_(function () {
+    linha = Number(linha); if (!(linha >= 7 && linha <= 67)) throw new Error('Linha do Cronograma inválida.');
+    var r = sisSS_().getSheetByName('Cronograma').getRange(linha, 1, 1, 3).getValues()[0];
+    if (!String(r[2] || '').trim()) throw new Error('Atividade não encontrada nesta linha.');
+    if (!String(texto || '').trim()) throw new Error('Escreva o que aconteceu.');
+    tipo = ['Observação', 'Andamento', 'Atraso'].indexOf(tipo) >= 0 ? tipo : 'Observação';
+    if (tipo === 'Atraso' && !motivo) throw new Error('Escolha o motivo do atraso.');
+    sisChGravar_(String(r[0]).trim(), String(r[2]).trim(), tipo, String(texto).trim().slice(0, 2000), motivo || '', '', '');
+    return sisLinhaTempo();
   });
 }
