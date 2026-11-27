@@ -526,6 +526,56 @@
     .duas { grid-template-columns: 1fr; }
     .barra input[type=search], .barra select { width: 100% !important; }
   }
+
+  /* Cronograma: linha do tempo por equipe */
+  .lt-barra { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+  .lt-seg { display: inline-flex; flex-wrap: wrap; max-width: 100%; border: 1px solid var(--linha); background: var(--papel); }
+  .lt-seg button { border: 0; background: transparent; color: var(--tinta); padding: 6px 10px; font: inherit; font-size: 13px; cursor: pointer; border-right: 1px solid var(--linha); }
+  .lt-seg button:last-child { border-right: 0; } .lt-seg button.on { background: var(--azul); color: #fff; }
+  .lt-seg button:focus-visible, .lt-card:focus-visible, .lt-it:focus-visible { outline: 3px solid var(--sinal); outline-offset: 1px; }
+  .lt-lay { display: grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 12px; align-items: start; }
+  .lt-wr { overflow-x: auto; background: var(--papel); border: 1px solid var(--linha); }
+  .lt-tl { position: relative; }
+  .lt-cab { display: flex; height: 38px; border-bottom: 1.5px solid var(--tinta); position: relative; }
+  .lt-cab .lt-nm { background: var(--cab); font-size: 12px; color: var(--aco); padding-top: 11px; }
+  .lt-dias { position: relative; flex: 0 0 auto; }
+  .lt-dias span { position: absolute; top: 0; font-size: 11px; color: var(--aco); padding: 3px 0 0 3px; white-space: nowrap; border-left: 1px solid var(--linha2); height: 100%; line-height: 1.25; }
+  .lt-dias span b { display: block; font-size: 12.5px; color: var(--tinta); font-weight: 600; }
+  .lt-dias span.hj b { color: var(--verm); }
+  .lt-ln { display: flex; border-bottom: 1px solid var(--linha2); position: relative; }
+  .lt-ln.dz { outline: 2px dashed var(--azul); outline-offset: -2px; }
+  .lt-nm { position: sticky; left: 0; z-index: 4; flex: 0 0 160px; background: var(--papel); border-right: 1px solid var(--linha); padding: 6px 8px; font-size: 12.5px; }
+  .lt-nm b { display: block; font-weight: 600; } .lt-nm small { color: var(--aco); font-size: 11.5px; }
+  .lt-nm .lt-tag { margin: 3px 4px 0 0; }
+  .lt-cv { position: relative; flex: 0 0 auto; }
+  .lt-fundo { position: absolute; top: 38px; bottom: 0; left: 160px; pointer-events: none; z-index: 0; }
+  .lt-fds { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(135deg, var(--grade) 0 4px, transparent 4px 8px); }
+  .lt-hoje { position: absolute; top: -38px; bottom: 0; width: 2px; background: var(--verm); z-index: 3; }
+  .lt-card { position: absolute; height: 26px; border: 1px solid var(--linha); border-left-width: 4px; background: var(--papel); color: var(--tinta); font: inherit; font-size: 12px; text-align: left; padding: 0 6px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: pointer; z-index: 2; }
+  .lt-card i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--azul-f); z-index: -1; }
+  .lt-card.lt-ok { border-color: var(--verde); background: var(--verde-f); } .lt-card.lt-and { border-color: var(--azul); } .lt-card.lt-atr { border-color: var(--verm); background: var(--verm-f); }
+  .lt-card.lt-pl { border-left-color: var(--aco); } .lt-card.sel { box-shadow: 0 0 0 3px var(--sinal); }
+  .lt-card:hover { border-color: var(--azul2); }
+  .lt-tag { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 3px; background: var(--st); color: var(--st-t); white-space: nowrap; }
+  .lt-tag.v { background: var(--verm-f); color: var(--verm); } .lt-tag.a { background: var(--ambar-f); color: var(--ambar); } .lt-tag.g { background: var(--verde-f); color: var(--verde); } .lt-tag.b { background: var(--azul-f); color: var(--azul-t); }
+  .lt-lado { background: var(--papel); border: 1px solid var(--linha); border-top: 4px solid var(--sinal); padding: 10px; }
+  .lt-lado h3 { margin: 0 0 6px; font-family: var(--titulo); font-size: 18px; font-weight: 600; }
+  .lt-lado .lt-seg { width: 100%; margin-bottom: 8px; } .lt-lado .lt-seg button { flex: 1; padding: 5px 4px; font-size: 12px; }
+  .lt-it { display: block; width: 100%; text-align: left; border: 1px solid var(--linha); background: var(--campo); color: var(--tinta); font: inherit; font-size: 12.5px; padding: 6px 8px; margin-bottom: 6px; cursor: pointer; }
+  .lt-it:hover { border-color: var(--azul); } .lt-it b { display: block; font-weight: 600; } .lt-it small { color: var(--aco); }
+  .lt-lista { max-height: 520px; overflow-y: auto; }
+  .lt-mov { background: var(--ambar-f); border: 1px solid var(--ambar); color: var(--tinta); padding: 10px 12px; margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .lt-mov p { margin: 0; flex: 1 1 100%; } .lt-mov select, .lt-mov input { width: auto; min-width: 180px; }
+  .lt-leg { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--aco); margin: 8px 0; }
+  .lt-leg i { display: inline-block; width: 14px; height: 10px; border: 1px solid; border-left-width: 4px; vertical-align: -1px; margin-right: 4px; }
+  .lt-rep table { width: 100%; } .lt-barras div { display: grid; grid-template-columns: 190px 1fr 30px; gap: 8px; align-items: center; font-size: 12.5px; margin: 3px 0; }
+  .lt-barras s { text-decoration: none; display: block; height: 10px; background: var(--s1); }
+  .lt-a { color: var(--azul-t); }
+  .lt-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; } .lt-form .larga { grid-column: 1 / -1; }
+  .lt-lay > div { min-width: 0; }
+  @media (max-width: 900px) { .lt-lay { grid-template-columns: minmax(0, 1fr); } .lt-lista { max-height: none; } }
+  @media (max-width: 640px) { .lt-nm { flex-basis: 110px; } .lt-fundo { left: 110px; } .lt-form { grid-template-columns: 1fr; } .lt-barras div { grid-template-columns: 120px 1fr 26px; } }
+  @media print { .lt-card, .lt-tag, .lt-fds { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .lt-lado, .lt-barra { display: none; } .lt-lay { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -768,6 +818,8 @@ function ir(id) {
   if (id === 'executivo') return vExecutivo();
   var m = mod(id);
   if (m.mapa) return vUnidades(m);
+  if (m.linha && !LT_TABELA) return vLinha(m);
+  LT_TABELA = false;
   if (m.tipo === 'tabela') return vTabela(m);
   if (m.tipo === 'consulta') return vConsulta(m);
   if (m.tipo === 'presenca') return vPresenca(m);
@@ -1469,7 +1521,7 @@ function desenharTabela(m) {
       ATIV.lista.map(function (a) { return a.atividade; }).concat(['Outro (ver Ocorrências)']).filter(function (y) { return usados[y]; }).map(function (y) { return '<option value="' + esc(y) + '"' + (fs === y ? ' selected' : '') + '>' + esc(y) + ' (' + usados[y] + ')</option>'; }).join('') + '</select></label></div>';
   }
   CLASSIF = antigosL;
-  var h = (m.mapa ? '<div class="barra nao-imprime"><button class="btn sec" onclick="UN_VISTA=\'mapa\';vUnidades(mod(\'' + m.id + '\'))">← Voltar ao mapa</button><span class="info">Tabela da aba ' + esc(m.aba) + '</span></div>' : '') + (m.dias >= 0 ? abasVista(m) : '') + filtroData + (antigos ? '<div class="aviso-orc nao-imprime">' + antigos + ' registro(s) antigo(s) têm "Serviços executados" em texto livre. <button class="btn sec peq" onclick="diarioClassificar()">Classificar pela lista do Cronograma</button></div>' : '') +
+  var h = (m.linha ? '<div class="barra nao-imprime"><button class="btn sec" onclick="vLinha(mod(\'' + m.id + '\'))">← Voltar à linha do tempo</button><span class="info">Tabela da aba ' + esc(m.aba) + '</span></div>' : '') + (m.mapa ? '<div class="barra nao-imprime"><button class="btn sec" onclick="UN_VISTA=\'mapa\';vUnidades(mod(\'' + m.id + '\'))">← Voltar ao mapa</button><span class="info">Tabela da aba ' + esc(m.aba) + '</span></div>' : '') + (m.dias >= 0 ? abasVista(m) : '') + filtroData + (antigos ? '<div class="aviso-orc nao-imprime">' + antigos + ' registro(s) antigo(s) têm "Serviços executados" em texto livre. <button class="btn sec peq" onclick="diarioClassificar()">Classificar pela lista do Cronograma</button></div>' : '') +
     '<div class="barra"><input type="search" id="buscaTab" aria-label="Buscar nesta lista" placeholder="Buscar nesta lista…" value="' + esc(BUSCA[m.id] || '') + '" oninput="BUSCA[\'' + m.id + '\']=this.value;desenharTabela(mod(\'' + m.id + '\'));manterFoco(\'#buscaTab\')">' +
     '<span class="info">' + ls.length + ' registro(s)</span><span class="esp"></span>' +
     '<button class="btn sec" onclick="vTabela(mod(\'' + m.id + '\'),true)">Atualizar</button>' +
@@ -2104,6 +2156,233 @@ ICO.alerta = '<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17v.01"/>';
 ICO.prancheta = '<rect x="5" y="4" width="14" height="17" rx="1"/><path d="M9 4h6v3H9zM9 12l2 2 4-4"/>';
 ICO.circulo = '<circle cx="12" cy="12" r="6"/>';
 ICO.ok = '<circle cx="12" cy="12" r="8"/><path d="M8.5 12.2l2.4 2.4 4.6-5"/>';
+/* ---------------------------------------------------------------- CRONOGRAMA: LINHA DO TEMPO POR EQUIPE */
+var LT = null, LT_TABELA = false, LT_MOV = null, LT_SEL = 0;
+var LTV = { zoom: 'sem', ini: '', vista: 'todas', agrupar: '', eq: '', painel: 'atr' };
+try { LTV.eq = localStorage.getItem('sis_lt_eq') || ''; } catch (e) {}
+var LT_Z = { dia: { w: 40, n: 35 }, sem: { w: 16, n: 91 }, mes: { w: 5, n: 365 } };
+var LT_MES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'], LT_DS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+function ltAdd(iso, n) { var d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+function ltDif(a, b) { return Math.round((new Date(b + 'T12:00:00Z') - new Date(a + 'T12:00:00Z')) / 864e5); }
+function ltDow(iso) { return new Date(iso + 'T12:00:00Z').getUTCDay(); }
+function ltSt(a) { var s = chave(a.status); return a.pct >= 1 || s === 'concluido' ? 'ok' : /atras/.test(s) ? 'atr' : /andamento/.test(s) ? 'and' : 'pl'; }
+var LT_STN = { ok: 'Concluída', atr: 'Atrasada', and: 'Em andamento', pl: 'Não iniciada' }, LT_STC = { ok: 'g', atr: 'v', and: 'b', pl: '' };
+function ltPorId(id) { return LT.ativ.filter(function (x) { return x.id === String(id); })[0]; }
+function ltHist(a) { return LT.hist.filter(function (h) { return h.id === a.id || (!h.id && h.ativ === a.nome); }); }
+function vLinha(m) {
+  LT_TABELA = false;
+  el('main').innerHTML = carimbo('Cronograma — linha do tempo', 'Todas as atividades da obra no tempo, por equipe: o que está acontecendo, o que vem pela frente, o que atrasou e o histórico de cada uma.', ['Aba da planilha', m.aba]) +
+    '<div id="area"><div class="vazio"><b>Montando a linha do tempo…</b>Lendo o Cronograma, o Diário e o histórico.</div></div>';
+  chamar('sisLinhaTempo').then(function (r) {
+    LT = r; if (!LTV.ini) LTV.ini = ltAdd(r.hoje, -7 - ((ltDow(r.hoje) + 6) % 7));
+    if (!LTV.agrupar) LTV.agrupar = r.ativ.some(function (a) { return a.resp; }) ? 'equipe' : 'etapa';
+    desenharLinha();
+  }).catch(function () {});
+}
+function ltVisiveis() {
+  var fimJ = ltAdd(LT.hoje, 14);
+  return LT.ativ.filter(function (a) {
+    if (!a.ini) return false;
+    if (LTV.vista === 'eq') return LTV.eq && a.resp === LTV.eq;
+    if (LTV.vista === 'campo') return a.ini <= fimJ && (a.fim || a.ini) >= LT.hoje && ltSt(a) !== 'ok';
+    if (LTV.vista === 'atr') return ltSt(a) === 'atr';
+    return true;
+  });
+}
+function desenharLinha() {
+  if (!LT) return;
+  var Z = LT_Z[LTV.zoom], W = Z.w, N = Z.n, ini = LTV.ini, fimJ = ltAdd(ini, N - 1), fer = {}; LT.feriados.forEach(function (f) { fer[f] = 1; });
+  var vb = function (id, t) { return '<button class="' + (LTV.vista === id ? 'on' : '') + '" aria-pressed="' + (LTV.vista === id) + '" onclick="LTV.vista=\'' + id + '\';desenharLinha()">' + t + '</button>'; };
+  var zb = function (id, t) { return '<button class="' + (LTV.zoom === id ? 'on' : '') + '" aria-pressed="' + (LTV.zoom === id) + '" onclick="ltZoom(\'' + id + '\')">' + t + '</button>'; };
+  var h = '<div class="abas-pres nao-imprime" role="tablist"><button role="tab" class="on" aria-selected="true">Linha do tempo</button><button role="tab" aria-selected="false" onclick="LT_TABELA=true;vTabela(mod(\'cronograma\'))">Tabela</button></div>';
+  h += '<div class="lt-barra nao-imprime"><div class="lt-seg" role="group" aria-label="Visão">' + vb('todas', 'Todas') + vb('eq', 'Minha equipe') + vb('campo', 'Próximas 2 semanas') + vb('atr', 'Atrasos') + vb('rep', 'Replanejamentos') + '</div>' +
+    (LTV.vista === 'eq' ? '<select aria-label="Equipe" onchange="LTV.eq=this.value;try{localStorage.setItem(\'sis_lt_eq\',this.value)}catch(e){};desenharLinha()"><option value="">Escolha a equipe…</option>' + LT.equipes.map(function (e) { return '<option' + (LTV.eq === e ? ' selected' : '') + '>' + esc(e) + '</option>'; }).join('') + '</select>' : '') +
+    '<label class="info">Agrupar por <select onchange="LTV.agrupar=this.value;desenharLinha()"><option value="equipe"' + (LTV.agrupar === 'equipe' ? ' selected' : '') + '>Equipe</option><option value="etapa"' + (LTV.agrupar === 'etapa' ? ' selected' : '') + '>Etapa</option></select></label>' +
+    '<span class="esp" style="flex:1"></span><div class="lt-seg" role="group" aria-label="Escala">' + zb('dia', 'Dia') + zb('sem', 'Semana') + zb('mes', 'Mês') + '</div>' +
+    '<div class="lt-seg" role="group" aria-label="Navegar"><button onclick="ltAndar(-1)" aria-label="Voltar no tempo">◀</button><button onclick="ltAndar(0)">Hoje</button><button onclick="ltAndar(1)" aria-label="Avançar no tempo">▶</button></div>' +
+    '<button class="btn sec" onclick="vLinha(mod(\'cronograma\'))">Atualizar</button></div>';
+  if (LT_MOV) h += ltMovBarra();
+  if (LTV.vista === 'rep') { el('area').innerHTML = h + ltReplanejamentos(); return; }
+  var vis = ltVisiveis(), lanes = [], porL = {};
+  var chaveL = function (a) { return LTV.agrupar === 'equipe' ? (a.resp || '') : (a.etapa || 'Sem etapa'); };
+  vis.forEach(function (a) { var k = chaveL(a); if (!porL[k]) { porL[k] = []; lanes.push(k); } porL[k].push(a); });
+  if (LTV.agrupar === 'equipe') {
+    if (LTV.vista === 'todas') LT.equipes.forEach(function (e) { if (!porL[e]) { porL[e] = []; lanes.push(e); } });
+    lanes.sort(function (a, b) { return a === '' ? 1 : b === '' ? -1 : a.localeCompare(b, 'pt-BR'); });
+  } else { var ord = {}; LT.ativ.forEach(function (a, i) { var k = a.etapa || 'Sem etapa'; if (!(k in ord)) ord[k] = i; }); lanes.sort(function (a, b) { return ord[a] - ord[b]; }); }
+  // cabeçalho dos dias
+  var cab = '';
+  for (var i = 0; i < N; i++) {
+    var d = ltAdd(ini, i), dw = ltDow(d), dd = +d.slice(8, 10), lab = null;
+    if (LTV.zoom === 'dia') lab = LT_DS[dw] + '<b>' + dd + '</b>';
+    else if (LTV.zoom === 'sem' && dw === 1) lab = 'sem<b>' + d.slice(8, 10) + '/' + d.slice(5, 7) + '</b>';
+    else if (LTV.zoom === 'mes' && dd === 1) lab = d.slice(0, 4) + '<b>' + LT_MES[+d.slice(5, 7) - 1] + '</b>';
+    if (lab) cab += '<span class="' + (d === LT.hoje ? 'hj' : '') + '" style="left:' + (i * W) + 'px;' + (LTV.zoom === 'dia' ? 'width:' + W + 'px;text-align:center;padding-left:0' : '') + '">' + lab + '</span>';
+  }
+  var fundo = '';
+  if (LTV.zoom !== 'mes') for (var j = 0; j < N; j++) { var dj = ltAdd(ini, j), wj = ltDow(dj); if (wj === 0 || wj === 6 || fer[dj]) fundo += '<div class="lt-fds" style="left:' + (j * W) + 'px;width:' + W + 'px"></div>'; }
+  var hx = ltDif(ini, LT.hoje); if (hx >= 0 && hx < N) fundo += '<div class="lt-hoje" style="left:' + (hx * W + W / 2 - 1) + 'px" title="Hoje"></div>';
+  var tl = '<div class="lt-tl" style="width:' + (160 + N * W) + 'px"><div class="lt-cab"><div class="lt-nm">' + (LTV.agrupar === 'equipe' ? 'Equipe' : 'Etapa') + '</div><div class="lt-dias" style="width:' + (N * W) + 'px">' + cab + '</div></div>' +
+    '<div class="lt-fundo" style="width:' + (N * W) + 'px">' + fundo + '</div>';
+  if (!lanes.length) tl += '<div class="vazio" style="margin:12px">' + (LTV.vista === 'eq' && !LTV.eq ? '<b>Escolha a sua equipe</b>A escolha fica guardada neste aparelho.' : '<b>Nada nesta visão</b>Mude a visão ou o período.') + '</div>';
+  lanes.forEach(function (k) {
+    var cs = porL[k].slice().sort(function (a, b) { return a.ini < b.ini ? -1 : 1; }), rows = [];
+    cs.forEach(function (a) { var f = a.fim || a.ini, r = rows.findIndex(function (x) { return x < a.ini; }); if (r < 0) { r = rows.length; rows.push(''); } rows[r] = f; a._r = r; });
+    var H = Math.max(1, rows.length) * 30 + 10, info = '';
+    if (LTV.agrupar === 'equipe' && k) {
+      var sob = 0, par = 0;
+      for (var q = 0; q < 14; q++) { var dq = ltAdd(LT.hoje, q), wq = ltDow(dq); if (wq === 0 || wq === 6 || fer[dq]) continue;
+        var nq = LT.ativ.filter(function (a) { return a.resp === k && a.ini && a.ini <= dq && (a.fim || a.ini) >= dq && ltSt(a) !== 'ok'; }).length; if (nq > 1) sob++; if (!nq) par++; }
+      info = (sob ? '<span class="lt-tag v" title="Dias úteis das próximas 2 semanas com 2 ou mais atividades ao mesmo tempo">Sobrecarga ' + sob + ' d</span>' : '') + (par ? '<span class="lt-tag a" title="Dias úteis das próximas 2 semanas sem atividade">Parada ' + par + ' d</span>' : '');
+    }
+    tl += '<div class="lt-ln" data-k="' + esc(k) + '" style="height:' + H + 'px" ondragover="event.preventDefault();this.classList.add(\'dz\')" ondragleave="this.classList.remove(\'dz\')" ondrop="ltSoltar(event,this)">' +
+      '<div class="lt-nm"><b>' + esc(k || 'Sem equipe') + '</b><small>' + porL[k].length + ' atividade(s)</small><br>' + info + '</div><div class="lt-cv" style="width:' + (N * W) + 'px">';
+    cs.forEach(function (a) {
+      var f = a.fim || a.ini; if (f < ini || a.ini > fimJ) return;
+      var x0 = Math.max(0, ltDif(ini, a.ini)), x1 = Math.min(N - 1, ltDif(ini, f)), st = ltSt(a);
+      var tit = a.nome + ' — ' + LT_STN[st] + ', ' + br(a.ini) + ' a ' + br(f) + (a.resp ? ' · ' + a.resp : '') + ' · ' + Math.round(a.pct * 100) + '%';
+      tl += '<button class="lt-card lt-' + st + (LT_SEL === a.linha ? ' sel' : '') + '" draggable="' + (PM.grava ? 'true' : 'false') + '" data-l="' + a.linha + '" style="left:' + (x0 * W + 1) + 'px;width:' + Math.max(W - 2, (x1 - x0 + 1) * W - 2) + 'px;top:' + (a._r * 30 + 6) + 'px" title="' + esc(tit) + '" aria-label="' + esc(tit) + '" onclick="ltFicha(' + a.linha + ')" ondragstart="ltArrastar(event,' + a.linha + ')"><i style="width:' + Math.round(Math.min(1, a.pct) * 100) + '%"></i>' + esc(a.nome) + '</button>';
+    });
+    tl += '</div></div>';
+  });
+  tl += '</div>';
+  var leg = '<div class="lt-leg"><span><i style="border-color:var(--aco)"></i>Não iniciada</span><span><i style="border-color:var(--azul)"></i>Em andamento</span><span><i style="border-color:var(--verm);background:var(--verm-f)"></i>Atrasada</span><span><i style="border-color:var(--verde);background:var(--verde-f)"></i>Concluída</span><span>Faixa clara dentro da barra = % concluído</span><span style="color:var(--verm)">│ hoje</span>' + (LTV.zoom !== 'mes' ? '<span>Hachurado = fim de semana ou feriado</span>' : '') + '</div>';
+  h += '<div class="lt-lay"><div><div class="lt-wr" id="ltWr">' + tl + '</div>' + leg + (PM.grava ? '<p class="info nao-imprime">Arraste uma barra para outro dia (adiantar ou atrasar) ou para outra equipe. No celular, toque na barra e mude pela ficha.</p>' : '') + '</div>' + ltPainel() + '</div>';
+  el('area').innerHTML = h;
+  var wr = el('ltWr'); if (wr && hx * W > (wr.clientWidth - 160) * 0.6) wr.scrollLeft = Math.max(0, hx * W - (wr.clientWidth - 160) * 0.3);
+}
+function ltZoom(z) { LTV.zoom = z; LTV.ini = z === 'mes' ? ltAdd(LT.hoje, -30) : ltAdd(LT.hoje, -7 - ((ltDow(LT.hoje) + 6) % 7)); desenharLinha(); }
+function ltAndar(dir) {
+  if (!dir) return ltZoom(LTV.zoom);
+  LTV.ini = ltAdd(LTV.ini, dir * Math.round(LT_Z[LTV.zoom].n / 3)); desenharLinha();
+}
+function ltPainel() {
+  var semData = LT.ativ.filter(function (a) { return !a.ini && ltSt(a) !== 'ok'; }), atr = LT.ativ.filter(function (a) { return ltSt(a) === 'atr'; }).sort(function (a, b) { return (a.fim || '') < (b.fim || '') ? -1 : 1; });
+  var semEq = LT.ativ.filter(function (a) { return !a.resp && ltSt(a) !== 'ok'; }).sort(function (a, b) { return (a.ini || '9') < (b.ini || '9') ? -1 : 1; });
+  var prox = LT.ativ.filter(function (a) { return a.ini && a.ini > LT.hoje && a.ini <= ltAdd(LT.hoje, 21) && ltSt(a) !== 'ok'; }).sort(function (a, b) { return a.ini < b.ini ? -1 : 1; });
+  var abas = [['atr', 'Em atraso', atr], ['prox', 'Vão começar', prox], ['semeq', 'Sem equipe', semEq], ['semdata', 'Sem data', semData]];
+  var cur = abas.filter(function (x) { return x[0] === LTV.painel; })[0] || abas[0];
+  var item = function (a) {
+    var sub = cur[0] === 'atr' ? '<span class="lt-tag v">Era para terminar ' + br(a.fim) + '</span>' : cur[0] === 'prox' ? '<span class="lt-tag b">Começa ' + br(a.ini) + ' (em ' + ltDif(LT.hoje, a.ini) + ' d)</span>' :
+      cur[0] === 'semeq' ? (a.ini ? '<span class="lt-tag">' + br(a.ini) + ' a ' + br(a.fim) + '</span>' : '<span class="lt-tag a">Sem data</span>') : '<span class="lt-tag a">Sem início calculado</span>';
+    return '<button class="lt-it" draggable="' + (PM.grava ? 'true' : 'false') + '" ondragstart="ltArrastar(event,' + a.linha + ')" onclick="ltFicha(' + a.linha + ')"><b>' + esc(a.nome) + '</b><small>' + esc([a.etapa, a.resp].filter(Boolean).join(' · ')) + '</small><br>' + sub + '</button>';
+  };
+  return '<aside class="lt-lado nao-imprime"><h3>Tarefas</h3><div class="lt-seg" role="tablist">' + abas.map(function (x) {
+    return '<button role="tab" class="' + (x === cur ? 'on' : '') + '" aria-selected="' + (x === cur) + '" onclick="LTV.painel=\'' + x[0] + '\';desenharLinha()">' + x[1] + ' (' + x[2].length + ')</button>'; }).join('') +
+    '</div><div class="lt-lista">' + (cur[2].length ? cur[2].map(item).join('') : '<p class="info">Nada aqui.</p>') + '</div>' +
+    (PM.grava ? '<p class="info" style="margin:6px 0 0">Clique para abrir. Arraste para a equipe e o dia.</p>' : '') + '</aside>';
+}
+function ltArrastar(ev, linha) {
+  var a = LT.ativ.filter(function (x) { return x.linha === linha; })[0], off = 0;
+  if (a && a.ini && ev.target.classList.contains('lt-card')) { var r = ev.target.getBoundingClientRect(); off = Math.floor((ev.clientX - r.left) / LT_Z[LTV.zoom].w); }
+  ev.dataTransfer.setData('text/plain', linha + '|' + off); ev.dataTransfer.effectAllowed = 'move';
+}
+function ltSoltar(ev, ln) {
+  ev.preventDefault(); ln.classList.remove('dz'); if (!PM.grava) return;
+  var p = String(ev.dataTransfer.getData('text/plain')).split('|'), linha = Number(p[0]), off = Number(p[1]) || 0;
+  var a = LT.ativ.filter(function (x) { return x.linha === linha; })[0]; if (!a) return;
+  var cv = ln.querySelector('.lt-cv'), r = cv.getBoundingClientRect(), W = LT_Z[LTV.zoom].w;
+  var dia = ltAdd(LTV.ini, Math.floor((ev.clientX - r.left) / W) - off);
+  var k = ln.getAttribute('data-k'), eq = LTV.agrupar === 'equipe' ? k : null;
+  var novoIni = dia !== a.ini ? dia : '';
+  if (!a.ini && LTV.agrupar === 'equipe' && eq !== a.resp) novoIni = '';  // sem data: só define a equipe (a data vem pela ficha)
+  if (!novoIni && (eq === null || eq === a.resp)) return;
+  LT_MOV = { linha: linha, ini: novoIni, eq: eq === a.resp ? null : eq }; LT_SEL = linha; desenharLinha();
+  var s = el('ltMotivo') || el('ltMovTxt'); if (s) s.focus();
+}
+function ltAvisoDep(a, ini) {
+  var tarde = a.dep.map(ltPorId).filter(function (d) { return d && d.fim && d.fim >= ini; });
+  return tarde.length ? 'Atenção: começa antes de terminar ' + tarde.map(function (d) { return '"' + d.nome + '" (' + br(d.fim) + ')'; }).join(' e ') + '. Confirme se a frente já está liberada.' : '';
+}
+function ltMovBarra() {
+  var m = LT_MOV, a = LT.ativ.filter(function (x) { return x.linha === m.linha; })[0]; if (!a) return '';
+  var partes = [];
+  if (m.ini) { var dd = a.ini ? ltDif(a.ini, m.ini) : 0; partes.push('início ' + (a.ini ? br(a.ini) + ' → ' : '') + '<b>' + br(m.ini) + '</b>' + (dd ? ' (' + (dd < 0 ? 'adianta ' + (-dd) : 'atrasa ' + dd) + ' dia' + (Math.abs(dd) > 1 ? 's' : '') + ')' : '')); }
+  if (m.eq !== null && m.eq !== undefined) partes.push('equipe ' + esc(a.resp || 'sem equipe') + ' → <b>' + esc(m.eq || 'sem equipe') + '</b>');
+  var av = m.ini ? ltAvisoDep(a, m.ini) : '';
+  return '<div class="lt-mov nao-imprime" role="region" aria-label="Confirmar mudança"><p><b>' + esc(a.nome) + '</b>: ' + partes.join(' · ') + '.' + (av ? '<br><span style="color:var(--verm)">' + esc(av) + '</span>' : '') +
+    (m.ini ? '<br><span class="info">Na planilha, o novo início vai para "Início fixo" e as atividades que dependem desta são recalculadas.</span>' : '') + '</p>' +
+    (m.ini ? '<select id="ltMotivo" aria-label="Motivo"><option value="">Motivo do replanejamento…</option>' + (a.ini ? '' : '<option>Programação inicial</option>') + LT.motivos.map(function (x) { return '<option>' + esc(x) + '</option>'; }).join('') + '</select>' : '') +
+    '<input id="ltMovTxt" type="text" placeholder="Observação (opcional)" style="flex:1">' +
+    '<button class="btn" onclick="ltMovSalvar()">Salvar</button><button class="btn sec" onclick="LT_MOV=null;desenharLinha()">Cancelar</button><span id="ltMovErr" style="color:var(--verm);display:none;flex-basis:100%">Escolha o motivo.</span></div>';
+}
+function ltMovSalvar() {
+  var m = LT_MOV, mot = el('ltMotivo') ? el('ltMotivo').value : '';
+  if (m.ini && !mot) { el('ltMovErr').style.display = 'block'; el('ltMotivo').focus(); return; }
+  chamar('sisTarefaMover', m.linha, m.ini, m.eq, mot, el('ltMovTxt').value).then(function (r) { LT = r; LT_MOV = null; desenharLinha(); aviso('Cronograma atualizado e registrado no histórico.', 3500); }).catch(function () {});
+}
+function ltReplanejamentos() {
+  var reps = LT.hist.filter(function (x) { return x.tipo === 'Replanejamento'; }).sort(function (a, b) { return a.quando < b.quando ? 1 : -1; });
+  if (!reps.length) return '<div class="vazio"><b>Nenhum replanejamento registrado ainda</b>Cada vez que uma atividade mudar de data por aqui, o motivo fica guardado e aparece nesta lista.</div>';
+  var cont = {}; reps.forEach(function (x) { var k = x.motivo || 'Sem motivo'; cont[k] = (cont[k] || 0) + 1; });
+  var ks = Object.keys(cont).sort(function (a, b) { return cont[b] - cont[a]; }), mx = cont[ks[0]];
+  var adi = reps.filter(function (x) { return x.de && x.para && x.para < x.de; }).length, atr = reps.filter(function (x) { return x.de && x.para && x.para > x.de; }).length;
+  return '<div class="lt-rep"><div class="graf" style="margin-bottom:12px"><h3 style="margin:0 0 6px;font-family:var(--titulo)">Por que replanejamos</h3><p class="info" style="margin:0 0 8px">' + reps.length + ' replanejamento(s): ' + adi + ' adiantaram, ' + atr + ' atrasaram.</p><div class="lt-barras">' +
+    ks.map(function (k) { return '<div><span>' + esc(k) + '</span><s style="width:' + Math.round(cont[k] / mx * 100) + '%"></s><b>' + cont[k] + '</b></div>'; }).join('') + '</div></div>' +
+    '<div class="tabela"><table><thead><tr><th>Quando</th><th>Atividade</th><th>Início antes → depois</th><th>Motivo</th><th>Observação</th><th>Por</th></tr></thead><tbody>' + reps.map(function (x) {
+      var a = ltPorId(x.id), dd = x.de && x.para ? ltDif(x.de, x.para) : 0;
+      return '<tr><td>' + br(x.quando.slice(0, 10)) + ' ' + esc(x.quando.slice(11, 16)) + '</td><td>' + (a ? '<a class="lt-a" href="#" onclick="ltFicha(' + a.linha + ');return false">' + esc(x.ativ) + '</a>' : esc(x.ativ)) + '</td><td>' + (x.de ? br(x.de) : '—') + ' → ' + (x.para ? br(x.para) : '—') +
+        (dd ? ' <span class="lt-tag ' + (dd < 0 ? 'g' : 'v') + '">' + (dd < 0 ? '−' + (-dd) : '+' + dd) + ' d</span>' : '') + '</td><td>' + esc(x.motivo) + '</td><td>' + esc(x.texto) + '</td><td>' + esc(x.por) + '</td></tr>'; }).join('') + '</tbody></table></div></div>';
+}
+function ltFicha(linha) {
+  var a = LT.ativ.filter(function (x) { return x.linha === linha; })[0]; if (!a) return; LT_SEL = linha;
+  var st = ltSt(a), deps = a.dep.map(ltPorId).filter(Boolean), libera = LT.ativ.filter(function (x) { return x.dep.indexOf(a.id) >= 0; });
+  var hs = ltHist(a), reps = hs.filter(function (x) { return x.tipo === 'Replanejamento' && x.de; }).sort(function (p, q) { return p.quando < q.quando ? -1 : 1; });
+  var link = function (x) { return '<a class="lt-a" href="#" onclick="ltFicha(' + x.linha + ');return false">' + esc(x.nome) + '</a>' + (x.fim ? ' <span class="info">(' + br(x.fim) + ')</span>' : ''); };
+  var h = '<header><h2>' + esc(a.nome) + ' <span class="lt-tag ' + LT_STC[st] + '">' + LT_STN[st] + '</span> <span class="lt-tag b">' + Math.round(a.pct * 100) + '% concluído</span></h2><div class="info">ID ' + esc(a.id) + ' · ' + esc(a.etapa) + ' · linha ' + a.linha + ' do Cronograma</div></header><div class="conteudo">' +
+    '<dl class="u-cad"><div><dt>Equipe</dt><dd>' + esc(a.resp || 'Sem equipe') + '</dd></div><div><dt>Início</dt><dd>' + (a.ini ? br(a.ini) : '—') + '</dd></div><div><dt>Término</dt><dd>' + (a.fim ? br(a.fim) : '—') + '</dd></div>' +
+    '<div><dt>Duração</dt><dd>' + (a.dur !== '' ? esc(a.dur) + ' dias úteis' : '—') + '</dd></div>' + (reps.length ? '<div><dt>Previsto original</dt><dd>início ' + br(reps[0].de) + '</dd></div>' : '') +
+    (a.fixo ? '<div><dt>Início fixo</dt><dd>' + br(a.fixo) + (a.fixoFormula ? ' <span class="info">(fórmula)</span>' : '') + '</dd></div>' : '') + '</dl>' +
+    '<div class="secao">Sequência</div><p style="margin:4px 0"><b>Depende de:</b> ' + (deps.length ? deps.map(link).join(' · ') : '<span class="info">nada (começa por data)</span>') + '</p>' +
+    '<p style="margin:4px 0"><b>Libera:</b> ' + (libera.length ? libera.map(link).join(' · ') : '<span class="info">nenhuma atividade depende desta</span>') + '</p>' +
+    (a.obs ? '<div class="secao">Observações do Cronograma</div><p class="u-pre">' + esc(a.obs) + '</p>' : '');
+  var repl = '', escr = '';
+  if (PM.grava) {
+    var eqs = LT.equipes.slice(); if (a.resp && eqs.indexOf(a.resp) < 0) eqs.unshift(a.resp);
+    repl = '<div class="secao so-grava">Replanejar ou trocar a equipe<small>O novo início vai para "Início fixo" na planilha; as atividades seguintes se ajustam sozinhas.</small></div><div class="lt-form so-grava">' +
+      '<label>Equipe<select id="lfEq" onchange="el(\'lfEqN\').style.display=this.value===\'__nova\'?\'\':\'none\'"><option value="">Sem equipe</option>' + eqs.map(function (e) { return '<option' + (e === a.resp ? ' selected' : '') + '>' + esc(e) + '</option>'; }).join('') + '<option value="__nova">Outra equipe…</option></select>' +
+      '<input id="lfEqN" type="text" placeholder="Nome da equipe ou empreiteiro" style="display:none;margin-top:4px"></label>' +
+      '<label>Início<input id="lfIni" type="date" value="' + esc(a.ini) + '"' + (a.fixoFormula ? ' disabled title="O início desta atividade vem de fórmula na planilha"' : '') + '></label>' +
+      (a.fixo && a.dep.length && !a.fixoFormula ? '<label class="larga"><input type="checkbox" id="lfDep" style="width:auto"> Voltar a seguir a dependência (apagar o início fixo)</label>' : '') +
+      '<label>Motivo (se mudar a data)<select id="lfMot"><option value="">—</option>' + LT.motivos.map(function (x) { return '<option>' + esc(x) + '</option>'; }).join('') + '</select></label>' +
+      '<label>Observação<input id="lfTxt" type="text" placeholder="Opcional"></label>' +
+      '<div class="larga"><button class="btn" onclick="ltFichaSalvar(' + a.linha + ')">Salvar mudança</button> <span id="lfErr" style="color:var(--verm)"></span></div></div>';
+    escr = '<div class="secao so-grava">Escrever no histórico</div><div class="lt-form so-grava"><label>Tipo<select id="lhTipo" onchange="el(\'lhMotL\').style.display=this.value===\'Atraso\'?\'\':\'none\'"><option>Observação</option><option>Andamento</option><option>Atraso</option></select></label>' +
+      '<label id="lhMotL" style="display:none">Motivo do atraso<select id="lhMot"><option value="">Escolha…</option>' + LT.motivos.map(function (x) { return '<option>' + esc(x) + '</option>'; }).join('') + '</select></label>' +
+      '<label class="larga">O que aconteceu<textarea id="lhTxt" rows="2" placeholder="Ex.: faltaram 2 armadores, equipe reforçada a partir de segunda"></textarea></label>' +
+      '<div class="larga"><button class="btn" onclick="ltRegistrar(' + a.linha + ')">Registrar</button> <span id="lhErr" style="color:var(--verm)"></span></div></div>';
+  }
+  var dia = LT.diario[a.nome] || [], ev = hs.map(function (x) { return { q: x.quando, t: x.tipo, x: x }; }).concat(dia.map(function (x) { return { q: x.data + 'T00:00', t: 'Diário', x: x }; }));
+  ev.sort(function (p, q) { return p.q < q.q ? 1 : -1; });
+  h += '<div class="secao">Ligado a esta atividade</div><p style="margin:4px 0">' + (dia.length ? '<span class="lt-tag b">Diário: ' + dia.length + ' dia(s)</span> ' : '<span class="info">Nenhum dia do Diário marcou esta atividade ainda.</span> ') +
+    (hs.length ? '<span class="lt-tag">' + hs.length + ' registro(s) no histórico</span>' : '') + '</p>';
+  h += escr;
+  h += '<div class="secao">Histórico</div>' + (ev.length ? '<ol class="u-tl">' + ev.slice(0, 80).map(function (e) {
+    var x = e.x;
+    if (e.t === 'Diário') return '<li><time>' + br(x.data) + ' · automático</time><b>Diário: atividade executada no dia</b>' + (x.oc ? '<p>' + esc(x.oc) + '</p>' : '') + '</li>';
+    var t = e.t === 'Replanejamento' ? 'Replanejada: início ' + (x.de ? br(x.de) : '—') + ' → ' + (x.para ? br(x.para) : '—') : e.t === 'Equipe' ? 'Equipe: ' + x.texto : e.t;
+    return '<li><time>' + br(x.quando.slice(0, 10)) + ' ' + esc(x.quando.slice(11, 16)) + ' · ' + esc(x.por) + '</time><b>' + esc(t) + '</b>' + (x.motivo ? ' <span class="lt-tag a">' + esc(x.motivo) + '</span>' : '') + (x.texto && e.t !== 'Equipe' ? '<p>' + esc(x.texto) + '</p>' : '') + '</li>';
+  }).join('') + '</ol>' : '<p class="info">Nada registrado ainda' + (LT.temHistorico ? '' : ' (a aba "Cronograma – Histórico" é criada no primeiro registro)') + '.</p>');
+  h += repl;
+  h += '</div><footer><button class="btn sec" onclick="fecharGaveta();LT_TABELA=true;vTabela(mod(\'cronograma\'))">Abrir a tabela do Cronograma</button><span style="flex:1"></span><button class="btn" onclick="fecharGaveta();desenharLinha()">Voltar</button></footer>';
+  abrirGaveta(h, true); el('gaveta').classList.add('larga'); if (el('ltWr')) desenharLinha();
+}
+function ltFichaSalvar(linha) {
+  var a = LT.ativ.filter(function (x) { return x.linha === linha; })[0], err = el('lfErr'); err.textContent = '';
+  var eq = el('lfEq').value === '__nova' ? el('lfEqN').value.trim() : el('lfEq').value;
+  if (el('lfEq').value === '__nova' && !eq) { err.textContent = 'Escreva o nome da equipe.'; return; }
+  var ini = el('lfDep') && el('lfDep').checked ? 'dep' : (el('lfIni').value && el('lfIni').value !== a.ini ? el('lfIni').value : '');
+  var mot = el('lfMot').value, txt = el('lfTxt').value;
+  if (ini && !mot) { err.textContent = 'Escolha o motivo da mudança de data.'; el('lfMot').focus(); return; }
+  if (!ini && eq === a.resp && !txt.trim()) { err.textContent = 'Nada mudou.'; return; }
+  chamar('sisTarefaMover', linha, ini, eq === a.resp ? null : eq, mot, txt).then(function (r) { LT = r; aviso('Salvo e registrado no histórico.', 3000); ltFicha(linha); }).catch(function () {});
+}
+function ltRegistrar(linha) {
+  var t = el('lhTxt').value.trim(), tp = el('lhTipo').value, mot = el('lhMot').value, err = el('lhErr'); err.textContent = '';
+  if (!t) { err.textContent = 'Escreva o que aconteceu.'; el('lhTxt').focus(); return; }
+  if (tp === 'Atraso' && !mot) { err.textContent = 'Escolha o motivo do atraso.'; el('lhMot').focus(); return; }
+  chamar('sisTarefaRegistrar', linha, tp, t, tp === 'Atraso' ? mot : '').then(function (r) { LT = r; aviso('Registrado no histórico.', 2500); ltFicha(linha); }).catch(function () {});
+}
 function vUnidades(m) {
   el('main').innerHTML = carimbo('Mapa de controle das unidades', 'Acompanhe a evolução física, os serviços executados, as pendências e as vistorias de cada unidade do empreendimento.', ['Aba da planilha', m.aba]) +
     '<div id="area"><div class="vazio"><b>Montando o mapa…</b>Lendo unidades, vistorias e inspeções.</div></div>';
